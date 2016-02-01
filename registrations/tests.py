@@ -494,7 +494,7 @@ class TestFieldValidation(AuthenticatedAPITestCase):
 
     def test_is_valid_msg_receiver(self):
         # Setup
-        valid_msg_receiver = "head_of_household"
+        valid_msg_receiver = "father"
         invalid_msg_receiver = "mama"
         # Execute
         # Check
