@@ -474,7 +474,7 @@ class TestFieldValidation(AuthenticatedAPITestCase):
 
     def test_is_valid_lang(self):
         # Setup
-        valid_lang = "runyakore"
+        valid_lang = "hausa"
         invalid_lang = "french"
         # Execute
         # Check

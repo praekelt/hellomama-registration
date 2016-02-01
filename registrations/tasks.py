@@ -27,7 +27,7 @@ def is_valid_uuid(id):
 
 
 def is_valid_lang(lang):
-    return lang in ["english", "runyakore", "lusoga"]
+    return lang in ["english", "hausa", "igbo"]
 
 
 def is_valid_msg_type(msg_type):
