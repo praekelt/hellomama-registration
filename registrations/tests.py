@@ -491,7 +491,7 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
         # Check
         self.assertEqual(v, True)
         self.assertEqual(registration.data["reg_type"], "hw_post")
-        self.assertEqual(registration.data["baby_age"], 1)
+        self.assertEqual(registration.data["baby_age"], 28)
         self.assertEqual(registration.validated, True)
 
     def test_validate_pbl_loss(self):
@@ -532,6 +532,36 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
             "source": self.make_source_adminuser()
         }
         registration_data["data"]["last_period_date"] = "20150816"
+        registration = Registration.objects.create(**registration_data)
+        # Execute
+        v = validate_registration.validate(registration)
+        # Check
+        self.assertEqual(v, False)
+        self.assertEqual(registration.validated, False)
+
+    def test_validate_baby_too_young(self):
+        # Setup
+        registration_data = {
+            "stage": "postbirth",
+            "data": REG_DATA["hw_post"].copy(),
+            "source": self.make_source_adminuser()
+        }
+        registration_data["data"]["baby_dob"] = "20150818"
+        registration = Registration.objects.create(**registration_data)
+        # Execute
+        v = validate_registration.validate(registration)
+        # Check
+        self.assertEqual(v, False)
+        self.assertEqual(registration.validated, False)
+
+    def test_validate_baby_too_old(self):
+        # Setup
+        registration_data = {
+            "stage": "postbirth",
+            "data": REG_DATA["hw_post"].copy(),
+            "source": self.make_source_adminuser()
+        }
+        registration_data["data"]["baby_dob"] = "20130717"
         registration = Registration.objects.create(**registration_data)
         # Execute
         v = validate_registration.validate(registration)

@@ -54,6 +54,19 @@ def calc_pregnancy_week_lmp(today, lmp):
     return preg_weeks
 
 
+def calc_baby_age(today, baby_dob):
+    """ Calculate the baby's age in weeks.
+    """
+    baby_dob_date = datetime.datetime.strptime(baby_dob, "%Y%m%d")
+    time_diff = today - baby_dob_date
+    if time_diff.days >= 0:
+        age_weeks = int(time_diff.days / 7)
+        return age_weeks
+    else:
+        # Return -1 if the date is in the future
+        return -1
+
+
 class ValidateRegistration(Task):
     """ Task to validate a registration model entry's registration
     data.
@@ -76,13 +89,18 @@ class ValidateRegistration(Task):
             if field in ["last_period_date", "baby_dob"]:
                 if not is_valid_date(registration_data[field]):
                     failures.append(field)
-                else:
+                elif field == "last_period_date":
                     # Check last_period_date is in the past and < 42 weeks ago
-                    if field == "last_period_date":
-                        preg_weeks = calc_pregnancy_week_lmp(
-                            get_today(), registration_data[field])
-                        if not (2 <= preg_weeks <= 42):
-                            failures.append("last_period_date out of range")
+                    preg_weeks = calc_pregnancy_week_lmp(
+                        get_today(), registration_data[field])
+                    if not (2 <= preg_weeks <= 42):
+                        failures.append("last_period_date out of range")
+                elif field == "baby_dob":
+                    # Check baby_dob is in the past and < 104 weeks ago
+                    preg_weeks = calc_baby_age(
+                        get_today(), registration_data[field])
+                    if not (0 <= preg_weeks <= 104):
+                        failures.append("baby_dob out of range")
             if field == "msg_receiver":
                 if not is_valid_msg_receiver(registration_data[field]):
                     failures.append(field)
@@ -130,7 +148,8 @@ class ValidateRegistration(Task):
                 hw_post, registration.data)
             if invalid_fields == []:
                 registration.data["reg_type"] = "hw_post"
-                registration.data["baby_age"] = 1  # TODO calc age
+                registration.data["baby_age"] = calc_baby_age(
+                    get_today(), registration.data["baby_dob"])
                 registration.validated = True
                 registration.save()
                 return True
