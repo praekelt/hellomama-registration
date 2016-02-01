@@ -35,8 +35,8 @@ def is_valid_msg_type(msg_type):
 
 
 def is_valid_msg_receiver(msg_receiver):
-    return msg_receiver in ["mother", "father",
-                            "family_member", "trusted_friend"]
+    return msg_receiver in ["mother", "father", "family_member",
+                            "trusted_friend"]
 
 
 def is_valid_loss_reason(loss_reason):
