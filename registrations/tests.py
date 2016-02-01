@@ -483,11 +483,13 @@ class TestFieldValidation(AuthenticatedAPITestCase):
 
     def test_is_valid_msg_type(self):
         # Setup
-        valid_msg_type = "sms"
-        invalid_msg_type = "voice"
+        valid_msg_type1 = "sms"
+        valid_msg_type2 = "voice"
+        invalid_msg_type = "email"
         # Execute
         # Check
-        self.assertEqual(is_valid_msg_type(valid_msg_type), True)
+        self.assertEqual(is_valid_msg_type(valid_msg_type1), True)
+        self.assertEqual(is_valid_msg_type(valid_msg_type2), True)
         self.assertEqual(is_valid_msg_type(invalid_msg_type), False)
 
     def test_is_valid_msg_receiver(self):

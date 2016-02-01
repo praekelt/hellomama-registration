@@ -31,7 +31,7 @@ def is_valid_lang(lang):
 
 
 def is_valid_msg_type(msg_type):
-    return msg_type in ["sms"]  # currently sms-only
+    return msg_type in ["sms", "voice"]
 
 
 def is_valid_msg_receiver(msg_receiver):
