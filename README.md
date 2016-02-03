@@ -1,2 +1,2 @@
 # hellomama-registration
-HelloMama Registration
+HelloMama Registration accepts registrations for the Hello Mama project.
