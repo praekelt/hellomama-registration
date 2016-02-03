@@ -3,10 +3,20 @@ import datetime
 from celery.task import Task
 from celery.utils.log import get_task_logger
 
-from .models import Registration
+from .models import Registration, SubscriptionRequest
 
 
 logger = get_task_logger(__name__)
+
+
+LANG_CODES = {
+    "english": "en_NG",
+    "hausa": "ha_NG",
+    "igbo": "ig_NG",
+    "en": "en_NG",
+    "ha": "ha_NG",
+    "ig": "ig_NG"
+}
 
 
 def get_today():
@@ -178,6 +188,27 @@ class ValidateRegistration(Task):
             registration.save()
             return False
 
+    def create_subscriptionrequest(self, registration):
+        """ Create SubscriptionRequest(s) based on the
+        validated registration.
+        """
+        if (registration.data["reg_type"] == "hw_pre" and
+           registration.data["msg_receiver"] == "mother"):
+
+            mother_sub = {
+                "contact": registration.data["contact"],
+                "version": 1,
+                "messageset_id": 1,  # TODO
+                "next_sequence_number": 1,  # TODO
+                "lang": LANG_CODES[registration.data["language"]],
+                "active": True,
+                "completed": False,
+                "schedule": 1,  # TODO
+                "process_status": 0,
+                "metadata": {}
+            }
+            SubscriptionRequest.objects.create(**mother_sub)
+
     def run(self, registration_id, **kwargs):
         """ Sets the registration's validated field to True if
         validation is successful.
@@ -185,10 +216,11 @@ class ValidateRegistration(Task):
         l = self.get_logger(**kwargs)
         l.info("Looking up the registration")
         registration = Registration.objects.get(id=registration_id)
-
         reg_validates = self.validate(registration)
+
         validation_string = "Validation completed - "
         if reg_validates:
+            self.create_subscriptionrequest(registration)
             validation_string += "Success"
         else:
             validation_string += "Failure"
