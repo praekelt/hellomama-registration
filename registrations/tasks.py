@@ -44,8 +44,8 @@ def is_valid_msg_type(msg_type):
 
 
 def is_valid_msg_receiver(msg_receiver):
-    return msg_receiver in ["mother", "father", "family_member",
-                            "trusted_friend"]
+    return msg_receiver in ["mother_father", "mother_only", "father_only",
+                            "family_member", "trusted_friend"]
 
 
 def is_valid_loss_reason(loss_reason):
@@ -87,7 +87,7 @@ class ValidateRegistration(Task):
     def check_field_values(self, fields, registration_data):
         failures = []
         for field in fields:
-            if field in ["contact", "registered_by"]:
+            if field in ["mother_id", "receiver_id", "registrar_id"]:
                 if not is_valid_uuid(registration_data[field]):
                     failures.append(field)
             if field == "language":
@@ -124,7 +124,8 @@ class ValidateRegistration(Task):
         registration.
         """
         data_fields = registration.data.keys()
-        fields_general = ["contact", "registered_by", "language", "msg_type"]
+        fields_general = ["mother_id", "receiver_id", "registrar_id",
+                          "language", "msg_type"]
         fields_prebirth = ["last_period_date", "msg_receiver"]
         fields_postbirth = ["baby_dob", "msg_receiver"]
         fields_loss = ["loss_reason"]
@@ -133,6 +134,25 @@ class ValidateRegistration(Task):
         hw_post = list(set(fields_general) | set(fields_postbirth))
         pbl_loss = list(set(fields_general) | set(fields_loss))
 
+        if "msg_receiver" in registration.data.keys():
+            # Reject registrations on behalf of mother has no unique id for
+            # mother
+            if (registration.data["msg_receiver"] in [
+                "father_only", "trusted_friend", "family_member"] and
+               registration.data["mother_id"] == registration.data[
+               "receiver_id"]):
+                registration.data["invalid_fields"] = "mother requires own id"
+                registration.save()
+                return False
+            # Reject registrations where the mother is the receiver but the
+            # mother_id and receiver_id differs
+            elif (registration.data["msg_receiver"] == "mother_only" and
+                  registration.data["mother_id"] != registration.data[
+                  "receiver_id"]):
+                registration.data["invalid_fields"] = "mother_id should be " \
+                    "the same as receiver_id"
+                registration.save()
+                return False
         # HW registration, prebirth, id
         if (registration.stage == "prebirth" and
                 registration.source.authority in ["hw_limited", "hw_full"] and
@@ -196,7 +216,7 @@ class ValidateRegistration(Task):
            registration.data["msg_receiver"] == "mother"):
 
             mother_sub = {
-                "contact": registration.data["contact"],
+                "contact": registration.data["mother_id"],
                 "version": 1,
                 "messageset_id": 1,  # TODO
                 "next_sequence_number": 1,  # TODO
