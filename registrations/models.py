@@ -77,3 +77,28 @@ def registration_post_save(sender, instance, created, **kwargs):
         from .tasks import validate_registration
         validate_registration.apply_async(
             kwargs={"registration_id": instance.id})
+
+
+class SubscriptionRequest(models.Model):
+    """ A data model that maps to the Stagebased Store
+    Subscription model. Created after a successful Registration
+    validation.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    contact = models.CharField(max_length=36, null=False, blank=False)
+    version = models.IntegerField(default=1)
+    messageset_id = models.IntegerField(null=False, blank=False)
+    next_sequence_number = models.IntegerField(default=1, null=False,
+                                               blank=False)
+    lang = models.CharField(max_length=6, null=False, blank=False)
+    active = models.BooleanField(default=True)
+    completed = models.BooleanField(default=False)
+    schedule = models.IntegerField(default=1)
+    process_status = models.IntegerField(default=0, null=False, blank=False)
+    metadata = JSONField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):  # __unicode__ on Python 2
+        return str(self.id)
