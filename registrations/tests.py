@@ -9,7 +9,8 @@ from rest_framework import status
 from rest_framework.test import APIClient
 from rest_framework.authtoken.models import Token
 
-from .models import Source, Registration, registration_post_save
+from .models import (Source, Registration, SubscriptionRequest,
+                     registration_post_save)
 from .tasks import (
     validate_registration,
     is_valid_date, is_valid_uuid, is_valid_lang, is_valid_msg_type,
@@ -28,23 +29,50 @@ REG_FIELDS = {
 }
 
 REG_DATA = {
+    "hw_pre_mother": {
+        "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
+        "receiver_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
+        "registrar_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
+        "language": "english",
+        "msg_type": "sms",
+        "last_period_date": "20150202",
+        "msg_receiver": "mother_only"
+    },
     "hw_pre_friend": {
-        "mother_id": "fbd73cf6-9d89-4aa6-99ff-13c225365b5d",
-        "receiver_id": "1d0f7a98-73a2-4d89-b045-d52004c025fe",
-        "registrar_id": "d61abbef-6a07-4377-a4f6-c0485ccba234",
+        "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
+        "receiver_id": "friend00-73a2-4d89-b045-d52004c025fe",
+        "registrar_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
         "language": "english",
         "msg_type": "sms",
         "last_period_date": "20150202",
         "msg_receiver": "trusted_friend"
     },
-    "hw_pre_mother": {
-        "mother_id": "fbd73cf6-9d89-4aa6-99ff-13c225365b5d",
-        "receiver_id": "fbd73cf6-9d89-4aa6-99ff-13c225365b5d",
-        "registrar_id": "d61abbef-6a07-4377-a4f6-c0485ccba234",
+    "hw_pre_family": {
+        "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
+        "receiver_id": "friend00-73a2-4d89-b045-d52004c025fe",
+        "registrar_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
         "language": "english",
         "msg_type": "sms",
         "last_period_date": "20150202",
-        "msg_receiver": "mother_only"
+        "msg_receiver": "family_member"
+    },
+    "hw_pre_father": {
+        "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
+        "receiver_id": "father00-73a2-4d89-b045-d52004c025fe",
+        "registrar_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
+        "language": "english",
+        "msg_type": "sms",
+        "last_period_date": "20150202",
+        "msg_receiver": "father_only"
+    },
+    "hw_pre_father_and_mother": {
+        "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
+        "receiver_id": "father00-73a2-4d89-b045-d52004c025fe",
+        "registrar_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
+        "language": "english",
+        "msg_type": "sms",
+        "last_period_date": "20150202",
+        "msg_receiver": "mother_father"
     },
     "hw_post": {
         "mother_id": str(uuid.uuid4()),
@@ -680,3 +708,165 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
         d = Registration.objects.get(id=registration.id)
         self.assertEqual(d.data["invalid_fields"],
                          "mother_id should be the same as receiver_id")
+
+
+class TestSubscriptionRequest(AuthenticatedAPITestCase):
+
+    def test_mother_only(self):
+        # Setup
+        registration_data = {
+            "stage": "prebirth",
+            "data": REG_DATA["hw_pre_mother"].copy(),
+            "source": self.make_source_adminuser()
+        }
+        registration = Registration.objects.create(**registration_data)
+        # Execute
+        result = validate_registration.create_subscriptionrequests(
+            registration)
+        # Check
+        self.assertEqual(result, "1 SubscriptionRequest created")
+        d_mom = SubscriptionRequest.objects.last()
+        self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
+        self.assertEqual(d_mom.version, 1)
+        self.assertEqual(d_mom.messageset_id, 1)
+        self.assertEqual(d_mom.next_sequence_number, 1)
+        self.assertEqual(d_mom.lang, "en_NG")
+        self.assertEqual(d_mom.active, True)
+        self.assertEqual(d_mom.completed, False)
+        self.assertEqual(d_mom.schedule, 1)
+        self.assertEqual(d_mom.process_status, 0)
+        self.assertEqual(d_mom.metadata, {})
+
+    def test_trusted_friend(self):
+        # Setup
+        registration_data = {
+            "stage": "prebirth",
+            "data": REG_DATA["hw_pre_friend"].copy(),
+            "source": self.make_source_adminuser()
+        }
+        registration = Registration.objects.create(**registration_data)
+        # Execute
+        result = validate_registration.create_subscriptionrequests(
+            registration)
+        # Check
+        self.assertEqual(result, "1 SubscriptionRequest created")
+        d_mom = SubscriptionRequest.objects.last()
+        self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
+        self.assertEqual(d_mom.version, 1)
+        self.assertEqual(d_mom.messageset_id, 1)
+        self.assertEqual(d_mom.next_sequence_number, 1)
+        self.assertEqual(d_mom.lang, "en_NG")
+        self.assertEqual(d_mom.active, True)
+        self.assertEqual(d_mom.completed, False)
+        self.assertEqual(d_mom.schedule, 1)
+        self.assertEqual(d_mom.process_status, 0)
+        self.assertEqual(d_mom.metadata, {})
+
+    def test_family_member(self):
+        # Setup
+        registration_data = {
+            "stage": "prebirth",
+            "data": REG_DATA["hw_pre_family"].copy(),
+            "source": self.make_source_adminuser()
+        }
+        registration = Registration.objects.create(**registration_data)
+        # Execute
+        result = validate_registration.create_subscriptionrequests(
+            registration)
+        # Check
+        self.assertEqual(result, "1 SubscriptionRequest created")
+        d_mom = SubscriptionRequest.objects.last()
+        self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
+        self.assertEqual(d_mom.version, 1)
+        self.assertEqual(d_mom.messageset_id, 1)
+        self.assertEqual(d_mom.next_sequence_number, 1)
+        self.assertEqual(d_mom.lang, "en_NG")
+        self.assertEqual(d_mom.active, True)
+        self.assertEqual(d_mom.completed, False)
+        self.assertEqual(d_mom.schedule, 1)
+        self.assertEqual(d_mom.process_status, 0)
+        self.assertEqual(d_mom.metadata, {})
+
+    def test_father_only(self):
+        # Setup
+        registration_data = {
+            "stage": "prebirth",
+            "data": REG_DATA["hw_pre_father"].copy(),
+            "source": self.make_source_adminuser()
+        }
+        registration = Registration.objects.create(**registration_data)
+
+        # Execute
+        result = validate_registration.create_subscriptionrequests(
+            registration)
+
+        # Check
+        self.assertEqual(result, "2 SubscriptionRequests created")
+
+        d_mom = SubscriptionRequest.objects.get(
+            contact="mother00-9d89-4aa6-99ff-13c225365b5d")
+        self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
+        self.assertEqual(d_mom.version, 1)
+        self.assertEqual(d_mom.messageset_id, 1)
+        self.assertEqual(d_mom.next_sequence_number, 1)
+        self.assertEqual(d_mom.lang, "en_NG")
+        self.assertEqual(d_mom.active, True)
+        self.assertEqual(d_mom.completed, False)
+        self.assertEqual(d_mom.schedule, 1)
+        self.assertEqual(d_mom.process_status, 0)
+        self.assertEqual(d_mom.metadata, {})
+
+        d_dad = SubscriptionRequest.objects.get(
+            contact="father00-73a2-4d89-b045-d52004c025fe")
+        self.assertEqual(d_dad.contact, "father00-73a2-4d89-b045-d52004c025fe")
+        self.assertEqual(d_dad.version, 1)
+        self.assertEqual(d_dad.messageset_id, 2)
+        self.assertEqual(d_dad.next_sequence_number, 1)
+        self.assertEqual(d_dad.lang, "en_NG")
+        self.assertEqual(d_dad.active, True)
+        self.assertEqual(d_dad.completed, False)
+        self.assertEqual(d_dad.schedule, 1)
+        self.assertEqual(d_dad.process_status, 0)
+        self.assertEqual(d_dad.metadata, {})
+
+    def test_mother_and_father(self):
+        # Setup
+        registration_data = {
+            "stage": "prebirth",
+            "data": REG_DATA["hw_pre_father"].copy(),
+            "source": self.make_source_adminuser()
+        }
+        registration = Registration.objects.create(**registration_data)
+
+        # Execute
+        result = validate_registration.create_subscriptionrequests(
+            registration)
+
+        # Check
+        self.assertEqual(result, "2 SubscriptionRequests created")
+
+        d_mom = SubscriptionRequest.objects.get(
+            contact="mother00-9d89-4aa6-99ff-13c225365b5d")
+        self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
+        self.assertEqual(d_mom.version, 1)
+        self.assertEqual(d_mom.messageset_id, 1)
+        self.assertEqual(d_mom.next_sequence_number, 1)
+        self.assertEqual(d_mom.lang, "en_NG")
+        self.assertEqual(d_mom.active, True)
+        self.assertEqual(d_mom.completed, False)
+        self.assertEqual(d_mom.schedule, 1)
+        self.assertEqual(d_mom.process_status, 0)
+        self.assertEqual(d_mom.metadata, {})
+
+        d_dad = SubscriptionRequest.objects.get(
+            contact="father00-73a2-4d89-b045-d52004c025fe")
+        self.assertEqual(d_dad.contact, "father00-73a2-4d89-b045-d52004c025fe")
+        self.assertEqual(d_dad.version, 1)
+        self.assertEqual(d_dad.messageset_id, 2)
+        self.assertEqual(d_dad.next_sequence_number, 1)
+        self.assertEqual(d_dad.lang, "en_NG")
+        self.assertEqual(d_dad.active, True)
+        self.assertEqual(d_dad.completed, False)
+        self.assertEqual(d_dad.schedule, 1)
+        self.assertEqual(d_dad.process_status, 0)
+        self.assertEqual(d_dad.metadata, {})

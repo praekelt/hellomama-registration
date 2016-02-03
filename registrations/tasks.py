@@ -208,17 +208,30 @@ class ValidateRegistration(Task):
             registration.save()
             return False
 
-    def create_subscriptionrequest(self, registration):
+    def create_subscriptionrequests(self, registration):
         """ Create SubscriptionRequest(s) based on the
         validated registration.
         """
-        if (registration.data["reg_type"] == "hw_pre" and
-           registration.data["msg_receiver"] == "mother"):
+        mother_sub = {
+            "contact": registration.data["mother_id"],
+            "version": 1,
+            "messageset_id": 1,  # TODO
+            "next_sequence_number": 1,  # TODO
+            "lang": LANG_CODES[registration.data["language"]],
+            "active": True,
+            "completed": False,
+            "schedule": 1,  # TODO
+            "process_status": 0,
+            "metadata": {}
+        }
+        SubscriptionRequest.objects.create(**mother_sub)
 
-            mother_sub = {
-                "contact": registration.data["mother_id"],
+        if registration.data["msg_receiver"] in ["father_only",
+                                                 "mother_father"]:
+            father_sub = {
+                "contact": registration.data["receiver_id"],
                 "version": 1,
-                "messageset_id": 1,  # TODO
+                "messageset_id": 2,  # TODO
                 "next_sequence_number": 1,  # TODO
                 "lang": LANG_CODES[registration.data["language"]],
                 "active": True,
@@ -227,7 +240,10 @@ class ValidateRegistration(Task):
                 "process_status": 0,
                 "metadata": {}
             }
-            SubscriptionRequest.objects.create(**mother_sub)
+            SubscriptionRequest.objects.create(**father_sub)
+            return "2 SubscriptionRequests created"
+
+        return "1 SubscriptionRequest created"
 
     def run(self, registration_id, **kwargs):
         """ Sets the registration's validated field to True if
@@ -240,7 +256,7 @@ class ValidateRegistration(Task):
 
         validation_string = "Validation completed - "
         if reg_validates:
-            self.create_subscriptionrequest(registration)
+            self.create_subscriptionrequests(registration)
             validation_string += "Success"
         else:
             validation_string += "Failure"
