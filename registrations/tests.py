@@ -9,7 +9,8 @@ from rest_framework import status
 from rest_framework.test import APIClient
 from rest_framework.authtoken.models import Token
 
-from .models import Source, Registration, registration_post_save
+from .models import (Source, Registration, SubscriptionRequest,
+                     registration_post_save)
 from .tasks import (
     validate_registration,
     is_valid_date, is_valid_uuid, is_valid_lang, is_valid_msg_type,
@@ -22,53 +23,95 @@ def override_get_today():
 
 
 REG_FIELDS = {
-    "hw_pre": [
-        "contact", "registered_by", "language", "msg_type",
+    "hw_pre_friend": [
+        "mother_id", "operator_id", "language", "msg_type",
         "last_period_date", "msg_receiver"]
 }
 
 REG_DATA = {
-    "hw_pre": {
-        "contact": str(uuid.uuid4()),
-        "registered_by": str(uuid.uuid4()),
+    "hw_pre_mother": {
+        "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
+        "receiver_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
+        "operator_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
+        "language": "english",
+        "msg_type": "sms",
+        "last_period_date": "20150202",
+        "msg_receiver": "mother_only"
+    },
+    "hw_pre_friend": {
+        "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
+        "receiver_id": "friend00-73a2-4d89-b045-d52004c025fe",
+        "operator_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
         "language": "english",
         "msg_type": "sms",
         "last_period_date": "20150202",
         "msg_receiver": "trusted_friend"
     },
+    "hw_pre_family": {
+        "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
+        "receiver_id": "friend00-73a2-4d89-b045-d52004c025fe",
+        "operator_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
+        "language": "english",
+        "msg_type": "sms",
+        "last_period_date": "20150202",
+        "msg_receiver": "family_member"
+    },
+    "hw_pre_father": {
+        "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
+        "receiver_id": "father00-73a2-4d89-b045-d52004c025fe",
+        "operator_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
+        "language": "english",
+        "msg_type": "sms",
+        "last_period_date": "20150202",
+        "msg_receiver": "father_only"
+    },
+    "hw_pre_father_and_mother": {
+        "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
+        "receiver_id": "father00-73a2-4d89-b045-d52004c025fe",
+        "operator_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
+        "language": "english",
+        "msg_type": "sms",
+        "last_period_date": "20150202",
+        "msg_receiver": "mother_father"
+    },
     "hw_post": {
-        "contact": str(uuid.uuid4()),
-        "registered_by": str(uuid.uuid4()),
+        "mother_id": str(uuid.uuid4()),
+        "receiver_id": str(uuid.uuid4()),
+        "operator_id": str(uuid.uuid4()),
         "language": "english",
         "msg_type": "sms",
         "baby_dob": "20150202",
         "msg_receiver": "trusted_friend"
     },
     "pbl_loss": {
-        "contact": str(uuid.uuid4()),
-        "registered_by": str(uuid.uuid4()),
+        "mother_id": str(uuid.uuid4()),
+        "receiver_id": str(uuid.uuid4()),
+        "operator_id": str(uuid.uuid4()),
         "language": "english",
         "msg_type": "sms",
         "loss_reason": "miscarriage"
     },
     "missing_field": {
-        "contact": str(uuid.uuid4()),
-        "registered_by": str(uuid.uuid4()),
+        "mother_id": str(uuid.uuid4()),
+        "receiver_id": str(uuid.uuid4()),
+        "operator_id": str(uuid.uuid4()),
         "language": "english",
         "msg_type": "sms",
         "last_period_date": "20150202",
     },
     "bad_fields": {
-        "contact": str(uuid.uuid4()),
-        "registered_by": str(uuid.uuid4()),
+        "mother_id": str(uuid.uuid4()),
+        "receiver_id": str(uuid.uuid4()),
+        "operator_id": str(uuid.uuid4()),
         "language": "english",
         "msg_type": "sms",
         "last_period_date": "2015020",
         "msg_receiver": "trusted friend"
     },
     "bad_lmp": {
-        "contact": str(uuid.uuid4()),
-        "registered_by": str(uuid.uuid4()),
+        "mother_id": str(uuid.uuid4()),
+        "receiver_id": str(uuid.uuid4()),
+        "operator_id": str(uuid.uuid4()),
         "language": "english",
         "msg_type": "sms",
         "last_period_date": "20140202",
@@ -429,7 +472,7 @@ class TestFieldValidation(AuthenticatedAPITestCase):
 
     def test_is_valid_msg_receiver(self):
         # Setup
-        valid_msg_receiver = "father"
+        valid_msg_receiver = "father_only"
         invalid_msg_receiver = "mama"
         # Execute
         # Check
@@ -447,14 +490,14 @@ class TestFieldValidation(AuthenticatedAPITestCase):
 
     def test_check_field_values(self):
         # Setup
-        valid_hw_pre_registration_data = REG_DATA["hw_pre"]
-        invalid_hw_pre_registration_data = REG_DATA["hw_pre"].copy()
+        valid_hw_pre_registration_data = REG_DATA["hw_pre_friend"].copy()
+        invalid_hw_pre_registration_data = REG_DATA["hw_pre_friend"].copy()
         invalid_hw_pre_registration_data["msg_receiver"] = "somebody"
         # Execute
         cfv_valid = validate_registration.check_field_values(
-            REG_FIELDS["hw_pre"], valid_hw_pre_registration_data)
+            REG_FIELDS["hw_pre_friend"], valid_hw_pre_registration_data)
         cfv_invalid = validate_registration.check_field_values(
-            REG_FIELDS["hw_pre"], invalid_hw_pre_registration_data)
+            REG_FIELDS["hw_pre_friend"], invalid_hw_pre_registration_data)
         # Check
         self.assertEqual(cfv_valid, [])
         self.assertEqual(cfv_invalid, ['msg_receiver'])
@@ -466,7 +509,7 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
         # Setup
         registration_data = {
             "stage": "prebirth",
-            "data": REG_DATA["hw_pre"],
+            "data": REG_DATA["hw_pre_friend"].copy(),
             "source": self.make_source_adminuser()
         }
         registration = Registration.objects.create(**registration_data)
@@ -482,7 +525,7 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
         # Setup
         registration_data = {
             "stage": "postbirth",
-            "data": REG_DATA["hw_post"],
+            "data": REG_DATA["hw_post"].copy(),
             "source": self.make_source_adminuser()
         }
         registration = Registration.objects.create(**registration_data)
@@ -498,7 +541,7 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
         # Setup
         registration_data = {
             "stage": "loss",
-            "data": REG_DATA["pbl_loss"],
+            "data": REG_DATA["pbl_loss"].copy(),
             "source": self.make_source_normaluser()
         }
         registration = Registration.objects.create(**registration_data)
@@ -513,7 +556,7 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
         # Setup
         registration_data = {
             "stage": "prebirth",
-            "data": REG_DATA["hw_pre"].copy(),
+            "data": REG_DATA["hw_pre_friend"].copy(),
             "source": self.make_source_adminuser()
         }
         registration_data["data"]["last_period_date"] = "20130101"
@@ -528,7 +571,7 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
         # Setup
         registration_data = {
             "stage": "prebirth",
-            "data": REG_DATA["hw_pre"].copy(),
+            "data": REG_DATA["hw_pre_friend"].copy(),
             "source": self.make_source_adminuser()
         }
         registration_data["data"]["last_period_date"] = "20150816"
@@ -573,7 +616,7 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
         # Setup
         registration_data = {
             "stage": "prebirth",
-            "data": REG_DATA["hw_pre"],
+            "data": REG_DATA["hw_pre_friend"].copy(),
             "source": self.make_source_adminuser()
         }
         registration = Registration.objects.create(**registration_data)
@@ -586,7 +629,7 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
         # Setup
         registration_data = {
             "stage": "prebirth",
-            "data": REG_DATA["missing_field"],
+            "data": REG_DATA["missing_field"].copy(),
             "source": self.make_source_adminuser()
         }
         registration = Registration.objects.create(**registration_data)
@@ -602,7 +645,7 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
         # Setup
         registration_data = {
             "stage": "prebirth",
-            "data": REG_DATA["bad_fields"],
+            "data": REG_DATA["bad_fields"].copy(),
             "source": self.make_source_adminuser()
         }
         registration = Registration.objects.create(**registration_data)
@@ -618,7 +661,7 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
         # Setup
         registration_data = {
             "stage": "prebirth",
-            "data": REG_DATA["bad_lmp"],
+            "data": REG_DATA["bad_lmp"].copy(),
             "source": self.make_source_adminuser()
         }
         registration = Registration.objects.create(**registration_data)
@@ -629,3 +672,166 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
         d = Registration.objects.get(id=registration.id)
         self.assertEqual(d.data["invalid_fields"],
                          ["last_period_date out of range"])
+
+    def test_validate_registration_run_failure_receiver_id(self):
+        # Setup
+        registration_data = {
+            "stage": "prebirth",
+            "data": REG_DATA["hw_pre_friend"].copy(),
+            "source": self.make_source_adminuser()
+        }
+        # reg_data = registration_data.copy()
+        registration_data["data"]["receiver_id"] = registration_data[
+            "data"]["mother_id"]
+        registration = Registration.objects.create(**registration_data)
+        # Execute
+        result = validate_registration.apply_async(args=[registration.id])
+        # Check
+        self.assertEqual(result.get(), "Validation completed - Failure")
+        d = Registration.objects.get(id=registration.id)
+        self.assertEqual(d.data["invalid_fields"], "mother requires own id")
+
+    def test_validate_registration_run_failure_mother_id(self):
+        # Setup
+        registration_data = {
+            "stage": "prebirth",
+            "data": REG_DATA["hw_pre_mother"].copy(),
+            "source": self.make_source_adminuser()
+        }
+        # reg_data = registration_data.copy()
+        registration_data["data"]["receiver_id"] = str(uuid.uuid4())
+        registration = Registration.objects.create(**registration_data)
+        # Execute
+        result = validate_registration.apply_async(args=[registration.id])
+        # Check
+        self.assertEqual(result.get(), "Validation completed - Failure")
+        d = Registration.objects.get(id=registration.id)
+        self.assertEqual(d.data["invalid_fields"],
+                         "mother_id should be the same as receiver_id")
+
+
+class TestSubscriptionRequest(AuthenticatedAPITestCase):
+
+    def test_mother_only(self):
+        # Setup
+        registration_data = {
+            "stage": "prebirth",
+            "data": REG_DATA["hw_pre_mother"].copy(),
+            "source": self.make_source_adminuser()
+        }
+        registration = Registration.objects.create(**registration_data)
+        # Execute
+        result = validate_registration.create_subscriptionrequests(
+            registration)
+        # Check
+        self.assertEqual(result, "1 SubscriptionRequest created")
+        d_mom = SubscriptionRequest.objects.last()
+        self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
+        self.assertEqual(d_mom.messageset_id, 1)
+        self.assertEqual(d_mom.next_sequence_number, 1)
+        self.assertEqual(d_mom.lang, "en_NG")
+        self.assertEqual(d_mom.schedule, 1)
+
+    def test_trusted_friend(self):
+        # Setup
+        registration_data = {
+            "stage": "prebirth",
+            "data": REG_DATA["hw_pre_friend"].copy(),
+            "source": self.make_source_adminuser()
+        }
+        registration = Registration.objects.create(**registration_data)
+        # Execute
+        result = validate_registration.create_subscriptionrequests(
+            registration)
+        # Check
+        self.assertEqual(result, "1 SubscriptionRequest created")
+        d_mom = SubscriptionRequest.objects.last()
+        self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
+        self.assertEqual(d_mom.messageset_id, 1)
+        self.assertEqual(d_mom.next_sequence_number, 1)
+        self.assertEqual(d_mom.lang, "en_NG")
+        self.assertEqual(d_mom.schedule, 1)
+
+    def test_family_member(self):
+        # Setup
+        registration_data = {
+            "stage": "prebirth",
+            "data": REG_DATA["hw_pre_family"].copy(),
+            "source": self.make_source_adminuser()
+        }
+        registration = Registration.objects.create(**registration_data)
+        # Execute
+        result = validate_registration.create_subscriptionrequests(
+            registration)
+        # Check
+        self.assertEqual(result, "1 SubscriptionRequest created")
+        d_mom = SubscriptionRequest.objects.last()
+        self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
+        self.assertEqual(d_mom.messageset_id, 1)
+        self.assertEqual(d_mom.next_sequence_number, 1)
+        self.assertEqual(d_mom.lang, "en_NG")
+        self.assertEqual(d_mom.schedule, 1)
+
+    def test_father_only(self):
+        # Setup
+        registration_data = {
+            "stage": "prebirth",
+            "data": REG_DATA["hw_pre_father"].copy(),
+            "source": self.make_source_adminuser()
+        }
+        registration = Registration.objects.create(**registration_data)
+
+        # Execute
+        result = validate_registration.create_subscriptionrequests(
+            registration)
+
+        # Check
+        self.assertEqual(result, "2 SubscriptionRequests created")
+
+        d_mom = SubscriptionRequest.objects.get(
+            contact="mother00-9d89-4aa6-99ff-13c225365b5d")
+        self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
+        self.assertEqual(d_mom.messageset_id, 1)
+        self.assertEqual(d_mom.next_sequence_number, 1)
+        self.assertEqual(d_mom.lang, "en_NG")
+        self.assertEqual(d_mom.schedule, 1)
+
+        d_dad = SubscriptionRequest.objects.get(
+            contact="father00-73a2-4d89-b045-d52004c025fe")
+        self.assertEqual(d_dad.contact, "father00-73a2-4d89-b045-d52004c025fe")
+        self.assertEqual(d_dad.messageset_id, 2)
+        self.assertEqual(d_dad.next_sequence_number, 1)
+        self.assertEqual(d_dad.lang, "en_NG")
+        self.assertEqual(d_dad.schedule, 1)
+
+    def test_mother_and_father(self):
+        # Setup
+        registration_data = {
+            "stage": "prebirth",
+            "data": REG_DATA["hw_pre_father"].copy(),
+            "source": self.make_source_adminuser()
+        }
+        registration = Registration.objects.create(**registration_data)
+
+        # Execute
+        result = validate_registration.create_subscriptionrequests(
+            registration)
+
+        # Check
+        self.assertEqual(result, "2 SubscriptionRequests created")
+
+        d_mom = SubscriptionRequest.objects.get(
+            contact="mother00-9d89-4aa6-99ff-13c225365b5d")
+        self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
+        self.assertEqual(d_mom.messageset_id, 1)
+        self.assertEqual(d_mom.next_sequence_number, 1)
+        self.assertEqual(d_mom.lang, "en_NG")
+        self.assertEqual(d_mom.schedule, 1)
+
+        d_dad = SubscriptionRequest.objects.get(
+            contact="father00-73a2-4d89-b045-d52004c025fe")
+        self.assertEqual(d_dad.contact, "father00-73a2-4d89-b045-d52004c025fe")
+        self.assertEqual(d_dad.messageset_id, 2)
+        self.assertEqual(d_dad.next_sequence_number, 1)
+        self.assertEqual(d_dad.lang, "en_NG")
+        self.assertEqual(d_dad.schedule, 1)
