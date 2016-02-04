@@ -24,7 +24,7 @@ def override_get_today():
 
 REG_FIELDS = {
     "hw_pre_friend": [
-        "mother_id", "registrar_id", "language", "msg_type",
+        "mother_id", "operator_id", "language", "msg_type",
         "last_period_date", "msg_receiver"]
 }
 
@@ -32,7 +32,7 @@ REG_DATA = {
     "hw_pre_mother": {
         "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
         "receiver_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
-        "registrar_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
+        "operator_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
         "language": "english",
         "msg_type": "sms",
         "last_period_date": "20150202",
@@ -41,7 +41,7 @@ REG_DATA = {
     "hw_pre_friend": {
         "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
         "receiver_id": "friend00-73a2-4d89-b045-d52004c025fe",
-        "registrar_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
+        "operator_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
         "language": "english",
         "msg_type": "sms",
         "last_period_date": "20150202",
@@ -50,7 +50,7 @@ REG_DATA = {
     "hw_pre_family": {
         "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
         "receiver_id": "friend00-73a2-4d89-b045-d52004c025fe",
-        "registrar_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
+        "operator_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
         "language": "english",
         "msg_type": "sms",
         "last_period_date": "20150202",
@@ -59,7 +59,7 @@ REG_DATA = {
     "hw_pre_father": {
         "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
         "receiver_id": "father00-73a2-4d89-b045-d52004c025fe",
-        "registrar_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
+        "operator_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
         "language": "english",
         "msg_type": "sms",
         "last_period_date": "20150202",
@@ -68,7 +68,7 @@ REG_DATA = {
     "hw_pre_father_and_mother": {
         "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
         "receiver_id": "father00-73a2-4d89-b045-d52004c025fe",
-        "registrar_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
+        "operator_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
         "language": "english",
         "msg_type": "sms",
         "last_period_date": "20150202",
@@ -77,7 +77,7 @@ REG_DATA = {
     "hw_post": {
         "mother_id": str(uuid.uuid4()),
         "receiver_id": str(uuid.uuid4()),
-        "registrar_id": str(uuid.uuid4()),
+        "operator_id": str(uuid.uuid4()),
         "language": "english",
         "msg_type": "sms",
         "baby_dob": "20150202",
@@ -86,7 +86,7 @@ REG_DATA = {
     "pbl_loss": {
         "mother_id": str(uuid.uuid4()),
         "receiver_id": str(uuid.uuid4()),
-        "registrar_id": str(uuid.uuid4()),
+        "operator_id": str(uuid.uuid4()),
         "language": "english",
         "msg_type": "sms",
         "loss_reason": "miscarriage"
@@ -94,7 +94,7 @@ REG_DATA = {
     "missing_field": {
         "mother_id": str(uuid.uuid4()),
         "receiver_id": str(uuid.uuid4()),
-        "registrar_id": str(uuid.uuid4()),
+        "operator_id": str(uuid.uuid4()),
         "language": "english",
         "msg_type": "sms",
         "last_period_date": "20150202",
@@ -102,7 +102,7 @@ REG_DATA = {
     "bad_fields": {
         "mother_id": str(uuid.uuid4()),
         "receiver_id": str(uuid.uuid4()),
-        "registrar_id": str(uuid.uuid4()),
+        "operator_id": str(uuid.uuid4()),
         "language": "english",
         "msg_type": "sms",
         "last_period_date": "2015020",
@@ -111,7 +111,7 @@ REG_DATA = {
     "bad_lmp": {
         "mother_id": str(uuid.uuid4()),
         "receiver_id": str(uuid.uuid4()),
-        "registrar_id": str(uuid.uuid4()),
+        "operator_id": str(uuid.uuid4()),
         "language": "english",
         "msg_type": "sms",
         "last_period_date": "20140202",

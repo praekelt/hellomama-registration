@@ -87,7 +87,7 @@ class ValidateRegistration(Task):
     def check_field_values(self, fields, registration_data):
         failures = []
         for field in fields:
-            if field in ["mother_id", "receiver_id", "registrar_id"]:
+            if field in ["mother_id", "receiver_id", "operator_id"]:
                 if not is_valid_uuid(registration_data[field]):
                     failures.append(field)
             if field == "language":
@@ -124,7 +124,7 @@ class ValidateRegistration(Task):
         registration.
         """
         data_fields = registration.data.keys()
-        fields_general = ["mother_id", "receiver_id", "registrar_id",
+        fields_general = ["mother_id", "receiver_id", "operator_id",
                           "language", "msg_type"]
         fields_prebirth = ["last_period_date", "msg_receiver"]
         fields_postbirth = ["baby_dob", "msg_receiver"]
