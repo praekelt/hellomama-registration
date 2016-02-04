@@ -727,15 +727,10 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         self.assertEqual(result, "1 SubscriptionRequest created")
         d_mom = SubscriptionRequest.objects.last()
         self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
-        self.assertEqual(d_mom.version, 1)
         self.assertEqual(d_mom.messageset_id, 1)
         self.assertEqual(d_mom.next_sequence_number, 1)
         self.assertEqual(d_mom.lang, "en_NG")
-        self.assertEqual(d_mom.active, True)
-        self.assertEqual(d_mom.completed, False)
         self.assertEqual(d_mom.schedule, 1)
-        self.assertEqual(d_mom.process_status, 0)
-        self.assertEqual(d_mom.metadata, {})
 
     def test_trusted_friend(self):
         # Setup
@@ -752,15 +747,10 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         self.assertEqual(result, "1 SubscriptionRequest created")
         d_mom = SubscriptionRequest.objects.last()
         self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
-        self.assertEqual(d_mom.version, 1)
         self.assertEqual(d_mom.messageset_id, 1)
         self.assertEqual(d_mom.next_sequence_number, 1)
         self.assertEqual(d_mom.lang, "en_NG")
-        self.assertEqual(d_mom.active, True)
-        self.assertEqual(d_mom.completed, False)
         self.assertEqual(d_mom.schedule, 1)
-        self.assertEqual(d_mom.process_status, 0)
-        self.assertEqual(d_mom.metadata, {})
 
     def test_family_member(self):
         # Setup
@@ -777,15 +767,10 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         self.assertEqual(result, "1 SubscriptionRequest created")
         d_mom = SubscriptionRequest.objects.last()
         self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
-        self.assertEqual(d_mom.version, 1)
         self.assertEqual(d_mom.messageset_id, 1)
         self.assertEqual(d_mom.next_sequence_number, 1)
         self.assertEqual(d_mom.lang, "en_NG")
-        self.assertEqual(d_mom.active, True)
-        self.assertEqual(d_mom.completed, False)
         self.assertEqual(d_mom.schedule, 1)
-        self.assertEqual(d_mom.process_status, 0)
-        self.assertEqual(d_mom.metadata, {})
 
     def test_father_only(self):
         # Setup
@@ -806,28 +791,18 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         d_mom = SubscriptionRequest.objects.get(
             contact="mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
-        self.assertEqual(d_mom.version, 1)
         self.assertEqual(d_mom.messageset_id, 1)
         self.assertEqual(d_mom.next_sequence_number, 1)
         self.assertEqual(d_mom.lang, "en_NG")
-        self.assertEqual(d_mom.active, True)
-        self.assertEqual(d_mom.completed, False)
         self.assertEqual(d_mom.schedule, 1)
-        self.assertEqual(d_mom.process_status, 0)
-        self.assertEqual(d_mom.metadata, {})
 
         d_dad = SubscriptionRequest.objects.get(
             contact="father00-73a2-4d89-b045-d52004c025fe")
         self.assertEqual(d_dad.contact, "father00-73a2-4d89-b045-d52004c025fe")
-        self.assertEqual(d_dad.version, 1)
         self.assertEqual(d_dad.messageset_id, 2)
         self.assertEqual(d_dad.next_sequence_number, 1)
         self.assertEqual(d_dad.lang, "en_NG")
-        self.assertEqual(d_dad.active, True)
-        self.assertEqual(d_dad.completed, False)
         self.assertEqual(d_dad.schedule, 1)
-        self.assertEqual(d_dad.process_status, 0)
-        self.assertEqual(d_dad.metadata, {})
 
     def test_mother_and_father(self):
         # Setup
@@ -848,25 +823,15 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         d_mom = SubscriptionRequest.objects.get(
             contact="mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
-        self.assertEqual(d_mom.version, 1)
         self.assertEqual(d_mom.messageset_id, 1)
         self.assertEqual(d_mom.next_sequence_number, 1)
         self.assertEqual(d_mom.lang, "en_NG")
-        self.assertEqual(d_mom.active, True)
-        self.assertEqual(d_mom.completed, False)
         self.assertEqual(d_mom.schedule, 1)
-        self.assertEqual(d_mom.process_status, 0)
-        self.assertEqual(d_mom.metadata, {})
 
         d_dad = SubscriptionRequest.objects.get(
             contact="father00-73a2-4d89-b045-d52004c025fe")
         self.assertEqual(d_dad.contact, "father00-73a2-4d89-b045-d52004c025fe")
-        self.assertEqual(d_dad.version, 1)
         self.assertEqual(d_dad.messageset_id, 2)
         self.assertEqual(d_dad.next_sequence_number, 1)
         self.assertEqual(d_dad.lang, "en_NG")
-        self.assertEqual(d_dad.active, True)
-        self.assertEqual(d_dad.completed, False)
         self.assertEqual(d_dad.schedule, 1)
-        self.assertEqual(d_dad.process_status, 0)
-        self.assertEqual(d_dad.metadata, {})

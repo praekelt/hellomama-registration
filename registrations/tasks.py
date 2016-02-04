@@ -214,15 +214,10 @@ class ValidateRegistration(Task):
         """
         mother_sub = {
             "contact": registration.data["mother_id"],
-            "version": 1,
             "messageset_id": 1,  # TODO
             "next_sequence_number": 1,  # TODO
             "lang": LANG_CODES[registration.data["language"]],
-            "active": True,
-            "completed": False,
             "schedule": 1,  # TODO
-            "process_status": 0,
-            "metadata": {}
         }
         SubscriptionRequest.objects.create(**mother_sub)
 
@@ -230,15 +225,10 @@ class ValidateRegistration(Task):
                                                  "mother_father"]:
             father_sub = {
                 "contact": registration.data["receiver_id"],
-                "version": 1,
                 "messageset_id": 2,  # TODO
                 "next_sequence_number": 1,  # TODO
                 "lang": LANG_CODES[registration.data["language"]],
-                "active": True,
-                "completed": False,
                 "schedule": 1,  # TODO
-                "process_status": 0,
-                "metadata": {}
             }
             SubscriptionRequest.objects.create(**father_sub)
             return "2 SubscriptionRequests created"
