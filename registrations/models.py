@@ -5,8 +5,10 @@ from django.contrib.auth.models import User
 from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.utils.encoding import python_2_unicode_compatible
 
 
+@python_2_unicode_compatible
 class Source(models.Model):
     """ The source from which a registation originates.
         The User foreignkey is used to identify the source based on the
@@ -25,10 +27,11 @@ class Source(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    def __unicode__(self):
-        return u"%s" % self.name
+    def __str__(self):
+        return "%s" % self.name
 
 
+@python_2_unicode_compatible
 class Registration(models.Model):
     """ A registation submitted via Vumi or other sources.
 
@@ -65,7 +68,7 @@ class Registration(models.Model):
                                    null=True)
     user = property(lambda self: self.created_by)
 
-    def __str__(self):  # __unicode__ on Python 2
+    def __str__(self):
         return str(self.id)
 
 
@@ -76,9 +79,10 @@ def registration_post_save(sender, instance, created, **kwargs):
     if created:
         from .tasks import validate_registration
         validate_registration.apply_async(
-            kwargs={"registration_id": instance.id})
+            kwargs={"registration_id": str(instance.id)})
 
 
+@python_2_unicode_compatible
 class SubscriptionRequest(models.Model):
     """ A data model that maps to the Stagebased Store
     Subscription model. Created after a successful Registration
@@ -95,5 +99,5 @@ class SubscriptionRequest(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    def __str__(self):  # __unicode__ on Python 2
+    def __str__(self):
         return str(self.id)

@@ -81,8 +81,7 @@ class ValidateRegistration(Task):
     """ Task to validate a registration model entry's registration
     data.
     """
-    name = "hellomama_registration.registrations.tasks.\
-    validate_registration"
+    name = "hellomama_registration.registrations.tasks.validate_registration"
 
     def check_field_values(self, fields, registration_data):
         failures = []
