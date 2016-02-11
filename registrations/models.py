@@ -79,7 +79,7 @@ def registration_post_save(sender, instance, created, **kwargs):
     if created:
         from .tasks import validate_registration
         validate_registration.apply_async(
-            kwargs={"registration_id": instance.id})
+            kwargs={"registration_id": str(instance.id)})
 
 
 @python_2_unicode_compatible
