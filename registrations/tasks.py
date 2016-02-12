@@ -10,12 +10,12 @@ logger = get_task_logger(__name__)
 
 
 LANG_CODES = {
-    "english": "en_NG",
-    "hausa": "ha_NG",
-    "igbo": "ig_NG",
-    "en": "en_NG",
-    "ha": "ha_NG",
-    "ig": "ig_NG"
+    "english": "eng_NG",
+    "hausa": "hau_NG",
+    "igbo": "ibo_NG",
+    "en": "eng_NG",
+    "ha": "hau_NG",
+    "ig": "ibo_NG"
 }
 
 
