@@ -48,6 +48,7 @@ INSTALLED_APPS = (
     'rest_framework',
     'rest_framework.authtoken',
     'django_filters',
+    'rest_hooks',
     # us
     'registrations',
 
@@ -128,6 +129,14 @@ REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': ('rest_framework.filters.DjangoFilterBackend',)
 }
 
+# Webhook event definition
+HOOK_EVENTS = {
+    # 'any.event.name': 'App.Model.Action' (created/updated/deleted)
+    'subscriptionrequest.added': 'registrations.SubscriptionRequest.created+'
+}
+
+HOOK_DELIVERER = 'registrations.tasks.deliver_hook_wrapper'
+
 # Celery configuration options
 CELERY_RESULT_BACKEND = 'djcelery.backends.database:DatabaseBackend'
 CELERYBEAT_SCHEDULER = 'djcelery.schedulers.DatabaseScheduler'
@@ -154,6 +163,9 @@ CELERY_ROUTES = {
         'queue': 'mediumpriority',
     },
     'registrations.tasks.validate_registration': {
+        'queue': 'priority',
+    },
+    'registrations.tasks.deliver_hook_wrapper': {
         'queue': 'priority',
     },
 }

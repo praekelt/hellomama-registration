@@ -22,7 +22,8 @@ setup(
         'django-celery==3.1.17',
         'redis==2.10.5',
         'pytz==2015.7',
-        'six==1.10.0'
+        'six==1.10.0',
+        'django-rest-hooks==1.2.1',
     ],
     classifiers=[
         'Development Status :: 4 - Beta',

@@ -1,2 +1,3 @@
 # Our dependencies are all specified in setup.py.
+git+https://github.com/zapier/django-rest-hooks
 -e .
