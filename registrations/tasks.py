@@ -1,4 +1,6 @@
 import datetime
+import json
+import requests
 
 from celery.task import Task
 from celery.utils.log import get_task_logger
@@ -20,7 +22,7 @@ LANG_CODES = {
 
 
 def get_today():
-    return datetime.today()
+    return datetime.datetime.today()
 
 
 def is_valid_date(date):
@@ -253,3 +255,20 @@ class ValidateRegistration(Task):
         return validation_string
 
 validate_registration = ValidateRegistration()
+
+class DeliverHook(Task):
+    def run(self, target, payload, instance=None, hook=None, **kwargs):
+        """
+        target:     the url to receive the payload.
+        payload:    a python primitive data structure
+        instance:   a possibly null "trigger" instance
+        hook:       the defining Hook object
+        """
+        resp = requests.post(
+            url=target,
+            data=json.dumps(payload),
+            headers={'Content-Type': 'application/json'}
+        )
+        print(resp.status_code)
+
+deliver_hook_wrapper = DeliverHook.delay
