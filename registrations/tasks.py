@@ -256,6 +256,7 @@ class ValidateRegistration(Task):
 
 validate_registration = ValidateRegistration()
 
+
 class DeliverHook(Task):
     def run(self, target, payload, instance=None, hook=None, **kwargs):
         """

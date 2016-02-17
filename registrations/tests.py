@@ -1,7 +1,6 @@
 ﻿import json
 import uuid
 import datetime
-import responses
 
 from django.contrib.auth.models import User
 from django.test import TestCase
@@ -12,7 +11,7 @@ from rest_framework.authtoken.models import Token
 
 from .models import (Source, Registration, SubscriptionRequest,
                      registration_post_save)
-from rest_hooks.models import model_saved, Hook
+from rest_hooks.models import model_saved
 from .tasks import (
     validate_registration,
     is_valid_date, is_valid_uuid, is_valid_lang, is_valid_msg_type,
@@ -139,8 +138,10 @@ class AuthenticatedAPITestCase(APITestCase):
         assert has_listeners(), (
             "Registration model has no post_save listeners. Make sure"
             " helpers cleaned up properly in earlier tests.")
-        post_save.disconnect(receiver=registration_post_save, sender=Registration)
-        post_save.disconnect(receiver=model_saved, dispatch_uid='instance-saved-hook')
+        post_save.disconnect(receiver=registration_post_save,
+                             sender=Registration)
+        post_save.disconnect(receiver=model_saved,
+                             dispatch_uid='instance-saved-hook')
         assert not has_listeners(), (
             "Registration model still has post_save listeners. Make sure"
             " helpers cleaned up properly in earlier tests.")
@@ -886,7 +887,8 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         # # Check
         # self.assertEqual(result, "1 SubscriptionRequest created")
         # d_mom = SubscriptionRequest.objects.last()
-        # self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
+        # self.assertEqual(d_mom.contact,
+        #                   "mother00-9d89-4aa6-99ff-13c225365b5d")
         # self.assertEqual(d_mom.messageset_id, 1)
         # self.assertEqual(d_mom.next_sequence_number, 1)
         # self.assertEqual(d_mom.lang, "eng_NG")
