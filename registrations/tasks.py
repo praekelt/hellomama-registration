@@ -265,7 +265,7 @@ class DeliverHook(Task):
         instance:   a possibly null "trigger" instance
         hook:       the defining Hook object
         """
-        resp = requests.post(
+        requests.post(
             url=target,
             data=json.dumps(payload),
             headers={'Content-Type': 'application/json'}
