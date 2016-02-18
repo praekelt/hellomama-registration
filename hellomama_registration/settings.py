@@ -137,6 +137,8 @@ HOOK_EVENTS = {
 
 HOOK_DELIVERER = 'registrations.tasks.deliver_hook_wrapper'
 
+HOOK_AUTH_TOKEN = os.environ.get('HOOK_AUTH_TOKEN', 'REPLACEME')
+
 # Celery configuration options
 CELERY_RESULT_BACKEND = 'djcelery.backends.database:DatabaseBackend'
 CELERYBEAT_SCHEDULER = 'djcelery.schedulers.DatabaseScheduler'
