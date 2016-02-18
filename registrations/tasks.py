@@ -270,6 +270,5 @@ class DeliverHook(Task):
             data=json.dumps(payload),
             headers={'Content-Type': 'application/json'}
         )
-        print(resp.status_code)
 
 deliver_hook_wrapper = DeliverHook.delay

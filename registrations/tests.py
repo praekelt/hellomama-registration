@@ -842,6 +842,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
 
 
 # This test is not working despite the code working fine
+# If you run these same steps below interactively the webhook will fire
 # class TestSubscriptionRequestWebhook(AuthenticatedAPITestCase):
 
     # @responses.activate
