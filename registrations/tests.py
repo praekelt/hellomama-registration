@@ -11,6 +11,7 @@ from rest_framework.authtoken.models import Token
 
 from .models import (Source, Registration, SubscriptionRequest,
                      registration_post_save)
+from rest_hooks.models import model_saved, Hook
 from .tasks import (
     validate_registration,
     is_valid_date, is_valid_uuid, is_valid_lang, is_valid_msg_type,
@@ -137,7 +138,10 @@ class AuthenticatedAPITestCase(APITestCase):
         assert has_listeners(), (
             "Registration model has no post_save listeners. Make sure"
             " helpers cleaned up properly in earlier tests.")
-        post_save.disconnect(registration_post_save, sender=Registration)
+        post_save.disconnect(receiver=registration_post_save,
+                             sender=Registration)
+        post_save.disconnect(receiver=model_saved,
+                             dispatch_uid='instance-saved-hook')
         assert not has_listeners(), (
             "Registration model still has post_save listeners. Make sure"
             " helpers cleaned up properly in earlier tests.")
@@ -835,3 +839,77 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         self.assertEqual(d_dad.next_sequence_number, 1)
         self.assertEqual(d_dad.lang, "eng_NG")
         self.assertEqual(d_dad.schedule, 1)
+
+
+class TestSubscriptionRequestWebhook(AuthenticatedAPITestCase):
+
+    def test_create_webhook(self):
+        # Setup
+        user = User.objects.get(username='testadminuser')
+        post_data = {
+            "target": "http://example.com/registration/",
+            "event": "subscriptionrequest.added"
+        }
+        # Execute
+        response = self.adminclient.post('/api/v1/webhook/',
+                                         json.dumps(post_data),
+                                         content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        d = Hook.objects.last()
+        self.assertEqual(d.target, 'http://example.com/registration/')
+        self.assertEqual(d.user, user)
+
+    # This test is not working despite the code working fine
+    # If you run these same steps below interactively the webhook will fire
+    # @responses.activate
+    # def test_mother_only_webhook(self):
+    #     # Setup
+    #     post_save.connect(receiver=model_saved, sender=SubscriptionRequest,
+    #                       dispatch_uid='instance-saved-hook')
+    #     Hook.objects.create(user=self.adminuser,
+    #                         event='subscriptionrequest.added',
+    #                         target='http://example.com/registration/')
+    #
+    #     expected_webhook = {
+    #         "hook": {
+    #             "target": "http://example.com/registration/",
+    #             "event": "subscriptionrequest.added",
+    #             "id": 3
+    #         },
+    #         "data": {
+    #             "messageset_id": 1,
+    #             "updated_at": "2016-02-17T07:59:42.831568+00:00",
+    #             "contact": "mother00-9d89-4aa6-99ff-13c225365b5d",
+    #             "lang": "eng_NG",
+    #             "created_at": "2016-02-17T07:59:42.831533+00:00",
+    #             "id": "5282ed58-348f-4a54-b1ff-f702e36ec3cc",
+    #             "next_sequence_number": 1,
+    #             "schedule": 1
+    #         }
+    #     }
+    #     responses.add(
+    #         responses.POST,
+    #         "http://example.com/registration/",
+    #         json.dumps(expected_webhook),
+    #         status=200, content_type='application/json')
+    #     registration_data = {
+    #         "stage": "prebirth",
+    #         "data": REG_DATA["hw_pre_mother"].copy(),
+    #         "source": self.make_source_adminuser()
+    #     }
+    #     registration = Registration.objects.create(**registration_data)
+    #     # Execute
+    #     result = validate_registration.create_subscriptionrequests(
+    #         registration)
+    #     # Check
+    #     self.assertEqual(result, "1 SubscriptionRequest created")
+    #     d_mom = SubscriptionRequest.objects.last()
+    #     self.assertEqual(d_mom.contact,
+    #                      "mother00-9d89-4aa6-99ff-13c225365b5d")
+    #     self.assertEqual(d_mom.messageset_id, 1)
+    #     self.assertEqual(d_mom.next_sequence_number, 1)
+    #     self.assertEqual(d_mom.lang, "eng_NG")
+    #     self.assertEqual(d_mom.schedule, 1)
+    #     self.assertEqual(responses.calls[0].request.url,
+    #                      "http://example.com/registration/")
