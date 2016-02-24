@@ -36,6 +36,7 @@ REG_DATA = {
         "operator_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
         "language": "english",
         "msg_type": "sms",
+        "gravida": "1",
         "last_period_date": "20150202",
         "msg_receiver": "mother_only"
     },
@@ -45,6 +46,7 @@ REG_DATA = {
         "operator_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
         "language": "english",
         "msg_type": "sms",
+        "gravida": "1",
         "last_period_date": "20150202",
         "msg_receiver": "trusted_friend"
     },
@@ -54,6 +56,7 @@ REG_DATA = {
         "operator_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
         "language": "english",
         "msg_type": "sms",
+        "gravida": "1",
         "last_period_date": "20150202",
         "msg_receiver": "family_member"
     },
@@ -63,6 +66,7 @@ REG_DATA = {
         "operator_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
         "language": "english",
         "msg_type": "sms",
+        "gravida": "2",
         "last_period_date": "20150202",
         "msg_receiver": "father_only"
     },
@@ -72,6 +76,7 @@ REG_DATA = {
         "operator_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
         "language": "english",
         "msg_type": "sms",
+        "gravida": "2",
         "last_period_date": "20150202",
         "msg_receiver": "mother_father"
     },
@@ -81,6 +86,7 @@ REG_DATA = {
         "operator_id": str(uuid.uuid4()),
         "language": "english",
         "msg_type": "sms",
+        "gravida": "2",
         "baby_dob": "20150202",
         "msg_receiver": "trusted_friend"
     },
@@ -90,6 +96,7 @@ REG_DATA = {
         "operator_id": str(uuid.uuid4()),
         "language": "english",
         "msg_type": "sms",
+        "gravida": "2",
         "loss_reason": "miscarriage"
     },
     "missing_field": {
@@ -98,6 +105,7 @@ REG_DATA = {
         "operator_id": str(uuid.uuid4()),
         "language": "english",
         "msg_type": "sms",
+        "gravida": "2",
         "last_period_date": "20150202",
     },
     "bad_fields": {
@@ -106,6 +114,7 @@ REG_DATA = {
         "operator_id": str(uuid.uuid4()),
         "language": "english",
         "msg_type": "sms",
+        "gravida": "2",
         "last_period_date": "2015020",
         "msg_receiver": "trusted friend"
     },
@@ -115,6 +124,7 @@ REG_DATA = {
         "operator_id": str(uuid.uuid4()),
         "language": "english",
         "msg_type": "sms",
+        "gravida": "2",
         "last_period_date": "20140202",
         "msg_receiver": "trusted_friend"
     },
