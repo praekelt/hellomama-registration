@@ -99,5 +99,23 @@ class SubscriptionRequest(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    def serialize_hook(self, hook):
+        # optional, there are serialization defaults
+        # we recommend always sending the Hook
+        # metadata along for the ride as well
+        return {
+            'hook': hook.dict(),
+            'data': {
+                'id': str(self.id),
+                'contact': self.contact,
+                'messageset_id': self.messageset_id,
+                'next_sequence_number': self.next_sequence_number,
+                'lang': self.lang,
+                'schedule': self.schedule,
+                'created_at': self.created_at.isoformat(),
+                'updated_at': self.updated_at.isoformat()
+            }
+        }
+
     def __str__(self):
         return str(self.id)

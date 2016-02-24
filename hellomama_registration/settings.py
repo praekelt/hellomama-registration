@@ -48,6 +48,7 @@ INSTALLED_APPS = (
     'rest_framework',
     'rest_framework.authtoken',
     'django_filters',
+    'rest_hooks',
     # us
     'registrations',
 
@@ -128,11 +129,21 @@ REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': ('rest_framework.filters.DjangoFilterBackend',)
 }
 
+# Webhook event definition
+HOOK_EVENTS = {
+    # 'any.event.name': 'App.Model.Action' (created/updated/deleted)
+    'subscriptionrequest.added': 'registrations.SubscriptionRequest.created+'
+}
+
+HOOK_DELIVERER = 'registrations.tasks.deliver_hook_wrapper'
+
+HOOK_AUTH_TOKEN = os.environ.get('HOOK_AUTH_TOKEN', 'REPLACEME')
+
 # Celery configuration options
 CELERY_RESULT_BACKEND = 'djcelery.backends.database:DatabaseBackend'
 CELERYBEAT_SCHEDULER = 'djcelery.schedulers.DatabaseScheduler'
 
-BROKER_URL = os.environ.get('RABBITMQ_URL', 'redis://localhost:6379/0')
+BROKER_URL = os.environ.get('BROKER_URL', 'redis://localhost:6379/0')
 
 CELERY_DEFAULT_QUEUE = 'hellomama_registration'
 CELERY_QUEUES = (
@@ -154,6 +165,9 @@ CELERY_ROUTES = {
         'queue': 'mediumpriority',
     },
     'registrations.tasks.validate_registration': {
+        'queue': 'priority',
+    },
+    'registrations.tasks.deliver_hook_wrapper': {
         'queue': 'priority',
     },
 }
