@@ -17,12 +17,7 @@ LANG_CODES = {
     "hausa": "hau_NG",
     "igbo": "ibo_NG",
     "yoruba": "yor_NG",
-    "pidgin": "pcm_NG",
-    "en": "eng_NG",
-    "ha": "hau_NG",
-    "ig": "ibo_NG",
-    "yo": "yor_NG",
-    # there is no 2-letter code for nigerian pidgin
+    "pidgin": "pcm_NG"
 }
 
 
