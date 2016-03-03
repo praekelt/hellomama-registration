@@ -48,7 +48,7 @@ REG_DATA = {
         "msg_type": "sms",
         "gravida": "1",
         "last_period_date": "20150202",
-        "msg_receiver": "trusted_friend"
+        "msg_receiver": "friend_only"
     },
     "hw_pre_family": {
         "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
@@ -58,7 +58,7 @@ REG_DATA = {
         "msg_type": "sms",
         "gravida": "1",
         "last_period_date": "20150202",
-        "msg_receiver": "family_member"
+        "msg_receiver": "family_only"
     },
     "hw_pre_father": {
         "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
@@ -88,7 +88,7 @@ REG_DATA = {
         "msg_type": "sms",
         "gravida": "2",
         "baby_dob": "20150202",
-        "msg_receiver": "trusted_friend"
+        "msg_receiver": "friend_only"
     },
     "pbl_loss": {
         "mother_id": str(uuid.uuid4()),
@@ -126,7 +126,7 @@ REG_DATA = {
         "msg_type": "sms",
         "gravida": "2",
         "last_period_date": "20140202",
-        "msg_receiver": "trusted_friend"
+        "msg_receiver": "friend_only"
     },
 }
 
@@ -746,7 +746,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         self.assertEqual(d_mom.lang, "eng_NG")
         self.assertEqual(d_mom.schedule, 1)
 
-    def test_trusted_friend(self):
+    def test_friend_only(self):
         # Setup
         registration_data = {
             "stage": "prebirth",

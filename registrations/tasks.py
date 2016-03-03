@@ -47,7 +47,8 @@ def is_valid_msg_type(msg_type):
 
 def is_valid_msg_receiver(msg_receiver):
     return msg_receiver in ["mother_father", "mother_only", "father_only",
-                            "family_member", "trusted_friend"]
+                            "mother_family", "mother_friend", "friend_only",
+                            "family_only"]
 
 
 def is_valid_loss_reason(loss_reason):
@@ -139,7 +140,7 @@ class ValidateRegistration(Task):
             # Reject registrations on behalf of mother has no unique id for
             # mother
             if (registration.data["msg_receiver"] in [
-                "father_only", "trusted_friend", "family_member"] and
+                "father_only", "friend_only", "family_only"] and
                registration.data["mother_id"] == registration.data[
                "receiver_id"]):
                 registration.data["invalid_fields"] = "mother requires own id"
@@ -154,7 +155,7 @@ class ValidateRegistration(Task):
                     "the same as receiver_id"
                 registration.save()
                 return False
-        # HW registration, prebirth, id
+        # HW registration, prebirth
         if (registration.stage == "prebirth" and
                 registration.source.authority in ["hw_limited", "hw_full"] and
                 set(hw_pre).issubset(data_fields)):  # ignore extra data
