@@ -102,7 +102,7 @@ STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
 )
 
-STATIC_ROOT = '/app/staticfiles'
+STATIC_ROOT = 'staticfiles'
 STATIC_URL = '/static/'
 
 # TEMPLATE_CONTEXT_PROCESSORS = (
