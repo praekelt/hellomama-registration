@@ -56,6 +56,7 @@ class Registration(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     stage = models.CharField(max_length=30, null=False, blank=False,
                              choices=STAGE_CHOICES)
+    mother_id = models.CharField(max_length=36, null=False, blank=False)
     data = JSONField(null=True, blank=True)
     validated = models.BooleanField(default=False)
     source = models.ForeignKey(Source, related_name='registrations',
