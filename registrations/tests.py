@@ -31,7 +31,6 @@ REG_FIELDS = {
 
 REG_DATA = {
     "hw_pre_mother": {
-        "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
         "receiver_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
         "operator_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
         "language": "english",
@@ -41,7 +40,6 @@ REG_DATA = {
         "msg_receiver": "mother_only"
     },
     "hw_pre_friend": {
-        "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
         "receiver_id": "friend00-73a2-4d89-b045-d52004c025fe",
         "operator_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
         "language": "english",
@@ -51,7 +49,6 @@ REG_DATA = {
         "msg_receiver": "friend_only"
     },
     "hw_pre_family": {
-        "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
         "receiver_id": "friend00-73a2-4d89-b045-d52004c025fe",
         "operator_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
         "language": "english",
@@ -61,7 +58,6 @@ REG_DATA = {
         "msg_receiver": "family_only"
     },
     "hw_pre_father": {
-        "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
         "receiver_id": "father00-73a2-4d89-b045-d52004c025fe",
         "operator_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
         "language": "english",
@@ -71,7 +67,6 @@ REG_DATA = {
         "msg_receiver": "father_only"
     },
     "hw_pre_father_and_mother": {
-        "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
         "receiver_id": "father00-73a2-4d89-b045-d52004c025fe",
         "operator_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
         "language": "english",
@@ -81,7 +76,6 @@ REG_DATA = {
         "msg_receiver": "mother_father"
     },
     "hw_post": {
-        "mother_id": str(uuid.uuid4()),
         "receiver_id": str(uuid.uuid4()),
         "operator_id": str(uuid.uuid4()),
         "language": "english",
@@ -91,7 +85,6 @@ REG_DATA = {
         "msg_receiver": "friend_only"
     },
     "pbl_loss": {
-        "mother_id": str(uuid.uuid4()),
         "receiver_id": str(uuid.uuid4()),
         "operator_id": str(uuid.uuid4()),
         "language": "english",
@@ -100,7 +93,6 @@ REG_DATA = {
         "loss_reason": "miscarriage"
     },
     "missing_field": {
-        "mother_id": str(uuid.uuid4()),
         "receiver_id": str(uuid.uuid4()),
         "operator_id": str(uuid.uuid4()),
         "language": "english",
@@ -109,7 +101,6 @@ REG_DATA = {
         "last_period_date": "20150202",
     },
     "bad_fields": {
-        "mother_id": str(uuid.uuid4()),
         "receiver_id": str(uuid.uuid4()),
         "operator_id": str(uuid.uuid4()),
         "language": "english",
@@ -119,7 +110,6 @@ REG_DATA = {
         "msg_receiver": "trusted friend"
     },
     "bad_lmp": {
-        "mother_id": str(uuid.uuid4()),
         "receiver_id": str(uuid.uuid4()),
         "operator_id": str(uuid.uuid4()),
         "language": "english",
@@ -385,6 +375,7 @@ class TestRegistrationAPI(AuthenticatedAPITestCase):
         self.make_source_adminuser()
         post_data = {
             "stage": "prebirth",
+            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
             "data": {"test_key1": "test_value1"}
         }
         # Execute
@@ -405,6 +396,7 @@ class TestRegistrationAPI(AuthenticatedAPITestCase):
         self.make_source_normaluser()
         post_data = {
             "stage": "postbirth",
+            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
             "data": {"test_key1": "test_value1"}
         }
         # Execute
@@ -425,6 +417,7 @@ class TestRegistrationAPI(AuthenticatedAPITestCase):
         self.make_source_adminuser()
         post_data = {
             "stage": "prebirth",
+            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
             "data": {"test_key1": "test_value1"},
             "validated": True
         }
@@ -523,6 +516,7 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
         # Setup
         registration_data = {
             "stage": "prebirth",
+            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
             "data": REG_DATA["hw_pre_friend"].copy(),
             "source": self.make_source_adminuser()
         }
@@ -539,6 +533,7 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
         # Setup
         registration_data = {
             "stage": "postbirth",
+            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
             "data": REG_DATA["hw_post"].copy(),
             "source": self.make_source_adminuser()
         }
@@ -555,6 +550,7 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
         # Setup
         registration_data = {
             "stage": "loss",
+            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
             "data": REG_DATA["pbl_loss"].copy(),
             "source": self.make_source_normaluser()
         }
@@ -570,6 +566,7 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
         # Setup
         registration_data = {
             "stage": "prebirth",
+            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
             "data": REG_DATA["hw_pre_friend"].copy(),
             "source": self.make_source_adminuser()
         }
@@ -585,6 +582,7 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
         # Setup
         registration_data = {
             "stage": "prebirth",
+            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
             "data": REG_DATA["hw_pre_friend"].copy(),
             "source": self.make_source_adminuser()
         }
@@ -600,6 +598,7 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
         # Setup
         registration_data = {
             "stage": "postbirth",
+            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
             "data": REG_DATA["hw_post"].copy(),
             "source": self.make_source_adminuser()
         }
@@ -615,6 +614,7 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
         # Setup
         registration_data = {
             "stage": "postbirth",
+            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
             "data": REG_DATA["hw_post"].copy(),
             "source": self.make_source_adminuser()
         }
@@ -630,6 +630,7 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
         # Setup
         registration_data = {
             "stage": "prebirth",
+            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
             "data": REG_DATA["hw_pre_friend"].copy(),
             "source": self.make_source_adminuser()
         }
@@ -643,6 +644,7 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
         # Setup
         registration_data = {
             "stage": "prebirth",
+            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
             "data": REG_DATA["missing_field"].copy(),
             "source": self.make_source_adminuser()
         }
@@ -659,6 +661,7 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
         # Setup
         registration_data = {
             "stage": "prebirth",
+            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
             "data": REG_DATA["bad_fields"].copy(),
             "source": self.make_source_adminuser()
         }
@@ -675,6 +678,7 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
         # Setup
         registration_data = {
             "stage": "prebirth",
+            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
             "data": REG_DATA["bad_lmp"].copy(),
             "source": self.make_source_adminuser()
         }
@@ -691,12 +695,13 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
         # Setup
         registration_data = {
             "stage": "prebirth",
+            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
             "data": REG_DATA["hw_pre_friend"].copy(),
             "source": self.make_source_adminuser()
         }
         # reg_data = registration_data.copy()
         registration_data["data"]["receiver_id"] = registration_data[
-            "data"]["mother_id"]
+            "mother_id"]
         registration = Registration.objects.create(**registration_data)
         # Execute
         result = validate_registration.apply_async(args=[registration.id])
@@ -705,10 +710,27 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
         d = Registration.objects.get(id=registration.id)
         self.assertEqual(d.data["invalid_fields"], "mother requires own id")
 
+    def test_validate_registration_run_failure_mother_uuid(self):
+        # Setup
+        registration_data = {
+            "stage": "prebirth",
+            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5",
+            "data": REG_DATA["hw_pre_mother"].copy(),
+            "source": self.make_source_adminuser()
+        }
+        registration = Registration.objects.create(**registration_data)
+        # Execute
+        result = validate_registration.apply_async(args=[registration.id])
+        # Check
+        self.assertEqual(result.get(), "Validation completed - Failure")
+        d = Registration.objects.get(id=registration.id)
+        self.assertEqual(d.data["invalid_fields"], "Invalid UUID mother_id")
+
     def test_validate_registration_run_failure_mother_id(self):
         # Setup
         registration_data = {
             "stage": "prebirth",
+            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
             "data": REG_DATA["hw_pre_mother"].copy(),
             "source": self.make_source_adminuser()
         }
@@ -730,6 +752,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         # Setup
         registration_data = {
             "stage": "prebirth",
+            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
             "data": REG_DATA["hw_pre_mother"].copy(),
             "source": self.make_source_adminuser()
         }
@@ -750,6 +773,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         # Setup
         registration_data = {
             "stage": "prebirth",
+            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
             "data": REG_DATA["hw_pre_friend"].copy(),
             "source": self.make_source_adminuser()
         }
@@ -770,6 +794,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         # Setup
         registration_data = {
             "stage": "prebirth",
+            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
             "data": REG_DATA["hw_pre_family"].copy(),
             "source": self.make_source_adminuser()
         }
@@ -790,6 +815,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         # Setup
         registration_data = {
             "stage": "prebirth",
+            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
             "data": REG_DATA["hw_pre_father"].copy(),
             "source": self.make_source_adminuser()
         }
@@ -822,6 +848,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         # Setup
         registration_data = {
             "stage": "prebirth",
+            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
             "data": REG_DATA["hw_pre_father"].copy(),
             "source": self.make_source_adminuser()
         }
