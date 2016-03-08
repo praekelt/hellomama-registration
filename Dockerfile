@@ -1,4 +1,4 @@
 FROM praekeltfoundation/django-bootstrap
 ENV DJANGO_SETTINGS_MODULE "hellomama_registration.settings"
-RUN django-admin collectstatic --noinput
-CMD ["hellomama_registration.wsgi:application"]
+RUN ./manage.py collectstatic --noinput
+ENV APP_MODULE "hellomama_registration.wsgi:application"
