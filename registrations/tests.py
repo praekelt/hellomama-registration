@@ -49,7 +49,7 @@ REG_DATA = {
         "msg_receiver": "friend_only"
     },
     "hw_pre_family": {
-        "receiver_id": "friend00-73a2-4d89-b045-d52004c025fe",
+        "receiver_id": "family00-73a2-4d89-b045-d52004c025fe",
         "operator_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
         "language": "english",
         "msg_type": "sms",
@@ -74,6 +74,15 @@ REG_DATA = {
         "gravida": "2",
         "last_period_date": "20150202",
         "msg_receiver": "mother_father"
+    },
+    "hw_pre_family_and_mother": {
+        "receiver_id": "family00-73a2-4d89-b045-d52004c025fe",
+        "operator_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
+        "language": "english",
+        "msg_type": "sms",
+        "gravida": "2",
+        "last_period_date": "20150202",
+        "msg_receiver": "mother_family"
     },
     "hw_post": {
         "receiver_id": str(uuid.uuid4()),
@@ -782,7 +791,8 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         result = validate_registration.create_subscriptionrequests(
             registration)
         # Check
-        self.assertEqual(result, "1 SubscriptionRequest created")
+        self.assertEqual(result, "2 SubscriptionRequests created")
+
         d_mom = SubscriptionRequest.objects.last()
         self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.messageset_id, 1)
@@ -790,7 +800,16 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         self.assertEqual(d_mom.lang, "eng_NG")
         self.assertEqual(d_mom.schedule, 1)
 
-    def test_family_member(self):
+        d_friend = SubscriptionRequest.objects.get(
+            contact="friend00-73a2-4d89-b045-d52004c025fe")
+        self.assertEqual(d_friend.contact,
+                         "friend00-73a2-4d89-b045-d52004c025fe")
+        self.assertEqual(d_friend.messageset_id, 2)
+        self.assertEqual(d_friend.next_sequence_number, 1)
+        self.assertEqual(d_friend.lang, "eng_NG")
+        self.assertEqual(d_friend.schedule, 1)
+
+    def test_family_only(self):
         # Setup
         registration_data = {
             "stage": "prebirth",
@@ -803,13 +822,24 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         result = validate_registration.create_subscriptionrequests(
             registration)
         # Check
-        self.assertEqual(result, "1 SubscriptionRequest created")
-        d_mom = SubscriptionRequest.objects.last()
+        self.assertEqual(result, "2 SubscriptionRequests created")
+
+        d_mom = SubscriptionRequest.objects.get(
+            contact="mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.messageset_id, 1)
         self.assertEqual(d_mom.next_sequence_number, 1)
         self.assertEqual(d_mom.lang, "eng_NG")
         self.assertEqual(d_mom.schedule, 1)
+
+        d_family = SubscriptionRequest.objects.get(
+            contact="family00-73a2-4d89-b045-d52004c025fe")
+        self.assertEqual(d_family.contact,
+                         "family00-73a2-4d89-b045-d52004c025fe")
+        self.assertEqual(d_family.messageset_id, 2)
+        self.assertEqual(d_family.next_sequence_number, 1)
+        self.assertEqual(d_family.lang, "eng_NG")
+        self.assertEqual(d_family.schedule, 1)
 
     def test_father_only(self):
         # Setup
@@ -849,7 +879,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         registration_data = {
             "stage": "prebirth",
             "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
-            "data": REG_DATA["hw_pre_father"].copy(),
+            "data": REG_DATA["hw_pre_father_and_mother"].copy(),
             "source": self.make_source_adminuser()
         }
         registration = Registration.objects.create(**registration_data)
@@ -876,6 +906,40 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         self.assertEqual(d_dad.next_sequence_number, 1)
         self.assertEqual(d_dad.lang, "eng_NG")
         self.assertEqual(d_dad.schedule, 1)
+
+    def test_mother_and_family(self):
+        # Setup
+        registration_data = {
+            "stage": "prebirth",
+            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
+            "data": REG_DATA["hw_pre_family_and_mother"].copy(),
+            "source": self.make_source_adminuser()
+        }
+        registration = Registration.objects.create(**registration_data)
+
+        # Execute
+        result = validate_registration.create_subscriptionrequests(
+            registration)
+
+        # Check
+        self.assertEqual(result, "2 SubscriptionRequests created")
+
+        d_mom = SubscriptionRequest.objects.get(
+            contact="mother00-9d89-4aa6-99ff-13c225365b5d")
+        self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
+        self.assertEqual(d_mom.messageset_id, 1)
+        self.assertEqual(d_mom.next_sequence_number, 1)
+        self.assertEqual(d_mom.lang, "eng_NG")
+        self.assertEqual(d_mom.schedule, 1)
+
+        d_family = SubscriptionRequest.objects.get(
+            contact="family00-73a2-4d89-b045-d52004c025fe")
+        self.assertEqual(d_family.contact,
+                         "family00-73a2-4d89-b045-d52004c025fe")
+        self.assertEqual(d_family.messageset_id, 2)
+        self.assertEqual(d_family.next_sequence_number, 1)
+        self.assertEqual(d_family.lang, "eng_NG")
+        self.assertEqual(d_family.schedule, 1)
 
 
 class TestSubscriptionRequestWebhook(AuthenticatedAPITestCase):

@@ -229,16 +229,15 @@ class ValidateRegistration(Task):
         }
         SubscriptionRequest.objects.create(**mother_sub)
 
-        if registration.data["msg_receiver"] in ["father_only",
-                                                 "mother_father"]:
-            father_sub = {
+        if registration.data["msg_receiver"] != 'mother_only':
+            household_sub = {
                 "contact": registration.data["receiver_id"],
                 "messageset_id": 2,  # TODO
                 "next_sequence_number": 1,  # TODO
                 "lang": LANG_CODES[registration.data["language"]],
                 "schedule": 1,  # TODO
             }
-            SubscriptionRequest.objects.create(**father_sub)
+            SubscriptionRequest.objects.create(**household_sub)
             return "2 SubscriptionRequests created"
 
         return "1 SubscriptionRequest created"
