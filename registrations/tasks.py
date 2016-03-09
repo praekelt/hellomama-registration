@@ -80,6 +80,27 @@ def calc_baby_age(today, baby_dob):
         return -1
 
 
+def get_messageset_id(stage, recipient, msg_type, weeks):
+
+    subscription_type_map = {
+        "sms": "text",
+        "voice": "audio"
+    }
+
+    if stage == "prebirth":
+        week_range = "10_42"
+
+    shortname = "%s_%s_%s_%s" % (
+        stage, recipient, subscription_type_map[msg_type], week_range)
+
+    print(shortname)
+
+    if shortname == "prebirth_mother_text_10_42":
+        return 1
+    else:
+        return 2
+
+
 class ValidateRegistration(Task):
     """ Task to validate a registration model entry's registration
     data.
@@ -171,6 +192,7 @@ class ValidateRegistration(Task):
                 registration.data["reg_type"] = "hw_pre"
                 registration.data["preg_week"] = calc_pregnancy_week_lmp(
                     get_today(), registration.data["last_period_date"])
+                print(registration.data["preg_week"])
                 registration.validated = True
                 registration.save()
                 return True
@@ -220,9 +242,12 @@ class ValidateRegistration(Task):
         """ Create SubscriptionRequest(s) based on the
         validated registration.
         """
+
         mother_sub = {
             "contact": registration.mother_id,
-            "messageset_id": 1,  # TODO
+            "messageset_id": get_messageset_id(
+                registration.stage, 'mother', registration.data["msg_type"],
+                registration.data["preg_week"]),
             "next_sequence_number": 1,  # TODO
             "lang": LANG_CODES[registration.data["language"]],
             "schedule": 1,  # TODO

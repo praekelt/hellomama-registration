@@ -757,7 +757,7 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
 
 class TestSubscriptionRequest(AuthenticatedAPITestCase):
 
-    def test_mother_only(self):
+    def test_mother_only_sms(self):
         # Setup
         registration_data = {
             "stage": "prebirth",
@@ -765,6 +765,32 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             "data": REG_DATA["hw_pre_mother"].copy(),
             "source": self.make_source_adminuser()
         }
+        registration_data["data"]["preg_week"] = 15
+        registration = Registration.objects.create(**registration_data)
+        # Execute
+        result = validate_registration.create_subscriptionrequests(
+            registration)
+        # Check
+        self.assertEqual(result, "1 SubscriptionRequest created")
+        d_mom = SubscriptionRequest.objects.last()
+        self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
+        self.assertEqual(d_mom.messageset_id, 1)
+        self.assertEqual(d_mom.next_sequence_number, 1)
+        self.assertEqual(d_mom.lang, "eng_NG")
+        self.assertEqual(d_mom.schedule, 1)
+
+    def test_mother_only_voice_1(self):
+        # Setup
+        registration_data = {
+            "stage": "prebirth",
+            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
+            "data": REG_DATA["hw_pre_mother"].copy(),
+            "source": self.make_source_adminuser()
+        }
+        registration_data["data"]["preg_week"] = 15
+        registration_data["data"]["msg_type"] = "voice"
+        registration_data["data"]["voice_times"] = "9_11"
+        registration_data["data"]["voice_days"] = "mon_wed"
         registration = Registration.objects.create(**registration_data)
         # Execute
         result = validate_registration.create_subscriptionrequests(
@@ -786,6 +812,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             "data": REG_DATA["hw_pre_friend"].copy(),
             "source": self.make_source_adminuser()
         }
+        registration_data["data"]["preg_week"] = 15
         registration = Registration.objects.create(**registration_data)
         # Execute
         result = validate_registration.create_subscriptionrequests(
@@ -793,7 +820,8 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         # Check
         self.assertEqual(result, "2 SubscriptionRequests created")
 
-        d_mom = SubscriptionRequest.objects.last()
+        d_mom = SubscriptionRequest.objects.get(
+            contact="mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.messageset_id, 1)
         self.assertEqual(d_mom.next_sequence_number, 1)
@@ -817,6 +845,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             "data": REG_DATA["hw_pre_family"].copy(),
             "source": self.make_source_adminuser()
         }
+        registration_data["data"]["preg_week"] = 15
         registration = Registration.objects.create(**registration_data)
         # Execute
         result = validate_registration.create_subscriptionrequests(
@@ -849,6 +878,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             "data": REG_DATA["hw_pre_father"].copy(),
             "source": self.make_source_adminuser()
         }
+        registration_data["data"]["preg_week"] = 8
         registration = Registration.objects.create(**registration_data)
 
         # Execute
@@ -882,6 +912,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             "data": REG_DATA["hw_pre_father_and_mother"].copy(),
             "source": self.make_source_adminuser()
         }
+        registration_data["data"]["preg_week"] = 30
         registration = Registration.objects.create(**registration_data)
 
         # Execute
@@ -915,6 +946,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             "data": REG_DATA["hw_pre_family_and_mother"].copy(),
             "source": self.make_source_adminuser()
         }
+        registration_data["data"]["preg_week"] = 40
         registration = Registration.objects.create(**registration_data)
 
         # Execute
