@@ -587,7 +587,7 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
         self.assertEqual(v, False)
         self.assertEqual(registration.validated, False)
 
-    def test_validate_pregnancy_too_short(self):
+    def test_validate_pregnancy_9_weeks(self):
         # Setup
         registration_data = {
             "stage": "prebirth",
@@ -595,13 +595,29 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
             "data": REG_DATA["hw_pre_friend"].copy(),
             "source": self.make_source_adminuser()
         }
-        registration_data["data"]["last_period_date"] = "20150816"
+        registration_data["data"]["last_period_date"] = "20150612"  # 9 weeks
         registration = Registration.objects.create(**registration_data)
         # Execute
         v = validate_registration.validate(registration)
         # Check
         self.assertEqual(v, False)
         self.assertEqual(registration.validated, False)
+
+    def test_validate_pregnancy_10_weeks(self):
+        # Setup
+        registration_data = {
+            "stage": "prebirth",
+            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
+            "data": REG_DATA["hw_pre_friend"].copy(),
+            "source": self.make_source_adminuser()
+        }
+        registration_data["data"]["last_period_date"] = "20150605"  # 10 weeks
+        registration = Registration.objects.create(**registration_data)
+        # Execute
+        v = validate_registration.validate(registration)
+        # Check
+        self.assertEqual(v, True)
+        self.assertEqual(registration.validated, True)
 
     def test_validate_baby_too_young(self):
         # Setup

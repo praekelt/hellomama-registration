@@ -123,16 +123,19 @@ class ValidateRegistration(Task):
                 if not is_valid_date(registration_data[field]):
                     failures.append(field)
                 elif field == "last_period_date":
-                    # Check last_period_date is in the past and < 42 weeks ago
+                    # Check last_period_date is in valid week range
                     preg_weeks = calc_pregnancy_week_lmp(
                         get_today(), registration_data[field])
-                    if not (2 <= preg_weeks <= 42):
+                    if not (settings.PREBIRTH_MIN_WEEKS <= preg_weeks <=
+                            settings.PREBIRTH_MAX_WEEKS):
+                        print(preg_weeks)
                         failures.append("last_period_date out of range")
                 elif field == "baby_dob":
-                    # Check baby_dob is in the past and < 104 weeks ago
+                    # Check baby_dob is in valid week range
                     preg_weeks = calc_baby_age(
                         get_today(), registration_data[field])
-                    if not (0 <= preg_weeks <= 104):
+                    if not (settings.POSTBIRTH_MIN_WEEKS <= preg_weeks <=
+                            settings.POSTBIRTH_MAX_WEEKS):
                         failures.append("baby_dob out of range")
             if field == "msg_receiver":
                 if not is_valid_msg_receiver(registration_data[field]):
