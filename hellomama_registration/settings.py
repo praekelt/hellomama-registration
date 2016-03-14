@@ -181,4 +181,7 @@ PREBIRTH_MAX_WEEKS = 42
 POSTBIRTH_MIN_WEEKS = 0
 POSTBIRTH_MAX_WEEKS = 52
 
+MESSAGESET_URL = 'http://localhost:8005/api/v1/messageset/'
+MESSAGESET_TOKEN = 'REPLACEME'
+
 djcelery.setup_loader()

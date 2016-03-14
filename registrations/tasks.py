@@ -104,16 +104,14 @@ def get_messageset_id(stage, recipient, msg_type, weeks):
     shortname = "%s_%s_%s_%s" % (
         stage, recipient, subscription_msg_type, week_range)
 
-    print(shortname)
+    # Get messageset
+    url = settings.MESSAGESET_URL
+    params = {'shortname': shortname}
+    headers = {'Authorization': ['Token %s' % settings.MESSAGESET_TOKEN],
+               'Content-Type': ['application/json']}
+    r = requests.get(url, params=params, headers=headers)
 
-    shortname_map = {
-        "prebirth_mother_text_10_42": 1,
-        "prebirth_mother_audio_10_42": 2,
-        "prebirth_household_text_10_42": 3,
-        "postbirth_mother_text_0_12": 4
-    }
-
-    return shortname_map[shortname]
+    return r.json()["id"]
 
 
 class ValidateRegistration(Task):
