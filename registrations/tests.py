@@ -773,7 +773,7 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
 
 class TestSubscriptionRequest(AuthenticatedAPITestCase):
 
-    def test_mother_only_sms(self):
+    def test_mother_only_prebirth_sms(self):
         # Setup
         registration_data = {
             "stage": "prebirth",
@@ -795,7 +795,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         self.assertEqual(d_mom.lang, "eng_NG")
         self.assertEqual(d_mom.schedule, 1)
 
-    def test_mother_only_voice_1(self):
+    def test_mother_only_prebirth_voice_mon_wed_9_11(self):
         # Setup
         registration_data = {
             "stage": "prebirth",
@@ -815,12 +815,12 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         self.assertEqual(result, "1 SubscriptionRequest created")
         d_mom = SubscriptionRequest.objects.last()
         self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
-        self.assertEqual(d_mom.messageset_id, 1)
+        self.assertEqual(d_mom.messageset_id, 2)
         self.assertEqual(d_mom.next_sequence_number, 1)
         self.assertEqual(d_mom.lang, "eng_NG")
         self.assertEqual(d_mom.schedule, 1)
 
-    def test_friend_only(self):
+    def test_friend_only_prebirth_sms(self):
         # Setup
         registration_data = {
             "stage": "prebirth",
@@ -848,12 +848,48 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             contact="friend00-73a2-4d89-b045-d52004c025fe")
         self.assertEqual(d_friend.contact,
                          "friend00-73a2-4d89-b045-d52004c025fe")
-        self.assertEqual(d_friend.messageset_id, 2)
+        self.assertEqual(d_friend.messageset_id, 3)
         self.assertEqual(d_friend.next_sequence_number, 1)
         self.assertEqual(d_friend.lang, "eng_NG")
         self.assertEqual(d_friend.schedule, 1)
 
-    def test_family_only(self):
+    def test_friend_only_voice_mon_wed_2_5(self):
+        # Setup
+        registration_data = {
+            "stage": "prebirth",
+            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
+            "data": REG_DATA["hw_pre_friend"].copy(),
+            "source": self.make_source_adminuser()
+        }
+        registration_data["data"]["preg_week"] = 15
+        registration_data["data"]["msg_type"] = "voice"
+        registration_data["data"]["voice_times"] = "2_5"
+        registration_data["data"]["voice_days"] = "mon_wed"
+        registration = Registration.objects.create(**registration_data)
+        # Execute
+        result = validate_registration.create_subscriptionrequests(
+            registration)
+        # Check
+        self.assertEqual(result, "2 SubscriptionRequests created")
+
+        d_mom = SubscriptionRequest.objects.get(
+            contact="mother00-9d89-4aa6-99ff-13c225365b5d")
+        self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
+        self.assertEqual(d_mom.messageset_id, 2)
+        self.assertEqual(d_mom.next_sequence_number, 1)
+        self.assertEqual(d_mom.lang, "eng_NG")
+        self.assertEqual(d_mom.schedule, 1)
+
+        d_friend = SubscriptionRequest.objects.get(
+            contact="friend00-73a2-4d89-b045-d52004c025fe")
+        self.assertEqual(d_friend.contact,
+                         "friend00-73a2-4d89-b045-d52004c025fe")
+        self.assertEqual(d_friend.messageset_id, 3)
+        self.assertEqual(d_friend.next_sequence_number, 1)
+        self.assertEqual(d_friend.lang, "eng_NG")
+        self.assertEqual(d_friend.schedule, 1)
+
+    def test_family_only_prebirth_sms(self):
         # Setup
         registration_data = {
             "stage": "prebirth",
@@ -881,12 +917,12 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             contact="family00-73a2-4d89-b045-d52004c025fe")
         self.assertEqual(d_family.contact,
                          "family00-73a2-4d89-b045-d52004c025fe")
-        self.assertEqual(d_family.messageset_id, 2)
+        self.assertEqual(d_family.messageset_id, 3)
         self.assertEqual(d_family.next_sequence_number, 1)
         self.assertEqual(d_family.lang, "eng_NG")
         self.assertEqual(d_family.schedule, 1)
 
-    def test_father_only(self):
+    def test_father_only_prebirth_sms(self):
         # Setup
         registration_data = {
             "stage": "prebirth",
@@ -915,12 +951,12 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         d_dad = SubscriptionRequest.objects.get(
             contact="father00-73a2-4d89-b045-d52004c025fe")
         self.assertEqual(d_dad.contact, "father00-73a2-4d89-b045-d52004c025fe")
-        self.assertEqual(d_dad.messageset_id, 2)
+        self.assertEqual(d_dad.messageset_id, 3)
         self.assertEqual(d_dad.next_sequence_number, 1)
         self.assertEqual(d_dad.lang, "eng_NG")
         self.assertEqual(d_dad.schedule, 1)
 
-    def test_mother_and_father(self):
+    def test_mother_and_father_prebirth_sms(self):
         # Setup
         registration_data = {
             "stage": "prebirth",
@@ -949,12 +985,12 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         d_dad = SubscriptionRequest.objects.get(
             contact="father00-73a2-4d89-b045-d52004c025fe")
         self.assertEqual(d_dad.contact, "father00-73a2-4d89-b045-d52004c025fe")
-        self.assertEqual(d_dad.messageset_id, 2)
+        self.assertEqual(d_dad.messageset_id, 3)
         self.assertEqual(d_dad.next_sequence_number, 1)
         self.assertEqual(d_dad.lang, "eng_NG")
         self.assertEqual(d_dad.schedule, 1)
 
-    def test_mother_and_family(self):
+    def test_mother_and_family_prebirth_sms(self):
         # Setup
         registration_data = {
             "stage": "prebirth",
@@ -984,7 +1020,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             contact="family00-73a2-4d89-b045-d52004c025fe")
         self.assertEqual(d_family.contact,
                          "family00-73a2-4d89-b045-d52004c025fe")
-        self.assertEqual(d_family.messageset_id, 2)
+        self.assertEqual(d_family.messageset_id, 3)
         self.assertEqual(d_family.next_sequence_number, 1)
         self.assertEqual(d_family.lang, "eng_NG")
         self.assertEqual(d_family.schedule, 1)
