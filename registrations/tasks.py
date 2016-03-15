@@ -107,14 +107,18 @@ def get_messageset_shortname(stage, recipient, msg_type, weeks):
     return shortname
 
 
-def get_messageset_id(shortname):
+def get_messageset_id(shortname, msg_type):
     url = settings.MESSAGESET_URL
     params = {'shortname': shortname}
     headers = {'Authorization': ['Token %s' % settings.MESSAGESET_TOKEN],
                'Content-Type': ['application/json']}
     r = requests.get(url, params=params, headers=headers)
 
-    return r.json()["id"]
+    return (r.json()["id"], r.json()["default_schedule"])
+
+
+# def get_schedule_id(shortname):
+
 
 
 class ValidateRegistration(Task):
@@ -266,12 +270,14 @@ class ValidateRegistration(Task):
             registration.stage, 'mother', registration.data["msg_type"],
             registration.data["preg_week"]
         )
+        mother_msgset_id, mother_msgset_schedule = get_messageset_id(
+            mother_shortname, registration.data["msg_type"])
         mother_sub = {
             "contact": registration.mother_id,
-            "messageset_id": get_messageset_id(mother_shortname),
+            "messageset_id": mother_msgset_id,
             "next_sequence_number": 1,  # TODO
             "lang": LANG_CODES[registration.data["language"]],
-            "schedule": 1,  # TODO
+            "schedule": mother_msgset_schedule
         }
         SubscriptionRequest.objects.create(**mother_sub)
 

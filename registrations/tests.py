@@ -662,7 +662,8 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json={"id": 1, "shortname": 'prebirth_mother_text_10_42'},
+            json={"id": 1, "shortname": 'prebirth_mother_text_10_42',
+                  "default_schedule": 1},
             status=200, content_type='application/json',
             match_querystring=True  # pos responses documentation!
         )
@@ -671,7 +672,8 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json={"id": 3, "shortname": 'prebirth_household_text_10_42'},
+            json={"id": 3, "shortname": 'prebirth_household_text_10_42',
+                  "default_schedule": 3},
             status=200, content_type='application/json',
             match_querystring=True  # pos responses documentation!
         )
@@ -804,7 +806,8 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json={"id": 1, "shortname": 'prebirth_mother_text_10_42'},
+            json={"id": 1, "shortname": 'prebirth_mother_text_10_42',
+                  "default_schedule": 1},
             status=200, content_type='application/json',
             match_querystring=True  # pos responses documentation!
         )
@@ -837,7 +840,8 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json={"id": 2, "shortname": 'prebirth_mother_audio_10_42'},
+            json={"id": 2, "shortname": 'prebirth_mother_audio_10_42',
+                  "default_schedule": 4},
             status=200, content_type='application/json',
             match_querystring=True  # pos responses documentation!
         )
@@ -873,7 +877,8 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json={"id": 1, "shortname": 'prebirth_mother_text_10_42'},
+            json={"id": 1, "shortname": 'prebirth_mother_text_10_42',
+                  "default_schedule": 1},
             status=200, content_type='application/json',
             match_querystring=True  # pos responses documentation!
         )
@@ -882,7 +887,8 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json={"id": 3, "shortname": 'prebirth_household_text_10_42'},
+            json={"id": 3, "shortname": 'prebirth_household_text_10_42',
+                  "default_schedule": 3},
             status=200, content_type='application/json',
             match_querystring=True  # pos responses documentation!
         )
@@ -926,7 +932,8 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json={"id": 2, "shortname": 'prebirth_mother_audio_10_42'},
+            json={"id": 2, "shortname": 'prebirth_mother_audio_10_42',
+                  "default_schedule": 4},
             status=200, content_type='application/json',
             match_querystring=True  # pos responses documentation!
         )
@@ -935,7 +942,8 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json={"id": 3, "shortname": 'prebirth_household_text_10_42'},
+            json={"id": 3, "shortname": 'prebirth_household_text_10_42',
+                  "default_schedule": 3},
             status=200, content_type='application/json',
             match_querystring=True  # pos responses documentation!
         )
@@ -985,7 +993,8 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json={"id": 1, "shortname": 'prebirth_mother_text_10_42'},
+            json={"id": 1, "shortname": 'prebirth_mother_text_10_42',
+                  "default_schedule": 1},
             status=200, content_type='application/json',
             match_querystring=True  # pos responses documentation!
         )
@@ -994,7 +1003,8 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json={"id": 3, "shortname": 'prebirth_household_text_10_42'},
+            json={"id": 3, "shortname": 'prebirth_household_text_10_42',
+                  "default_schedule": 3},
             status=200, content_type='application/json',
             match_querystring=True  # pos responses documentation!
         )
@@ -1039,7 +1049,8 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json={"id": 1, "shortname": 'prebirth_mother_text_10_42'},
+            json={"id": 1, "shortname": 'prebirth_mother_text_10_42',
+                  "default_schedule": 1},
             status=200, content_type='application/json',
             match_querystring=True  # pos responses documentation!
         )
@@ -1048,7 +1059,8 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json={"id": 3, "shortname": 'prebirth_household_text_10_42'},
+            json={"id": 3, "shortname": 'prebirth_household_text_10_42',
+                  "default_schedule": 3},
             status=200, content_type='application/json',
             match_querystring=True  # pos responses documentation!
         )
@@ -1094,7 +1106,8 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json={"id": 1, "shortname": 'prebirth_mother_text_10_42'},
+            json={"id": 1, "shortname": 'prebirth_mother_text_10_42',
+                  "default_schedule": 1},
             status=200, content_type='application/json',
             match_querystring=True  # pos responses documentation!
         )
@@ -1103,7 +1116,8 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json={"id": 3, "shortname": 'prebirth_household_text_10_42'},
+            json={"id": 3, "shortname": 'prebirth_household_text_10_42',
+                  "default_schedule": 3},
             status=200, content_type='application/json',
             match_querystring=True  # pos responses documentation!
         )
