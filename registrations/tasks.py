@@ -80,7 +80,7 @@ def calc_baby_age(today, baby_dob):
         return -1
 
 
-def get_messageset_id(stage, recipient, msg_type, weeks):
+def get_messageset_shortname(stage, recipient, msg_type, weeks):
 
     subscription_type_map = {
         "sms": "text",
@@ -104,7 +104,10 @@ def get_messageset_id(stage, recipient, msg_type, weeks):
     shortname = "%s_%s_%s_%s" % (
         stage, recipient, subscription_msg_type, week_range)
 
-    # Get messageset
+    return shortname
+
+
+def get_messageset_id(shortname):
     url = settings.MESSAGESET_URL
     params = {'shortname': shortname}
     headers = {'Authorization': ['Token %s' % settings.MESSAGESET_TOKEN],
@@ -259,14 +262,13 @@ class ValidateRegistration(Task):
         validated registration.
         """
 
+        mother_shortname = get_messageset_shortname(
+            registration.stage, 'mother', registration.data["msg_type"],
+            registration.data["preg_week"]
+        )
         mother_sub = {
             "contact": registration.mother_id,
-            "messageset_id": get_messageset_id(
-                registration.stage,
-                'mother',
-                registration.data["msg_type"],
-                registration.data["preg_week"]
-            ),
+            "messageset_id": get_messageset_id(mother_shortname),
             "next_sequence_number": 1,  # TODO
             "lang": LANG_CODES[registration.data["language"]],
             "schedule": 1,  # TODO
@@ -274,14 +276,15 @@ class ValidateRegistration(Task):
         SubscriptionRequest.objects.create(**mother_sub)
 
         if registration.data["msg_receiver"] != 'mother_only':
+            household_shortname = get_messageset_shortname(
+                registration.stage,
+                'household',
+                registration.data["msg_type"],
+                registration.data["preg_week"],
+            )
             household_sub = {
                 "contact": registration.data["receiver_id"],
-                "messageset_id": get_messageset_id(
-                    registration.stage,
-                    'household',
-                    registration.data["msg_type"],
-                    registration.data["preg_week"],
-                ),
+                "messageset_id": get_messageset_id(household_shortname),
                 "next_sequence_number": 1,  # TODO
                 "lang": LANG_CODES[registration.data["language"]],
                 "schedule": 1,  # TODO
