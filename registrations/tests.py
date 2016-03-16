@@ -34,7 +34,7 @@ REG_DATA = {
         "receiver_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
         "operator_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
         "language": "english",
-        "msg_type": "sms",
+        "msg_type": "text",
         "gravida": "1",
         "last_period_date": "20150202",
         "msg_receiver": "mother_only"
@@ -43,7 +43,7 @@ REG_DATA = {
         "receiver_id": "friend00-73a2-4d89-b045-d52004c025fe",
         "operator_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
         "language": "english",
-        "msg_type": "sms",
+        "msg_type": "text",
         "gravida": "1",
         "last_period_date": "20150202",
         "msg_receiver": "friend_only"
@@ -52,7 +52,7 @@ REG_DATA = {
         "receiver_id": "friend00-73a2-4d89-b045-d52004c025fe",
         "operator_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
         "language": "english",
-        "msg_type": "sms",
+        "msg_type": "text",
         "gravida": "1",
         "last_period_date": "20150202",
         "msg_receiver": "family_only"
@@ -61,7 +61,7 @@ REG_DATA = {
         "receiver_id": "father00-73a2-4d89-b045-d52004c025fe",
         "operator_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
         "language": "english",
-        "msg_type": "sms",
+        "msg_type": "text",
         "gravida": "2",
         "last_period_date": "20150202",
         "msg_receiver": "father_only"
@@ -70,7 +70,7 @@ REG_DATA = {
         "receiver_id": "father00-73a2-4d89-b045-d52004c025fe",
         "operator_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
         "language": "english",
-        "msg_type": "sms",
+        "msg_type": "text",
         "gravida": "2",
         "last_period_date": "20150202",
         "msg_receiver": "mother_father"
@@ -79,7 +79,7 @@ REG_DATA = {
         "receiver_id": str(uuid.uuid4()),
         "operator_id": str(uuid.uuid4()),
         "language": "english",
-        "msg_type": "sms",
+        "msg_type": "text",
         "gravida": "2",
         "baby_dob": "20150202",
         "msg_receiver": "friend_only"
@@ -88,7 +88,7 @@ REG_DATA = {
         "receiver_id": str(uuid.uuid4()),
         "operator_id": str(uuid.uuid4()),
         "language": "english",
-        "msg_type": "sms",
+        "msg_type": "text",
         "gravida": "2",
         "loss_reason": "miscarriage"
     },
@@ -96,7 +96,7 @@ REG_DATA = {
         "receiver_id": str(uuid.uuid4()),
         "operator_id": str(uuid.uuid4()),
         "language": "english",
-        "msg_type": "sms",
+        "msg_type": "text",
         "gravida": "2",
         "last_period_date": "20150202",
     },
@@ -104,7 +104,7 @@ REG_DATA = {
         "receiver_id": str(uuid.uuid4()),
         "operator_id": str(uuid.uuid4()),
         "language": "english",
-        "msg_type": "sms",
+        "msg_type": "text",
         "gravida": "2",
         "last_period_date": "2015020",
         "msg_receiver": "trusted friend"
@@ -113,7 +113,7 @@ REG_DATA = {
         "receiver_id": str(uuid.uuid4()),
         "operator_id": str(uuid.uuid4()),
         "language": "english",
-        "msg_type": "sms",
+        "msg_type": "text",
         "gravida": "2",
         "last_period_date": "20140202",
         "msg_receiver": "friend_only"
@@ -468,8 +468,8 @@ class TestFieldValidation(AuthenticatedAPITestCase):
 
     def test_is_valid_msg_type(self):
         # Setup
-        valid_msg_type1 = "sms"
-        valid_msg_type2 = "voice"
+        valid_msg_type1 = "text"
+        valid_msg_type2 = "audio"
         invalid_msg_type = "email"
         # Execute
         # Check
