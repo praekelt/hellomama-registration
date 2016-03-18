@@ -101,18 +101,48 @@ def get_messageset_short_name(stage, recipient, msg_type, weeks):
     return short_name
 
 
-def get_messageset_schedule(short_name, msg_type):
+def get_cron_string(days, times):
+    t1 = "0"
+    t2_map = {
+        '9_11': "8",
+        '2_5': "13"
+    }
+    t2 = t2_map[times]
+    t3_map = {
+        'mon_wed': "1,3",
+        'tue_thu': "2,4"
+    }
+    t3 = t3_map[days]
+    t4 = "*"
+    t5 = "*"
+
+    return "%s %s %s %s %s" % (t1, t2, t3, t4, t5)
+
+
+def get_messageset_schedule(short_name, reg_data):
+    # get messageset_id
     url = settings.MESSAGESET_URL
     params = {'short_name': short_name}
     headers = {'Authorization': ['Token %s' % settings.MESSAGESET_TOKEN],
                'Content-Type': ['application/json']}
     r = requests.get(url, params=params, headers=headers)
+    messageset_id = r.json()["id"]
 
-    return (r.json()["id"], r.json()["default_schedule"])
+    if short_name.find('audio') != -1:
+        cron_string = get_cron_string(reg_data["voice_days"],
+                                      reg_data["voice_times"])
+        print(cron_string)
+        # get schedule_id
+        url = settings.SCHEDULE_URL
+        params = {'cron_string': cron_string}
+        headers = {'Authorization': ['Token %s' % settings.SCHEDULE_TOKEN],
+                   'Content-Type': ['application/json']}
+        r = requests.get(url, params=params, headers=headers)
+        schedule_id = r.json()["id"]
+    else:
+        schedule_id = r.json()["default_schedule"]
 
-
-# def get_schedule_id(short_name):
-
+    return (messageset_id, schedule_id)
 
 
 class ValidateRegistration(Task):
@@ -264,8 +294,11 @@ class ValidateRegistration(Task):
             registration.stage, 'mother', registration.data["msg_type"],
             registration.data["preg_week"]
         )
-        mother_msgset_id, mother_msgset_schedule = get_messageset_schedule(
-            mother_short_name, registration.data["msg_type"])
+        mother_msgset_id, mother_msgset_schedule =\
+            get_messageset_schedule(
+                mother_short_name,
+                registration.data
+            )
         mother_sub = {
             "contact": registration.mother_id,
             "messageset_id": mother_msgset_id,
@@ -285,7 +318,8 @@ class ValidateRegistration(Task):
             household_msgset_id, household_msgset_schedule =\
                 get_messageset_schedule(
                     household_short_name,
-                    registration.data["msg_type"])
+                    registration.data
+                )
             household_sub = {
                 "contact": registration.data["receiver_id"],
                 "messageset_id": household_msgset_id,

@@ -843,6 +843,16 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             status=200, content_type='application/json',
             match_querystring=True  # pos responses documentation!
         )
+        # mock mother schedule lookup
+        query_string = '?cron_string=0+8+1%2C3+%2A+%2A'
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/schedule/%s' % query_string,
+            json={"id": 4},
+            status=200, content_type='application/json',
+            match_querystring=True  # pos responses documentation!
+        )
+
         # prepare registration data
         registration_data = {
             "stage": "prebirth",
@@ -945,6 +955,15 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             status=200, content_type='application/json',
             match_querystring=True  # pos responses documentation!
         )
+        # mock mothe r schedule lookup
+        query_string = '?cron_string=0+13+1%2C3+%2A+%2A'
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/schedule/%s' % query_string,
+            json={"id": 5},
+            status=200, content_type='application/json',
+            match_querystring=True  # pos responses documentation!
+        )
 
         # prepare registration data
         registration_data = {
@@ -972,7 +991,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         self.assertEqual(d_mom.messageset_id, 2)
         self.assertEqual(d_mom.next_sequence_number, 1)
         self.assertEqual(d_mom.lang, "eng_NG")
-        self.assertEqual(d_mom.schedule, 4)
+        self.assertEqual(d_mom.schedule, 5)
 
         d_friend = SubscriptionRequest.objects.get(
             contact="friend00-73a2-4d89-b045-d52004c025fe")
