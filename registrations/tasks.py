@@ -42,7 +42,7 @@ def is_valid_lang(lang):
 
 
 def is_valid_msg_type(msg_type):
-    return msg_type in ["sms", "voice"]
+    return msg_type in ["text", "audio"]
 
 
 def is_valid_msg_receiver(msg_receiver):
