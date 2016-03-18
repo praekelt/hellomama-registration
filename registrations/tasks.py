@@ -82,14 +82,8 @@ def calc_baby_age(today, baby_dob):
 
 def get_messageset_short_name(stage, recipient, msg_type, weeks):
 
-    subscription_type_map = {
-        "sms": "text",
-        "voice": "audio"
-    }
     if recipient == "household":
-        subscription_msg_type = "text"
-    else:
-        subscription_msg_type = subscription_type_map[msg_type]
+        msg_type = "text"
 
     if stage == "prebirth":
         week_range = "10_42"
@@ -102,7 +96,7 @@ def get_messageset_short_name(stage, recipient, msg_type, weeks):
         week_range = "0_2"
 
     short_name = "%s_%s_%s_%s" % (
-        stage, recipient, subscription_msg_type, week_range)
+        stage, recipient, msg_type, week_range)
 
     return short_name
 

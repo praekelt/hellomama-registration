@@ -80,7 +80,7 @@ REG_DATA = {
         "receiver_id": "family00-73a2-4d89-b045-d52004c025fe",
         "operator_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
         "language": "english",
-        "msg_type": "sms",
+        "msg_type": "text",
         "gravida": "2",
         "last_period_date": "20150202",
         "msg_receiver": "mother_family"
@@ -851,7 +851,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             "source": self.make_source_adminuser()
         }
         registration_data["data"]["preg_week"] = 15
-        registration_data["data"]["msg_type"] = "voice"
+        registration_data["data"]["msg_type"] = "audio"
         registration_data["data"]["voice_times"] = "9_11"
         registration_data["data"]["voice_days"] = "mon_wed"
         registration = Registration.objects.create(**registration_data)
@@ -954,7 +954,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             "source": self.make_source_adminuser()
         }
         registration_data["data"]["preg_week"] = 15
-        registration_data["data"]["msg_type"] = "voice"
+        registration_data["data"]["msg_type"] = "audio"
         registration_data["data"]["voice_times"] = "2_5"
         registration_data["data"]["voice_days"] = "mon_wed"
         registration = Registration.objects.create(**registration_data)
