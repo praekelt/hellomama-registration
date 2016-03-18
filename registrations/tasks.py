@@ -80,7 +80,7 @@ def calc_baby_age(today, baby_dob):
         return -1
 
 
-def get_messageset_shortname(stage, recipient, msg_type, weeks):
+def get_messageset_short_name(stage, recipient, msg_type, weeks):
 
     subscription_type_map = {
         "sms": "text",
@@ -101,15 +101,15 @@ def get_messageset_shortname(stage, recipient, msg_type, weeks):
     elif stage == "loss":
         week_range = "0_2"
 
-    shortname = "%s_%s_%s_%s" % (
+    short_name = "%s_%s_%s_%s" % (
         stage, recipient, subscription_msg_type, week_range)
 
-    return shortname
+    return short_name
 
 
-def get_messageset_id(shortname, msg_type):
+def get_messageset_schedule(short_name, msg_type):
     url = settings.MESSAGESET_URL
-    params = {'shortname': shortname}
+    params = {'short_name': short_name}
     headers = {'Authorization': ['Token %s' % settings.MESSAGESET_TOKEN],
                'Content-Type': ['application/json']}
     r = requests.get(url, params=params, headers=headers)
@@ -117,7 +117,7 @@ def get_messageset_id(shortname, msg_type):
     return (r.json()["id"], r.json()["default_schedule"])
 
 
-# def get_schedule_id(shortname):
+# def get_schedule_id(short_name):
 
 
 
@@ -266,12 +266,12 @@ class ValidateRegistration(Task):
         validated registration.
         """
 
-        mother_shortname = get_messageset_shortname(
+        mother_short_name = get_messageset_short_name(
             registration.stage, 'mother', registration.data["msg_type"],
             registration.data["preg_week"]
         )
-        mother_msgset_id, mother_msgset_schedule = get_messageset_id(
-            mother_shortname, registration.data["msg_type"])
+        mother_msgset_id, mother_msgset_schedule = get_messageset_schedule(
+            mother_short_name, registration.data["msg_type"])
         mother_sub = {
             "contact": registration.mother_id,
             "messageset_id": mother_msgset_id,
@@ -282,18 +282,22 @@ class ValidateRegistration(Task):
         SubscriptionRequest.objects.create(**mother_sub)
 
         if registration.data["msg_receiver"] != 'mother_only':
-            household_shortname = get_messageset_shortname(
+            household_short_name = get_messageset_short_name(
                 registration.stage,
                 'household',
                 registration.data["msg_type"],
                 registration.data["preg_week"],
             )
+            household_msgset_id, household_msgset_schedule =\
+                get_messageset_schedule(
+                    household_short_name,
+                    registration.data["msg_type"])
             household_sub = {
                 "contact": registration.data["receiver_id"],
-                "messageset_id": get_messageset_id(household_shortname),
+                "messageset_id": household_msgset_id,
                 "next_sequence_number": 1,  # TODO
                 "lang": LANG_CODES[registration.data["language"]],
-                "schedule": 1,  # TODO
+                "schedule": household_msgset_schedule
             }
             SubscriptionRequest.objects.create(**household_sub)
             return "2 SubscriptionRequests created"

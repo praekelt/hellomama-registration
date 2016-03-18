@@ -3,8 +3,6 @@ import uuid
 import datetime
 import responses
 
-import requests
-
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.db.models.signals import post_save
@@ -658,21 +656,21 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
     def test_validate_registration_run_success(self):
         # Setup
         # mock mother messageset lookup
-        query_string = '?shortname=prebirth_mother_text_10_42'
+        query_string = '?short_name=prebirth_mother_text_10_42'
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json={"id": 1, "shortname": 'prebirth_mother_text_10_42',
+            json={"id": 1, "short_name": 'prebirth_mother_text_10_42',
                   "default_schedule": 1},
             status=200, content_type='application/json',
             match_querystring=True  # pos responses documentation!
         )
         # mock household messageset lookup
-        query_string = '?shortname=prebirth_household_text_10_42'
+        query_string = '?short_name=prebirth_household_text_10_42'
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json={"id": 3, "shortname": 'prebirth_household_text_10_42',
+            json={"id": 3, "short_name": 'prebirth_household_text_10_42',
                   "default_schedule": 3},
             status=200, content_type='application/json',
             match_querystring=True  # pos responses documentation!
@@ -802,11 +800,11 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
     def test_mother_only_prebirth_sms(self):
         # Setup
         # mock mother messageset lookup
-        query_string = '?shortname=prebirth_mother_text_10_42'
+        query_string = '?short_name=prebirth_mother_text_10_42'
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json={"id": 1, "shortname": 'prebirth_mother_text_10_42',
+            json={"id": 1, "short_name": 'prebirth_mother_text_10_42',
                   "default_schedule": 1},
             status=200, content_type='application/json',
             match_querystring=True  # pos responses documentation!
@@ -836,11 +834,11 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
     def test_mother_only_prebirth_voice_mon_wed_9_11(self):
         # Setup
         # mock mother messageset lookup
-        query_string = '?shortname=prebirth_mother_audio_10_42'
+        query_string = '?short_name=prebirth_mother_audio_10_42'
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json={"id": 2, "shortname": 'prebirth_mother_audio_10_42',
+            json={"id": 2, "short_name": 'prebirth_mother_audio_10_42',
                   "default_schedule": 4},
             status=200, content_type='application/json',
             match_querystring=True  # pos responses documentation!
@@ -867,27 +865,27 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         self.assertEqual(d_mom.messageset_id, 2)
         self.assertEqual(d_mom.next_sequence_number, 1)
         self.assertEqual(d_mom.lang, "eng_NG")
-        self.assertEqual(d_mom.schedule, 1)
+        self.assertEqual(d_mom.schedule, 4)
 
     @responses.activate
     def test_friend_only_prebirth_sms(self):
         # Setup
         # mock mother messageset lookup
-        query_string = '?shortname=prebirth_mother_text_10_42'
+        query_string = '?short_name=prebirth_mother_text_10_42'
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json={"id": 1, "shortname": 'prebirth_mother_text_10_42',
+            json={"id": 1, "short_name": 'prebirth_mother_text_10_42',
                   "default_schedule": 1},
             status=200, content_type='application/json',
             match_querystring=True  # pos responses documentation!
         )
         # mock household messageset lookup
-        query_string = '?shortname=prebirth_household_text_10_42'
+        query_string = '?short_name=prebirth_household_text_10_42'
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json={"id": 3, "shortname": 'prebirth_household_text_10_42',
+            json={"id": 3, "short_name": 'prebirth_household_text_10_42',
                   "default_schedule": 3},
             status=200, content_type='application/json',
             match_querystring=True  # pos responses documentation!
@@ -922,27 +920,27 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         self.assertEqual(d_friend.messageset_id, 3)
         self.assertEqual(d_friend.next_sequence_number, 1)
         self.assertEqual(d_friend.lang, "eng_NG")
-        self.assertEqual(d_friend.schedule, 1)
+        self.assertEqual(d_friend.schedule, 3)
 
     @responses.activate
     def test_friend_only_voice_mon_wed_2_5(self):
         # Setup
         # mock mother messageset lookup
-        query_string = '?shortname=prebirth_mother_audio_10_42'
+        query_string = '?short_name=prebirth_mother_audio_10_42'
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json={"id": 2, "shortname": 'prebirth_mother_audio_10_42',
+            json={"id": 2, "short_name": 'prebirth_mother_audio_10_42',
                   "default_schedule": 4},
             status=200, content_type='application/json',
             match_querystring=True  # pos responses documentation!
         )
         # mock household messageset lookup
-        query_string = '?shortname=prebirth_household_text_10_42'
+        query_string = '?short_name=prebirth_household_text_10_42'
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json={"id": 3, "shortname": 'prebirth_household_text_10_42',
+            json={"id": 3, "short_name": 'prebirth_household_text_10_42',
                   "default_schedule": 3},
             status=200, content_type='application/json',
             match_querystring=True  # pos responses documentation!
@@ -974,7 +972,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         self.assertEqual(d_mom.messageset_id, 2)
         self.assertEqual(d_mom.next_sequence_number, 1)
         self.assertEqual(d_mom.lang, "eng_NG")
-        self.assertEqual(d_mom.schedule, 1)
+        self.assertEqual(d_mom.schedule, 4)
 
         d_friend = SubscriptionRequest.objects.get(
             contact="friend00-73a2-4d89-b045-d52004c025fe")
@@ -983,27 +981,27 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         self.assertEqual(d_friend.messageset_id, 3)
         self.assertEqual(d_friend.next_sequence_number, 1)
         self.assertEqual(d_friend.lang, "eng_NG")
-        self.assertEqual(d_friend.schedule, 1)
+        self.assertEqual(d_friend.schedule, 3)
 
     @responses.activate
     def test_family_only_prebirth_sms(self):
         # Setup
         # mock mother messageset lookup
-        query_string = '?shortname=prebirth_mother_text_10_42'
+        query_string = '?short_name=prebirth_mother_text_10_42'
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json={"id": 1, "shortname": 'prebirth_mother_text_10_42',
+            json={"id": 1, "short_name": 'prebirth_mother_text_10_42',
                   "default_schedule": 1},
             status=200, content_type='application/json',
             match_querystring=True  # pos responses documentation!
         )
         # mock household messageset lookup
-        query_string = '?shortname=prebirth_household_text_10_42'
+        query_string = '?short_name=prebirth_household_text_10_42'
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json={"id": 3, "shortname": 'prebirth_household_text_10_42',
+            json={"id": 3, "short_name": 'prebirth_household_text_10_42',
                   "default_schedule": 3},
             status=200, content_type='application/json',
             match_querystring=True  # pos responses documentation!
@@ -1039,27 +1037,27 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         self.assertEqual(d_family.messageset_id, 3)
         self.assertEqual(d_family.next_sequence_number, 1)
         self.assertEqual(d_family.lang, "eng_NG")
-        self.assertEqual(d_family.schedule, 1)
+        self.assertEqual(d_family.schedule, 3)
 
     @responses.activate
     def test_mother_and_father_prebirth_sms(self):
         # Setup
         # mock mother messageset lookup
-        query_string = '?shortname=prebirth_mother_text_10_42'
+        query_string = '?short_name=prebirth_mother_text_10_42'
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json={"id": 1, "shortname": 'prebirth_mother_text_10_42',
+            json={"id": 1, "short_name": 'prebirth_mother_text_10_42',
                   "default_schedule": 1},
             status=200, content_type='application/json',
             match_querystring=True  # pos responses documentation!
         )
         # mock household messageset lookup
-        query_string = '?shortname=prebirth_household_text_10_42'
+        query_string = '?short_name=prebirth_household_text_10_42'
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json={"id": 3, "shortname": 'prebirth_household_text_10_42',
+            json={"id": 3, "short_name": 'prebirth_household_text_10_42',
                   "default_schedule": 3},
             status=200, content_type='application/json',
             match_querystring=True  # pos responses documentation!
@@ -1096,27 +1094,27 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         self.assertEqual(d_dad.messageset_id, 3)
         self.assertEqual(d_dad.next_sequence_number, 1)
         self.assertEqual(d_dad.lang, "eng_NG")
-        self.assertEqual(d_dad.schedule, 1)
+        self.assertEqual(d_dad.schedule, 3)
 
     @responses.activate
     def test_mother_and_family_prebirth_sms(self):
         # Setup
         # mock mother messageset lookup
-        query_string = '?shortname=prebirth_mother_text_10_42'
+        query_string = '?short_name=prebirth_mother_text_10_42'
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json={"id": 1, "shortname": 'prebirth_mother_text_10_42',
+            json={"id": 1, "short_name": 'prebirth_mother_text_10_42',
                   "default_schedule": 1},
             status=200, content_type='application/json',
             match_querystring=True  # pos responses documentation!
         )
         # mock household messageset lookup
-        query_string = '?shortname=prebirth_household_text_10_42'
+        query_string = '?short_name=prebirth_household_text_10_42'
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json={"id": 3, "shortname": 'prebirth_household_text_10_42',
+            json={"id": 3, "short_name": 'prebirth_household_text_10_42',
                   "default_schedule": 3},
             status=200, content_type='application/json',
             match_querystring=True  # pos responses documentation!
@@ -1154,7 +1152,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         self.assertEqual(d_family.messageset_id, 3)
         self.assertEqual(d_family.next_sequence_number, 1)
         self.assertEqual(d_family.lang, "eng_NG")
-        self.assertEqual(d_family.schedule, 1)
+        self.assertEqual(d_family.schedule, 3)
 
 
 class TestSubscriptionRequestWebhook(AuthenticatedAPITestCase):
