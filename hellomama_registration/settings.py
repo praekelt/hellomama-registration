@@ -51,6 +51,7 @@ INSTALLED_APPS = (
     'rest_hooks',
     # us
     'registrations',
+    'changes'
 
 )
 
@@ -138,6 +139,7 @@ HOOK_EVENTS = {
 }
 
 HOOK_DELIVERER = 'registrations.tasks.deliver_hook_wrapper'
+# TODO: Add changes hook deliverer?
 
 HOOK_AUTH_TOKEN = os.environ.get('HOOK_AUTH_TOKEN', 'REPLACEME')
 
@@ -159,6 +161,7 @@ CELERY_ALWAYS_EAGER = False
 # Tell Celery where to find the tasks
 CELERY_IMPORTS = (
     'registrations.tasks',
+    'changes.tasks'
 )
 
 CELERY_CREATE_MISSING_QUEUES = True
@@ -167,6 +170,9 @@ CELERY_ROUTES = {
         'queue': 'mediumpriority',
     },
     'registrations.tasks.validate_registration': {
+        'queue': 'priority',
+    },
+    'changes.tasks.TODO': {
         'queue': 'priority',
     },
     'registrations.tasks.deliver_hook_wrapper': {
