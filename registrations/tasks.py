@@ -119,8 +119,8 @@ def get_cron_string(days, times):
     return "%s %s %s %s %s" % (t1, t2, t3, t4, t5)
 
 
-def get_messageset_schedule_sequence(short_name, voice_days, voice_times,
-                                     weeks):
+def get_messageset_schedule_sequence(short_name, weeks, voice_days,
+                                     voice_times):
     # get messageset_id
     url = settings.MESSAGESET_URL
     params = {'short_name': short_name}
@@ -131,7 +131,6 @@ def get_messageset_schedule_sequence(short_name, voice_days, voice_times,
 
     if short_name.find('audio') != -1:
         cron_string = get_cron_string(voice_days, voice_times)
-        print("Cronstring", cron_string)
         # get schedule
         url = settings.SCHEDULE_URL
         params = {'cron_string': cron_string}
@@ -151,10 +150,6 @@ def get_messageset_schedule_sequence(short_name, voice_days, voice_times,
     days_of_week = r.json()["day_of_week"]
     msgs_per_week = len(days_of_week.split(','))
     next_sequence_number = msgs_per_week * weeks
-
-    print("Msgs_per_week", msgs_per_week)
-    print("weeks", weeks)
-    print("next_sequence_number", next_sequence_number)
 
     return (messageset_id, schedule_id, next_sequence_number)
 
@@ -186,7 +181,6 @@ class ValidateRegistration(Task):
                         get_today(), registration_data[field])
                     if not (settings.PREBIRTH_MIN_WEEKS <= preg_weeks <=
                             settings.PREBIRTH_MAX_WEEKS):
-                        print("preg_weeks", preg_weeks)
                         failures.append("last_period_date out of range")
                 elif field == "baby_dob":
                     # Check baby_dob is in valid week range
@@ -253,7 +247,6 @@ class ValidateRegistration(Task):
                 registration.data["reg_type"] = "hw_pre"
                 registration.data["preg_week"] = calc_pregnancy_week_lmp(
                     get_today(), registration.data["last_period_date"])
-                print("reg.data preg_week", registration.data["preg_week"])
                 registration.validated = True
                 registration.save()
                 return True
@@ -323,8 +316,7 @@ class ValidateRegistration(Task):
 
         mother_msgset_id, mother_msgset_schedule, next_sequence_number =\
             get_messageset_schedule_sequence(
-                mother_short_name, voice_days, voice_times, weeks
-            )
+                mother_short_name, weeks, voice_days, voice_times)
         mother_sub = {
             "contact": registration.mother_id,
             "messageset_id": mother_msgset_id,
@@ -347,14 +339,13 @@ class ValidateRegistration(Task):
             else:
                 weeks = registration.data["baby_age"]
 
-            household_msgset_id, household_msgset_schedule, next_sequence_number =\
+            household_msgset_id, household_msgset_schedule, seq_number =\
                 get_messageset_schedule_sequence(
-                    household_short_name, None, None, weeks
-                )
+                    household_short_name, weeks, None, None)
             household_sub = {
                 "contact": registration.data["receiver_id"],
                 "messageset_id": household_msgset_id,
-                "next_sequence_number": next_sequence_number,
+                "next_sequence_number": seq_number,
                 "lang": LANG_CODES[registration.data["language"]],
                 "schedule": household_msgset_schedule
             }
