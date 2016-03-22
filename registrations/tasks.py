@@ -97,26 +97,36 @@ def get_messageset_short_name(stage, recipient, msg_type, weeks, voice_days,
     return short_name
 
 
-def get_messageset_schedule_sequence(short_name, weeks, voice_days,
-                                     voice_times):
-    # get messageset_id
+def get_messageset(short_name):
     url = settings.STAGE_BASED_URL + 'messageset/'
     params = {'short_name': short_name}
     headers = {'Authorization': ['Token %s' % settings.STAGE_BASED_TOKEN],
                'Content-Type': ['application/json']}
     r = requests.get(url, params=params, headers=headers)
-    messageset_id = r.json()["id"]
-    schedule_id = r.json()["default_schedule"]
+    return r.json()
 
-    # get schedule
+
+def get_schedule(schedule_id):
     url = settings.STAGE_BASED_URL + 'schedule/%s/' % str(schedule_id)
     headers = {'Authorization': ['Token %s' % settings.STAGE_BASED_TOKEN],
                'Content-Type': ['application/json']}
-    schedule_response = requests.get(url, headers=headers)
+    r = requests.get(url, headers=headers)
+    return r.json()
+
+
+def get_messageset_schedule_sequence(short_name, weeks, voice_days,
+                                     voice_times):
+    # get messageset
+    messageset = get_messageset(short_name)
+
+    messageset_id = messageset["id"]
+    schedule_id = messageset["default_schedule"]
+    # get schedule
+    schedule = get_schedule(schedule_id)
 
     # calculate next_sequence_number
     # get schedule days of week: comma-seperated str e.g. '1,3' for Mon & Wed
-    days_of_week = schedule_response.json()["day_of_week"]
+    days_of_week = schedule["day_of_week"]
     # determine how many times a week messages are sent e.g. 2 for '1,3'
     msgs_per_week = len(days_of_week.split(','))
     # determine starting message
