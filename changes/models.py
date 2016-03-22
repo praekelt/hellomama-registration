@@ -55,7 +55,7 @@ def change_post_save(sender, instance, created, **kwargs):
     """ Post save hook to fire Change validation task
     """
     if created:
-        # from .tasks import validate_registration
-        # validate_registration.apply_async(
-        #     kwargs={"registration_id": str(instance.id)})
+        from .tasks import implement_action
+        implement_action.apply_async(
+            kwargs={"change_id": str(instance.id)})
         pass

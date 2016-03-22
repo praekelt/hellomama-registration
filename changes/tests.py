@@ -1,5 +1,6 @@
 import datetime
 import json
+import responses
 
 from django.test import TestCase
 from django.contrib.auth.models import User
@@ -8,11 +9,12 @@ from django.db.models.signals import post_save
 from rest_framework import status
 from rest_framework.test import APIClient
 from rest_framework.authtoken.models import Token
-from rest_hooks.models import model_saved, Hook
+from rest_hooks.models import model_saved
 
 from registrations import tasks
-from registrations.models import Source
+from registrations.models import Source, Registration, registration_post_save
 from .models import Change, change_post_save
+from .tasks import implement_action
 
 
 def override_get_today():
@@ -30,7 +32,7 @@ class APITestCase(TestCase):
 
 class AuthenticatedAPITestCase(APITestCase):
 
-    def _replace_post_save_hooks(self):
+    def _replace_post_save_hooks_change(self):
         def has_listeners():
             return post_save.has_listeners(Change)
         assert has_listeners(), (
@@ -44,13 +46,35 @@ class AuthenticatedAPITestCase(APITestCase):
             "Change model still has post_save listeners. Make sure"
             " helpers cleaned up properly in earlier tests.")
 
-    def _restore_post_save_hooks(self):
+    def _restore_post_save_hooks_change(self):
         def has_listeners():
             return post_save.has_listeners(Change)
         assert not has_listeners(), (
             "Change model still has post_save listeners. Make sure"
             " helpers removed them properly in earlier tests.")
         post_save.connect(change_post_save, sender=Change)
+
+    def _replace_post_save_hooks_registration(self):
+        def has_listeners():
+            return post_save.has_listeners(Registration)
+        assert has_listeners(), (
+            "Registration model has no post_save listeners. Make sure"
+            " helpers cleaned up properly in earlier tests.")
+        post_save.disconnect(receiver=registration_post_save,
+                             sender=Registration)
+        post_save.disconnect(receiver=model_saved,
+                             dispatch_uid='instance-saved-hook')
+        assert not has_listeners(), (
+            "Registration model still has post_save listeners. Make sure"
+            " helpers cleaned up properly in earlier tests.")
+
+    def _restore_post_save_hooks_registration(self):
+        def has_listeners():
+            return post_save.has_listeners(Registration)
+        assert not has_listeners(), (
+            "Registration model still has post_save listeners. Make sure"
+            " helpers removed them properly in earlier tests.")
+        post_save.connect(registration_post_save, sender=Registration)
 
     def make_source_adminuser(self):
         data = {
@@ -70,7 +94,7 @@ class AuthenticatedAPITestCase(APITestCase):
 
     def make_change_adminuser(self):
         data = {
-            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
+            "mother_id": "846877e6-afaa-43de-acb1-09f61ad4de99",
             "action": "change_language",
             "data": {"test_adminuser_change": "test_adminuser_changed"},
             "source": self.make_source_adminuser()
@@ -79,16 +103,37 @@ class AuthenticatedAPITestCase(APITestCase):
 
     def make_change_normaluser(self):
         data = {
-            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
+            "mother_id": "846877e6-afaa-43de-acb1-09f61ad4de99",
             "action": "change_language",
             "data": {"test_normaluser_change": "test_normaluser_changed"},
             "source": self.make_source_adminuser()
         }
         return Change.objects.create(**data)
 
+    def make_registration_mother_only(self):
+        data = {
+            "stage": "prebirth",
+            "mother_id": "846877e6-afaa-43de-acb1-09f61ad4de99",
+            "data": {
+                "receiver_id": "846877e6-afaa-43de-acb1-09f61ad4de99",
+                "operator_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
+                "language": "eng_NG",
+                "msg_type": "text",
+                "gravida": "1",
+                "last_period_date": "20150202",
+                "msg_receiver": "mother_only",
+                # data added during validation
+                "reg_type": "hw_pre",
+                "preg_week": "15"
+            },
+            "source": self.make_source_adminuser()
+        }
+        return Registration.objects.create(**data)
+
     def setUp(self):
         super(AuthenticatedAPITestCase, self).setUp()
-        self._replace_post_save_hooks()
+        self._replace_post_save_hooks_change()
+        self._replace_post_save_hooks_registration()
 
         # Normal User setup
         self.normalusername = 'testnormaluser'
@@ -115,7 +160,8 @@ class AuthenticatedAPITestCase(APITestCase):
             HTTP_AUTHORIZATION='Token ' + self.admintoken)
 
     def tearDown(self):
-        self._restore_post_save_hooks()
+        self._restore_post_save_hooks_change()
+        self._restore_post_save_hooks_registration()
 
 
 class TestLogin(AuthenticatedAPITestCase):
@@ -187,7 +233,7 @@ class TestLogin(AuthenticatedAPITestCase):
         self.assertEqual(request.status_code, status.HTTP_400_BAD_REQUEST)
 
 
-class TestRegistrationAPI(AuthenticatedAPITestCase):
+class TestChangeAPI(AuthenticatedAPITestCase):
 
     def test_get_change_adminuser(self):
         # Setup
@@ -217,7 +263,7 @@ class TestRegistrationAPI(AuthenticatedAPITestCase):
         # Setup
         self.make_source_adminuser()
         post_data = {
-            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
+            "mother_id": "846877e6-afaa-43de-acb1-09f61ad4de99",
             "action": "change_language",
             "data": {"test_key1": "test_value1"}
         }
@@ -234,11 +280,11 @@ class TestRegistrationAPI(AuthenticatedAPITestCase):
         self.assertEqual(d.validated, False)
         self.assertEqual(d.data, {"test_key1": "test_value1"})
 
-    def test_create_registration_normaluser(self):
+    def test_create_change_normaluser(self):
         # Setup
         self.make_source_normaluser()
         post_data = {
-            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
+            "mother_id": "846877e6-afaa-43de-acb1-09f61ad4de99",
             "action": "change_language",
             "data": {"test_key1": "test_value1"}
         }
@@ -255,11 +301,11 @@ class TestRegistrationAPI(AuthenticatedAPITestCase):
         self.assertEqual(d.validated, False)
         self.assertEqual(d.data, {"test_key1": "test_value1"})
 
-    def test_create_registration_set_readonly_field(self):
+    def test_create_change_set_readonly_field(self):
         # Setup
         self.make_source_adminuser()
         post_data = {
-            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
+            "mother_id": "846877e6-afaa-43de-acb1-09f61ad4de99",
             "action": "change_language",
             "data": {"test_key1": "test_value1"},
             "validated": True
@@ -276,3 +322,49 @@ class TestRegistrationAPI(AuthenticatedAPITestCase):
         self.assertEqual(d.action, 'change_language')
         self.assertEqual(d.validated, False)  # Should ignore True post_data
         self.assertEqual(d.data, {"test_key1": "test_value1"})
+
+
+class TestRegistrationCreation(AuthenticatedAPITestCase):
+
+    def test_make_registration_mother_only(self):
+        # Setup
+        # Execute
+        self.make_registration_mother_only()
+        # Test
+        d = Registration.objects.last()
+        self.assertEqual(d.mother_id, "846877e6-afaa-43de-acb1-09f61ad4de99")
+        self.assertEqual(d.data["msg_receiver"], "mother_only")
+
+
+class TestChangeMessaging(AuthenticatedAPITestCase):
+
+    @responses.activate
+    def test_mother_only_audio_to_text(self):
+        # Setup
+        # make registration
+        self.make_registration_mother_only()
+        # make change object
+        change_data = {
+            "mother_id": "846877e6-afaa-43de-acb1-09f61ad4de99",
+            "action": "change_messaging",
+            "data": {
+                "msg_type": "audio",
+                "voice_days": "tue_thu",
+                "voice_times": "9_11"
+            },
+            "source": self.make_source_adminuser()
+        }
+        change = Change.objects.create(**change_data)
+        # mock unsubscribe request
+        responses.add(
+            responses.POST,
+            'http://localhost:8001/api/v1/optout/%s/' % change_data[
+                "mother_id"],
+            json={"id": 1},
+            status=201, content_type='application/json',
+        )
+
+        # Execute
+        result = implement_action.apply_async(args=[change.id])
+        # Check
+        self.assertEqual(result.get(), "Change messaging completed")
