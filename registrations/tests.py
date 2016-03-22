@@ -663,7 +663,7 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
             json={"id": 1, "short_name": 'prebirth_mother_text_10_42',
                   "default_schedule": 1},
             status=200, content_type='application/json',
-            match_querystring=True  # pos responses documentation!
+            match_querystring=True
         )
         # mock household messageset lookup
         query_string = '?short_name=prebirth_household_text_10_42'
@@ -673,7 +673,7 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
             json={"id": 3, "short_name": 'prebirth_household_text_10_42',
                   "default_schedule": 3},
             status=200, content_type='application/json',
-            match_querystring=True  # pos responses documentation!
+            match_querystring=True
         )
         # mock mother schedule lookup
         responses.add(
@@ -821,7 +821,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             json={"id": 1, "short_name": 'prebirth_mother_text_10_42',
                   "default_schedule": 1},
             status=200, content_type='application/json',
-            match_querystring=True  # pos responses documentation!
+            match_querystring=True
         )
         # mock mother schedule lookup
         responses.add(
@@ -869,7 +869,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             json={"id": 2, "short_name": 'prebirth_mother_audio_10_42',
                   "default_schedule": 4},
             status=200, content_type='application/json',
-            match_querystring=True  # pos responses documentation!
+            match_querystring=True
         )
         # mock mother schedule lookup
         query_string = '?cron_string=0+8+1%2C3+%2A+%2A'
@@ -878,7 +878,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             'http://localhost:8005/api/v1/schedule/%s' % query_string,
             json={"id": 4, "day_of_week": "1,3"},
             status=200, content_type='application/json',
-            match_querystring=True  # pos responses documentation!
+            match_querystring=True
         )
         # prepare registration data
         registration_data = {
@@ -915,7 +915,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             json={"id": 1, "short_name": 'prebirth_mother_text_10_42',
                   "default_schedule": 1},
             status=200, content_type='application/json',
-            match_querystring=True  # pos responses documentation!
+            match_querystring=True
         )
         # mock household messageset lookup
         query_string = '?short_name=prebirth_household_text_10_42'
@@ -925,7 +925,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             json={"id": 3, "short_name": 'prebirth_household_text_10_42',
                   "default_schedule": 3},
             status=200, content_type='application/json',
-            match_querystring=True  # pos responses documentation!
+            match_querystring=True
         )
         # mock mother schedule lookup
         responses.add(
@@ -984,7 +984,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             json={"id": 2, "short_name": 'prebirth_mother_audio_10_42',
                   "default_schedule": 4},
             status=200, content_type='application/json',
-            match_querystring=True  # pos responses documentation!
+            match_querystring=True
         )
         # mock household messageset lookup
         query_string = '?short_name=prebirth_household_text_10_42'
@@ -994,7 +994,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             json={"id": 3, "short_name": 'prebirth_household_text_10_42',
                   "default_schedule": 3},
             status=200, content_type='application/json',
-            match_querystring=True  # pos responses documentation!
+            match_querystring=True
         )
         # mock mother schedule lookup
         query_string = '?cron_string=0+13+1%2C3+%2A+%2A'
@@ -1003,7 +1003,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             'http://localhost:8005/api/v1/schedule/%s' % query_string,
             json={"id": 5, "day_of_week": "1,3"},
             status=200, content_type='application/json',
-            match_querystring=True  # pos responses documentation!
+            match_querystring=True
         )
         # mock household schedule lookup
         responses.add(
@@ -1060,7 +1060,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             json={"id": 1, "short_name": 'prebirth_mother_text_10_42',
                   "default_schedule": 1},
             status=200, content_type='application/json',
-            match_querystring=True  # pos responses documentation!
+            match_querystring=True
         )
         # mock household messageset lookup
         query_string = '?short_name=prebirth_household_text_10_42'
@@ -1070,7 +1070,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             json={"id": 3, "short_name": 'prebirth_household_text_10_42',
                   "default_schedule": 3},
             status=200, content_type='application/json',
-            match_querystring=True  # pos responses documentation!
+            match_querystring=True
         )
         # mock mother schedule lookup
         responses.add(
@@ -1129,7 +1129,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             json={"id": 1, "short_name": 'prebirth_mother_text_10_42',
                   "default_schedule": 1},
             status=200, content_type='application/json',
-            match_querystring=True  # pos responses documentation!
+            match_querystring=True
         )
         # mock household messageset lookup
         query_string = '?short_name=prebirth_household_text_10_42'
@@ -1139,7 +1139,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             json={"id": 3, "short_name": 'prebirth_household_text_10_42',
                   "default_schedule": 3},
             status=200, content_type='application/json',
-            match_querystring=True  # pos responses documentation!
+            match_querystring=True
         )
         # mock mother schedule lookup
         responses.add(
@@ -1199,7 +1199,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             json={"id": 1, "short_name": 'prebirth_mother_text_10_42',
                   "default_schedule": 1},
             status=200, content_type='application/json',
-            match_querystring=True  # pos responses documentation!
+            match_querystring=True
         )
         # mock household messageset lookup
         query_string = '?short_name=prebirth_household_text_10_42'
@@ -1209,7 +1209,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             json={"id": 3, "short_name": 'prebirth_household_text_10_42',
                   "default_schedule": 3},
             status=200, content_type='application/json',
-            match_querystring=True  # pos responses documentation!
+            match_querystring=True
         )
         # mock mother schedule lookup
         responses.add(
