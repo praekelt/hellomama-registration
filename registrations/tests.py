@@ -34,7 +34,7 @@ REG_DATA = {
     "hw_pre_mother": {
         "receiver_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
         "operator_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
-        "language": "english",
+        "language": "eng_NG",
         "msg_type": "text",
         "gravida": "1",
         "last_period_date": "20150202",
@@ -43,7 +43,7 @@ REG_DATA = {
     "hw_pre_friend": {
         "receiver_id": "friend00-73a2-4d89-b045-d52004c025fe",
         "operator_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
-        "language": "english",
+        "language": "eng_NG",
         "msg_type": "text",
         "gravida": "1",
         "last_period_date": "20150202",
@@ -52,7 +52,7 @@ REG_DATA = {
     "hw_pre_family": {
         "receiver_id": "family00-73a2-4d89-b045-d52004c025fe",
         "operator_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
-        "language": "english",
+        "language": "eng_NG",
         "msg_type": "text",
         "gravida": "1",
         "last_period_date": "20150202",
@@ -61,7 +61,7 @@ REG_DATA = {
     "hw_pre_father": {
         "receiver_id": "father00-73a2-4d89-b045-d52004c025fe",
         "operator_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
-        "language": "english",
+        "language": "eng_NG",
         "msg_type": "text",
         "gravida": "2",
         "last_period_date": "20150202",
@@ -70,7 +70,7 @@ REG_DATA = {
     "hw_pre_father_and_mother": {
         "receiver_id": "father00-73a2-4d89-b045-d52004c025fe",
         "operator_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
-        "language": "english",
+        "language": "eng_NG",
         "msg_type": "text",
         "gravida": "2",
         "last_period_date": "20150202",
@@ -79,7 +79,7 @@ REG_DATA = {
     "hw_pre_family_and_mother": {
         "receiver_id": "family00-73a2-4d89-b045-d52004c025fe",
         "operator_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
-        "language": "english",
+        "language": "eng_NG",
         "msg_type": "text",
         "gravida": "2",
         "last_period_date": "20150202",
@@ -88,7 +88,7 @@ REG_DATA = {
     "hw_post": {
         "receiver_id": str(uuid.uuid4()),
         "operator_id": str(uuid.uuid4()),
-        "language": "english",
+        "language": "eng_NG",
         "msg_type": "text",
         "gravida": "2",
         "baby_dob": "20150202",
@@ -97,7 +97,7 @@ REG_DATA = {
     "pbl_loss": {
         "receiver_id": str(uuid.uuid4()),
         "operator_id": str(uuid.uuid4()),
-        "language": "english",
+        "language": "eng_NG",
         "msg_type": "text",
         "gravida": "2",
         "loss_reason": "miscarriage"
@@ -105,7 +105,7 @@ REG_DATA = {
     "missing_field": {
         "receiver_id": str(uuid.uuid4()),
         "operator_id": str(uuid.uuid4()),
-        "language": "english",
+        "language": "eng_NG",
         "msg_type": "text",
         "gravida": "2",
         "last_period_date": "20150202",
@@ -113,7 +113,7 @@ REG_DATA = {
     "bad_fields": {
         "receiver_id": str(uuid.uuid4()),
         "operator_id": str(uuid.uuid4()),
-        "language": "english",
+        "language": "eng_NG",
         "msg_type": "text",
         "gravida": "2",
         "last_period_date": "2015020",
@@ -122,7 +122,7 @@ REG_DATA = {
     "bad_lmp": {
         "receiver_id": str(uuid.uuid4()),
         "operator_id": str(uuid.uuid4()),
-        "language": "english",
+        "language": "eng_NG",
         "msg_type": "text",
         "gravida": "2",
         "last_period_date": "20140202",
@@ -469,8 +469,8 @@ class TestFieldValidation(AuthenticatedAPITestCase):
 
     def test_is_valid_lang(self):
         # Setup
-        valid_lang = "pidgin"
-        invalid_lang = "french"
+        valid_lang = "pcm_NG"
+        invalid_lang = "pidgin"
         # Execute
         # Check
         self.assertEqual(is_valid_lang(valid_lang), True)

@@ -12,15 +12,6 @@ from .models import Registration, SubscriptionRequest
 logger = get_task_logger(__name__)
 
 
-LANG_CODES = {
-    "english": "eng_NG",
-    "hausa": "hau_NG",
-    "igbo": "ibo_NG",
-    "yoruba": "yor_NG",
-    "pidgin": "pcm_NG"
-}
-
-
 def get_today():
     return datetime.datetime.today()
 
@@ -38,7 +29,7 @@ def is_valid_uuid(id):
 
 
 def is_valid_lang(lang):
-    return lang in ["english", "hausa", "igbo", "pidgin", "yoruba"]
+    return lang in ["eng_NG", "hau_NG", "ibo_NG", "yor_NG", "pcm_NG"]
 
 
 def is_valid_msg_type(msg_type):
@@ -321,7 +312,7 @@ class ValidateRegistration(Task):
             "contact": registration.mother_id,
             "messageset_id": mother_msgset_id,
             "next_sequence_number": next_sequence_number,
-            "lang": LANG_CODES[registration.data["language"]],
+            "lang": registration.data["language"],
             "schedule": mother_msgset_schedule
         }
         SubscriptionRequest.objects.create(**mother_sub)
@@ -346,7 +337,7 @@ class ValidateRegistration(Task):
                 "contact": registration.data["receiver_id"],
                 "messageset_id": household_msgset_id,
                 "next_sequence_number": seq_number,
-                "lang": LANG_CODES[registration.data["language"]],
+                "lang": registration.data["language"],
                 "schedule": household_msgset_schedule
             }
             SubscriptionRequest.objects.create(**household_sub)
