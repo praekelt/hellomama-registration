@@ -100,17 +100,17 @@ def get_messageset_short_name(stage, recipient, msg_type, weeks, voice_days,
 def get_messageset_schedule_sequence(short_name, weeks, voice_days,
                                      voice_times):
     # get messageset_id
-    url = settings.MESSAGESET_URL
+    url = settings.STAGE_BASED_URL + 'messageset/'
     params = {'short_name': short_name}
-    headers = {'Authorization': ['Token %s' % settings.MESSAGESET_TOKEN],
+    headers = {'Authorization': ['Token %s' % settings.STAGE_BASED_TOKEN],
                'Content-Type': ['application/json']}
     r = requests.get(url, params=params, headers=headers)
     messageset_id = r.json()["id"]
     schedule_id = r.json()["default_schedule"]
 
     # get schedule
-    url = settings.SCHEDULE_URL + str(schedule_id) + "/"
-    headers = {'Authorization': ['Token %s' % settings.SCHEDULE_TOKEN],
+    url = settings.STAGE_BASED_URL + 'schedule/%s/' % str(schedule_id)
+    headers = {'Authorization': ['Token %s' % settings.STAGE_BASED_TOKEN],
                'Content-Type': ['application/json']}
     schedule_response = requests.get(url, headers=headers)
 
