@@ -12,15 +12,6 @@ from .models import Registration, SubscriptionRequest
 logger = get_task_logger(__name__)
 
 
-LANG_CODES = {
-    "english": "eng_NG",
-    "hausa": "hau_NG",
-    "igbo": "ibo_NG",
-    "yoruba": "yor_NG",
-    "pidgin": "pcm_NG"
-}
-
-
 def get_today():
     return datetime.datetime.today()
 
@@ -38,7 +29,7 @@ def is_valid_uuid(id):
 
 
 def is_valid_lang(lang):
-    return lang in ["english", "hausa", "igbo", "pidgin", "yoruba"]
+    return lang in ["eng_NG", "hau_NG", "ibo_NG", "yor_NG", "pcm_NG"]
 
 
 def is_valid_msg_type(msg_type):
@@ -80,7 +71,8 @@ def calc_baby_age(today, baby_dob):
         return -1
 
 
-def get_messageset_short_name(stage, recipient, msg_type, weeks):
+def get_messageset_short_name(stage, recipient, msg_type, weeks, voice_days,
+                              voice_times):
 
     if recipient == "household":
         msg_type = "text"
@@ -95,60 +87,49 @@ def get_messageset_short_name(stage, recipient, msg_type, weeks):
     elif stage == "loss":
         week_range = "0_2"
 
-    short_name = "%s_%s_%s_%s" % (
-        stage, recipient, msg_type, week_range)
+    if msg_type == "text":
+        short_name = "%s.%s.%s.%s" % (
+            stage, recipient, msg_type, week_range)
+    else:
+        short_name = "%s.%s.%s.%s.%s.%s" % (
+            stage, recipient, msg_type, week_range, voice_days, voice_times)
 
     return short_name
 
 
-def get_cron_string(days, times):
-    t1 = "0"
-    t2_map = {
-        '9_11': "8",
-        '2_5': "13"
-    }
-    t2 = t2_map[times]
-    t3_map = {
-        'mon_wed': "1,3",
-        'tue_thu': "2,4"
-    }
-    t3 = t3_map[days]
-    t4 = "*"
-    t5 = "*"
+def get_messageset(short_name):
+    url = settings.STAGE_BASED_URL + 'messageset/'
+    params = {'short_name': short_name}
+    headers = {'Authorization': ['Token %s' % settings.STAGE_BASED_TOKEN],
+               'Content-Type': ['application/json']}
+    r = requests.get(url, params=params, headers=headers)
+    return r.json()
 
-    return "%s %s %s %s %s" % (t1, t2, t3, t4, t5)
+
+def get_schedule(schedule_id):
+    url = settings.STAGE_BASED_URL + 'schedule/%s/' % str(schedule_id)
+    headers = {'Authorization': ['Token %s' % settings.STAGE_BASED_TOKEN],
+               'Content-Type': ['application/json']}
+    r = requests.get(url, headers=headers)
+    return r.json()
 
 
 def get_messageset_schedule_sequence(short_name, weeks, voice_days,
                                      voice_times):
-    # get messageset_id
-    url = settings.MESSAGESET_URL
-    params = {'short_name': short_name}
-    headers = {'Authorization': ['Token %s' % settings.MESSAGESET_TOKEN],
-               'Content-Type': ['application/json']}
-    r = requests.get(url, params=params, headers=headers)
-    messageset_id = r.json()["id"]
+    # get messageset
+    messageset = get_messageset(short_name)
 
-    if short_name.find('audio') != -1:
-        cron_string = get_cron_string(voice_days, voice_times)
-        # get schedule
-        url = settings.SCHEDULE_URL
-        params = {'cron_string': cron_string}
-        headers = {'Authorization': ['Token %s' % settings.SCHEDULE_TOKEN],
-                   'Content-Type': ['application/json']}
-        r = requests.get(url, params=params, headers=headers)
-        schedule_id = r.json()["id"]
-    else:
-        schedule_id = r.json()["default_schedule"]
-        # get schedule
-        url = settings.SCHEDULE_URL + str(schedule_id) + "/"
-        headers = {'Authorization': ['Token %s' % settings.SCHEDULE_TOKEN],
-                   'Content-Type': ['application/json']}
-        r = requests.get(url, headers=headers)
+    messageset_id = messageset["id"]
+    schedule_id = messageset["default_schedule"]
+    # get schedule
+    schedule = get_schedule(schedule_id)
 
     # calculate next_sequence_number
-    days_of_week = r.json()["day_of_week"]
+    # get schedule days of week: comma-seperated str e.g. '1,3' for Mon & Wed
+    days_of_week = schedule["day_of_week"]
+    # determine how many times a week messages are sent e.g. 2 for '1,3'
     msgs_per_week = len(days_of_week.split(','))
+    # determine starting message
     next_sequence_number = msgs_per_week * weeks
 
     return (messageset_id, schedule_id, next_sequence_number)
@@ -297,11 +278,6 @@ class ValidateRegistration(Task):
         validated registration.
         """
 
-        mother_short_name = get_messageset_short_name(
-            registration.stage, 'mother', registration.data["msg_type"],
-            registration.data["preg_week"]
-        )
-
         if 'voice_days' in registration.data:
             voice_days = registration.data["voice_days"]
             voice_times = registration.data["voice_times"]
@@ -314,30 +290,35 @@ class ValidateRegistration(Task):
         else:
             weeks = registration.data["baby_age"]
 
+        mother_short_name = get_messageset_short_name(
+            registration.stage, 'mother', registration.data["msg_type"],
+            weeks, voice_days, voice_times
+        )
+
         mother_msgset_id, mother_msgset_schedule, next_sequence_number =\
             get_messageset_schedule_sequence(
-                mother_short_name, weeks, voice_days, voice_times)
+                mother_short_name, weeks, voice_days, voice_times
+            )
+
         mother_sub = {
             "contact": registration.mother_id,
             "messageset_id": mother_msgset_id,
             "next_sequence_number": next_sequence_number,
-            "lang": LANG_CODES[registration.data["language"]],
+            "lang": registration.data["language"],
             "schedule": mother_msgset_schedule
         }
         SubscriptionRequest.objects.create(**mother_sub)
 
         if registration.data["msg_receiver"] != 'mother_only':
-            household_short_name = get_messageset_short_name(
-                registration.stage,
-                'household',
-                registration.data["msg_type"],
-                registration.data["preg_week"],
-            )
-
             if 'preg_week' in registration.data:
                 weeks = registration.data["preg_week"]
             else:
                 weeks = registration.data["baby_age"]
+
+            household_short_name = get_messageset_short_name(
+                registration.stage, 'household', registration.data["msg_type"],
+                registration.data["preg_week"], None, None
+            )
 
             household_msgset_id, household_msgset_schedule, seq_number =\
                 get_messageset_schedule_sequence(
@@ -346,7 +327,7 @@ class ValidateRegistration(Task):
                 "contact": registration.data["receiver_id"],
                 "messageset_id": household_msgset_id,
                 "next_sequence_number": seq_number,
-                "lang": LANG_CODES[registration.data["language"]],
+                "lang": registration.data["language"],
                 "schedule": household_msgset_schedule
             }
             SubscriptionRequest.objects.create(**household_sub)
