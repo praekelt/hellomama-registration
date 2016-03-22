@@ -103,7 +103,7 @@ def get_messageset(short_name):
     headers = {'Authorization': ['Token %s' % settings.STAGE_BASED_TOKEN],
                'Content-Type': ['application/json']}
     r = requests.get(url, params=params, headers=headers)
-    return r.json()
+    return r.json()[0]  # messagesets should be unique, so return first object
 
 
 def get_schedule(schedule_id):
