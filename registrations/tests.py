@@ -1,6 +1,7 @@
 ﻿import json
 import uuid
 import datetime
+import responses
 
 from django.contrib.auth.models import User
 from django.test import TestCase
@@ -33,7 +34,7 @@ REG_DATA = {
     "hw_pre_mother": {
         "receiver_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
         "operator_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
-        "language": "english",
+        "language": "eng_NG",
         "msg_type": "text",
         "gravida": "1",
         "last_period_date": "20150202",
@@ -42,16 +43,16 @@ REG_DATA = {
     "hw_pre_friend": {
         "receiver_id": "friend00-73a2-4d89-b045-d52004c025fe",
         "operator_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
-        "language": "english",
+        "language": "eng_NG",
         "msg_type": "text",
         "gravida": "1",
         "last_period_date": "20150202",
         "msg_receiver": "friend_only"
     },
     "hw_pre_family": {
-        "receiver_id": "friend00-73a2-4d89-b045-d52004c025fe",
+        "receiver_id": "family00-73a2-4d89-b045-d52004c025fe",
         "operator_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
-        "language": "english",
+        "language": "eng_NG",
         "msg_type": "text",
         "gravida": "1",
         "last_period_date": "20150202",
@@ -60,7 +61,7 @@ REG_DATA = {
     "hw_pre_father": {
         "receiver_id": "father00-73a2-4d89-b045-d52004c025fe",
         "operator_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
-        "language": "english",
+        "language": "eng_NG",
         "msg_type": "text",
         "gravida": "2",
         "last_period_date": "20150202",
@@ -69,16 +70,25 @@ REG_DATA = {
     "hw_pre_father_and_mother": {
         "receiver_id": "father00-73a2-4d89-b045-d52004c025fe",
         "operator_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
-        "language": "english",
+        "language": "eng_NG",
         "msg_type": "text",
         "gravida": "2",
         "last_period_date": "20150202",
         "msg_receiver": "mother_father"
     },
+    "hw_pre_family_and_mother": {
+        "receiver_id": "family00-73a2-4d89-b045-d52004c025fe",
+        "operator_id": "nurse000-6a07-4377-a4f6-c0485ccba234",
+        "language": "eng_NG",
+        "msg_type": "text",
+        "gravida": "2",
+        "last_period_date": "20150202",
+        "msg_receiver": "mother_family"
+    },
     "hw_post": {
         "receiver_id": str(uuid.uuid4()),
         "operator_id": str(uuid.uuid4()),
-        "language": "english",
+        "language": "eng_NG",
         "msg_type": "text",
         "gravida": "2",
         "baby_dob": "20150202",
@@ -87,7 +97,7 @@ REG_DATA = {
     "pbl_loss": {
         "receiver_id": str(uuid.uuid4()),
         "operator_id": str(uuid.uuid4()),
-        "language": "english",
+        "language": "eng_NG",
         "msg_type": "text",
         "gravida": "2",
         "loss_reason": "miscarriage"
@@ -95,7 +105,7 @@ REG_DATA = {
     "missing_field": {
         "receiver_id": str(uuid.uuid4()),
         "operator_id": str(uuid.uuid4()),
-        "language": "english",
+        "language": "eng_NG",
         "msg_type": "text",
         "gravida": "2",
         "last_period_date": "20150202",
@@ -103,7 +113,7 @@ REG_DATA = {
     "bad_fields": {
         "receiver_id": str(uuid.uuid4()),
         "operator_id": str(uuid.uuid4()),
-        "language": "english",
+        "language": "eng_NG",
         "msg_type": "text",
         "gravida": "2",
         "last_period_date": "2015020",
@@ -112,7 +122,7 @@ REG_DATA = {
     "bad_lmp": {
         "receiver_id": str(uuid.uuid4()),
         "operator_id": str(uuid.uuid4()),
-        "language": "english",
+        "language": "eng_NG",
         "msg_type": "text",
         "gravida": "2",
         "last_period_date": "20140202",
@@ -459,8 +469,8 @@ class TestFieldValidation(AuthenticatedAPITestCase):
 
     def test_is_valid_lang(self):
         # Setup
-        valid_lang = "pidgin"
-        invalid_lang = "french"
+        valid_lang = "pcm_NG"
+        invalid_lang = "pidgin"
         # Execute
         # Check
         self.assertEqual(is_valid_lang(valid_lang), True)
@@ -578,7 +588,7 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
         self.assertEqual(v, False)
         self.assertEqual(registration.validated, False)
 
-    def test_validate_pregnancy_too_short(self):
+    def test_validate_pregnancy_9_weeks(self):
         # Setup
         registration_data = {
             "stage": "prebirth",
@@ -586,13 +596,29 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
             "data": REG_DATA["hw_pre_friend"].copy(),
             "source": self.make_source_adminuser()
         }
-        registration_data["data"]["last_period_date"] = "20150816"
+        registration_data["data"]["last_period_date"] = "20150612"  # 9 weeks
         registration = Registration.objects.create(**registration_data)
         # Execute
         v = validate_registration.validate(registration)
         # Check
         self.assertEqual(v, False)
         self.assertEqual(registration.validated, False)
+
+    def test_validate_pregnancy_10_weeks(self):
+        # Setup
+        registration_data = {
+            "stage": "prebirth",
+            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
+            "data": REG_DATA["hw_pre_friend"].copy(),
+            "source": self.make_source_adminuser()
+        }
+        registration_data["data"]["last_period_date"] = "20150605"  # 10 weeks
+        registration = Registration.objects.create(**registration_data)
+        # Execute
+        v = validate_registration.validate(registration)
+        # Check
+        self.assertEqual(v, True)
+        self.assertEqual(registration.validated, True)
 
     def test_validate_baby_too_young(self):
         # Setup
@@ -626,8 +652,44 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
         self.assertEqual(v, False)
         self.assertEqual(registration.validated, False)
 
+    @responses.activate
     def test_validate_registration_run_success(self):
         # Setup
+        # mock mother messageset lookup
+        query_string = '?short_name=prebirth.mother.text.10_42'
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/%s' % query_string,
+            json=[{"id": 1, "short_name": 'prebirth.mother.text.10_42',
+                   "default_schedule": 1}],
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock household messageset lookup
+        query_string = '?short_name=prebirth.household.text.10_42'
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/%s' % query_string,
+            json=[{"id": 3, "short_name": 'prebirth.household.text.10_42',
+                   "default_schedule": 3}],
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock mother schedule lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/schedule/1/',
+            json={"id": 1, "day_of_week": "1,3,5"},
+            status=200, content_type='application/json',
+        )
+        # mock household schedule lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/schedule/3/',
+            json={"id": 3, "day_of_week": "5"},
+            status=200, content_type='application/json',
+        )
+        # prepare registration data
         registration_data = {
             "stage": "prebirth",
             "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
@@ -748,14 +810,41 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
 
 class TestSubscriptionRequest(AuthenticatedAPITestCase):
 
-    def test_mother_only(self):
+    @responses.activate
+    def test_mother_only_prebirth_sms(self):
         # Setup
+        # mock mother messageset lookup
+        query_string = '?short_name=prebirth.mother.text.10_42'
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/%s' % query_string,
+            json=[{"id": 1, "short_name": 'prebirth.mother.text.10_42',
+                   "default_schedule": 1}],
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock mother schedule lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/schedule/1/',
+            json={"id": 1, "day_of_week": "1,3,5"},
+            status=200, content_type='application/json',
+        )
+        # mock household schedule lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/schedule/3/',
+            json={"id": 3, "day_of_week": "5"},
+            status=200, content_type='application/json',
+        )
+        # prepare registration data
         registration_data = {
             "stage": "prebirth",
             "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
             "data": REG_DATA["hw_pre_mother"].copy(),
             "source": self.make_source_adminuser()
         }
+        registration_data["data"]["preg_week"] = 15
         registration = Registration.objects.create(**registration_data)
         # Execute
         result = validate_registration.create_subscriptionrequests(
@@ -765,60 +854,316 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         d_mom = SubscriptionRequest.objects.last()
         self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.messageset_id, 1)
-        self.assertEqual(d_mom.next_sequence_number, 1)
+        self.assertEqual(d_mom.next_sequence_number, 45)
         self.assertEqual(d_mom.lang, "eng_NG")
         self.assertEqual(d_mom.schedule, 1)
 
-    def test_friend_only(self):
+    @responses.activate
+    def test_mother_only_prebirth_voice_tue_thu_9_11(self):
         # Setup
+        # mock mother messageset lookup
+        query_string = '?short_name=prebirth.mother.audio.10_42.tue_thu.9_11'
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/%s' % query_string,
+            json=[{"id": 2,
+                   "short_name": 'prebirth.mother.audio.10_42.tue_thu.9_11',
+                   "default_schedule": 6}],
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock mother schedule lookup
+        query_string = '?cron_string=0+8+1%2C3+%2A+%2A'
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/schedule/6/',
+            json={"id": 6, "day_of_week": "2,4"},
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # prepare registration data
+        registration_data = {
+            "stage": "prebirth",
+            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
+            "data": REG_DATA["hw_pre_mother"].copy(),
+            "source": self.make_source_adminuser()
+        }
+        registration_data["data"]["preg_week"] = 15
+        registration_data["data"]["msg_type"] = "audio"
+        registration_data["data"]["voice_times"] = "9_11"
+        registration_data["data"]["voice_days"] = "tue_thu"
+        registration = Registration.objects.create(**registration_data)
+        # Execute
+        result = validate_registration.create_subscriptionrequests(
+            registration)
+        # Check
+        self.assertEqual(result, "1 SubscriptionRequest created")
+        d_mom = SubscriptionRequest.objects.last()
+        self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
+        self.assertEqual(d_mom.messageset_id, 2)
+        self.assertEqual(d_mom.next_sequence_number, 30)
+        self.assertEqual(d_mom.lang, "eng_NG")
+        self.assertEqual(d_mom.schedule, 6)
+
+    @responses.activate
+    def test_friend_only_prebirth_sms(self):
+        # Setup
+        # mock mother messageset lookup
+        query_string = '?short_name=prebirth.mother.text.10_42'
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/%s' % query_string,
+            json=[{"id": 1, "short_name": 'prebirth.mother.text.10_42',
+                   "default_schedule": 1}],
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock household messageset lookup
+        query_string = '?short_name=prebirth.household.text.10_42'
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/%s' % query_string,
+            json=[{"id": 3, "short_name": 'prebirth.household.text.10_42',
+                   "default_schedule": 3}],
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock mother schedule lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/schedule/1/',
+            json={"id": 1, "day_of_week": "1,3,5"},
+            status=200, content_type='application/json',
+        )
+        # mock household schedule lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/schedule/3/',
+            json={"id": 3, "day_of_week": "5"},
+            status=200, content_type='application/json',
+        )
+        # prepare registration data
         registration_data = {
             "stage": "prebirth",
             "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
             "data": REG_DATA["hw_pre_friend"].copy(),
             "source": self.make_source_adminuser()
         }
+        registration_data["data"]["preg_week"] = 15
         registration = Registration.objects.create(**registration_data)
         # Execute
         result = validate_registration.create_subscriptionrequests(
             registration)
         # Check
-        self.assertEqual(result, "1 SubscriptionRequest created")
-        d_mom = SubscriptionRequest.objects.last()
+        self.assertEqual(result, "2 SubscriptionRequests created")
+
+        d_mom = SubscriptionRequest.objects.get(
+            contact="mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.messageset_id, 1)
-        self.assertEqual(d_mom.next_sequence_number, 1)
+        self.assertEqual(d_mom.next_sequence_number, 45)
         self.assertEqual(d_mom.lang, "eng_NG")
         self.assertEqual(d_mom.schedule, 1)
 
-    def test_family_member(self):
+        d_friend = SubscriptionRequest.objects.get(
+            contact="friend00-73a2-4d89-b045-d52004c025fe")
+        self.assertEqual(d_friend.contact,
+                         "friend00-73a2-4d89-b045-d52004c025fe")
+        self.assertEqual(d_friend.messageset_id, 3)
+        self.assertEqual(d_friend.next_sequence_number, 15)
+        self.assertEqual(d_friend.lang, "eng_NG")
+        self.assertEqual(d_friend.schedule, 3)
+
+    @responses.activate
+    def test_friend_only_voice_mon_wed_2_5(self):
         # Setup
+        # mock mother messageset lookup
+        query_string = '?short_name=prebirth.mother.audio.10_42.mon_wed.2_5'
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/%s' % query_string,
+            json=[{"id": 2,
+                   "short_name": 'prebirth.mother.audio.10_42.mon_wed.2_5',
+                   "default_schedule": 5}],
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock household messageset lookup
+        query_string = '?short_name=prebirth.household.text.10_42'
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/%s' % query_string,
+            json=[{"id": 3, "short_name": 'prebirth.household.text.10_42',
+                   "default_schedule": 3}],
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock mother schedule lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/schedule/5/',
+            json={"id": 5, "day_of_week": "1,3"},
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock household schedule lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/schedule/3/',
+            json={"id": 3, "day_of_week": "5"},
+            status=200, content_type='application/json',
+        )
+        # prepare registration data
+        registration_data = {
+            "stage": "prebirth",
+            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
+            "data": REG_DATA["hw_pre_friend"].copy(),
+            "source": self.make_source_adminuser()
+        }
+        registration_data["data"]["preg_week"] = 15
+        registration_data["data"]["msg_type"] = "audio"
+        registration_data["data"]["voice_times"] = "2_5"
+        registration_data["data"]["voice_days"] = "mon_wed"
+        registration = Registration.objects.create(**registration_data)
+
+        # Execute
+        result = validate_registration.create_subscriptionrequests(
+            registration)
+
+        # Check
+        self.assertEqual(result, "2 SubscriptionRequests created")
+
+        d_mom = SubscriptionRequest.objects.get(
+            contact="mother00-9d89-4aa6-99ff-13c225365b5d")
+        self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
+        self.assertEqual(d_mom.messageset_id, 2)
+        self.assertEqual(d_mom.next_sequence_number, 30)
+        self.assertEqual(d_mom.lang, "eng_NG")
+        self.assertEqual(d_mom.schedule, 5)
+
+        d_friend = SubscriptionRequest.objects.get(
+            contact="friend00-73a2-4d89-b045-d52004c025fe")
+        self.assertEqual(d_friend.contact,
+                         "friend00-73a2-4d89-b045-d52004c025fe")
+        self.assertEqual(d_friend.messageset_id, 3)
+        self.assertEqual(d_friend.next_sequence_number, 15)
+        self.assertEqual(d_friend.lang, "eng_NG")
+        self.assertEqual(d_friend.schedule, 3)
+
+    @responses.activate
+    def test_family_only_prebirth_sms(self):
+        # Setup
+        # mock mother messageset lookup
+        query_string = '?short_name=prebirth.mother.text.10_42'
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/%s' % query_string,
+            json=[{"id": 1, "short_name": 'prebirth.mother.text.10_42',
+                   "default_schedule": 1}],
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock household messageset lookup
+        query_string = '?short_name=prebirth.household.text.10_42'
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/%s' % query_string,
+            json=[{"id": 3, "short_name": 'prebirth.household.text.10_42',
+                   "default_schedule": 3}],
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock mother schedule lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/schedule/1/',
+            json={"id": 1, "day_of_week": "1,3,5"},
+            status=200, content_type='application/json',
+        )
+        # mock household schedule lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/schedule/3/',
+            json={"id": 3, "day_of_week": "5"},
+            status=200, content_type='application/json',
+        )
+        # prepare registration data
         registration_data = {
             "stage": "prebirth",
             "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
             "data": REG_DATA["hw_pre_family"].copy(),
             "source": self.make_source_adminuser()
         }
+        registration_data["data"]["preg_week"] = 15
         registration = Registration.objects.create(**registration_data)
         # Execute
         result = validate_registration.create_subscriptionrequests(
             registration)
         # Check
-        self.assertEqual(result, "1 SubscriptionRequest created")
-        d_mom = SubscriptionRequest.objects.last()
+        self.assertEqual(result, "2 SubscriptionRequests created")
+
+        d_mom = SubscriptionRequest.objects.get(
+            contact="mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.messageset_id, 1)
-        self.assertEqual(d_mom.next_sequence_number, 1)
+        self.assertEqual(d_mom.next_sequence_number, 45)
         self.assertEqual(d_mom.lang, "eng_NG")
         self.assertEqual(d_mom.schedule, 1)
 
-    def test_father_only(self):
+        d_family = SubscriptionRequest.objects.get(
+            contact="family00-73a2-4d89-b045-d52004c025fe")
+        self.assertEqual(d_family.contact,
+                         "family00-73a2-4d89-b045-d52004c025fe")
+        self.assertEqual(d_family.messageset_id, 3)
+        self.assertEqual(d_family.next_sequence_number, 15)
+        self.assertEqual(d_family.lang, "eng_NG")
+        self.assertEqual(d_family.schedule, 3)
+
+    @responses.activate
+    def test_mother_and_father_prebirth_sms(self):
         # Setup
+        # mock mother messageset lookup
+        query_string = '?short_name=prebirth.mother.text.10_42'
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/%s' % query_string,
+            json=[{"id": 1, "short_name": 'prebirth.mother.text.10_42',
+                   "default_schedule": 1}],
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock household messageset lookup
+        query_string = '?short_name=prebirth.household.text.10_42'
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/%s' % query_string,
+            json=[{"id": 3, "short_name": 'prebirth.household.text.10_42',
+                   "default_schedule": 3}],
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock mother schedule lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/schedule/1/',
+            json={"id": 1, "day_of_week": "1,3,5"},
+            status=200, content_type='application/json',
+        )
+        # mock household schedule lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/schedule/3/',
+            json={"id": 3, "day_of_week": "5"},
+            status=200, content_type='application/json',
+        )
+        # prepare registration data
         registration_data = {
             "stage": "prebirth",
             "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
-            "data": REG_DATA["hw_pre_father"].copy(),
+            "data": REG_DATA["hw_pre_father_and_mother"].copy(),
             "source": self.make_source_adminuser()
         }
+        registration_data["data"]["preg_week"] = 30
         registration = Registration.objects.create(**registration_data)
 
         # Execute
@@ -832,26 +1177,63 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             contact="mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.messageset_id, 1)
-        self.assertEqual(d_mom.next_sequence_number, 1)
+        self.assertEqual(d_mom.next_sequence_number, 90)
         self.assertEqual(d_mom.lang, "eng_NG")
         self.assertEqual(d_mom.schedule, 1)
 
         d_dad = SubscriptionRequest.objects.get(
             contact="father00-73a2-4d89-b045-d52004c025fe")
         self.assertEqual(d_dad.contact, "father00-73a2-4d89-b045-d52004c025fe")
-        self.assertEqual(d_dad.messageset_id, 2)
-        self.assertEqual(d_dad.next_sequence_number, 1)
+        self.assertEqual(d_dad.messageset_id, 3)
+        self.assertEqual(d_dad.next_sequence_number, 30)
         self.assertEqual(d_dad.lang, "eng_NG")
-        self.assertEqual(d_dad.schedule, 1)
+        self.assertEqual(d_dad.schedule, 3)
 
-    def test_mother_and_father(self):
+    @responses.activate
+    def test_mother_and_family_prebirth_sms(self):
         # Setup
+        # mock mother messageset lookup
+        query_string = '?short_name=prebirth.mother.text.10_42'
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/%s' % query_string,
+            json=[{"id": 1, "short_name": 'prebirth.mother.text.10_42',
+                   "default_schedule": 1}],
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock household messageset lookup
+        query_string = '?short_name=prebirth.household.text.10_42'
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/%s' % query_string,
+            json=[{"id": 3, "short_name": 'prebirth.household.text.10_42',
+                   "default_schedule": 3}],
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock mother schedule lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/schedule/1/',
+            json={"id": 1, "day_of_week": "1,3,5"},
+            status=200, content_type='application/json',
+        )
+        # mock household schedule lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/schedule/3/',
+            json={"id": 3, "day_of_week": "5"},
+            status=200, content_type='application/json',
+        )
+        # prepare registration data
         registration_data = {
             "stage": "prebirth",
             "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
-            "data": REG_DATA["hw_pre_father"].copy(),
+            "data": REG_DATA["hw_pre_family_and_mother"].copy(),
             "source": self.make_source_adminuser()
         }
+        registration_data["data"]["preg_week"] = 40
         registration = Registration.objects.create(**registration_data)
 
         # Execute
@@ -865,17 +1247,18 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             contact="mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.messageset_id, 1)
-        self.assertEqual(d_mom.next_sequence_number, 1)
+        self.assertEqual(d_mom.next_sequence_number, 120)
         self.assertEqual(d_mom.lang, "eng_NG")
         self.assertEqual(d_mom.schedule, 1)
 
-        d_dad = SubscriptionRequest.objects.get(
-            contact="father00-73a2-4d89-b045-d52004c025fe")
-        self.assertEqual(d_dad.contact, "father00-73a2-4d89-b045-d52004c025fe")
-        self.assertEqual(d_dad.messageset_id, 2)
-        self.assertEqual(d_dad.next_sequence_number, 1)
-        self.assertEqual(d_dad.lang, "eng_NG")
-        self.assertEqual(d_dad.schedule, 1)
+        d_family = SubscriptionRequest.objects.get(
+            contact="family00-73a2-4d89-b045-d52004c025fe")
+        self.assertEqual(d_family.contact,
+                         "family00-73a2-4d89-b045-d52004c025fe")
+        self.assertEqual(d_family.messageset_id, 3)
+        self.assertEqual(d_family.next_sequence_number, 40)
+        self.assertEqual(d_family.lang, "eng_NG")
+        self.assertEqual(d_family.schedule, 3)
 
 
 class TestSubscriptionRequestWebhook(AuthenticatedAPITestCase):

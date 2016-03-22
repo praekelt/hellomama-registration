@@ -178,4 +178,13 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_ACCEPT_CONTENT = ['json']
 
+PREBIRTH_MIN_WEEKS = int(os.environ.get('PREBIRTH_MIN_WEEKS', '10'))
+PREBIRTH_MAX_WEEKS = int(os.environ.get('PREBIRTH_MAX_WEEKS', '42'))
+POSTBIRTH_MIN_WEEKS = int(os.environ.get('POSTBIRTH_MIN_WEEKS', '0'))
+POSTBIRTH_MAX_WEEKS = int(os.environ.get('POSTBIRTH_MAX_WEEKS', '52'))
+
+STAGE_BASED_URL = os.environ.get('STAGE_BASED_URL',
+                                 'http://localhost:8005/api/v1/')
+STAGE_BASED_TOKEN = os.environ.get('STAGE_BASED_TOKEN', 'REPLACEME')
+
 djcelery.setup_loader()

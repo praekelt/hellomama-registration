@@ -12,15 +12,6 @@ from .models import Registration, SubscriptionRequest
 logger = get_task_logger(__name__)
 
 
-LANG_CODES = {
-    "english": "eng_NG",
-    "hausa": "hau_NG",
-    "igbo": "ibo_NG",
-    "yoruba": "yor_NG",
-    "pidgin": "pcm_NG"
-}
-
-
 def get_today():
     return datetime.datetime.today()
 
@@ -38,7 +29,7 @@ def is_valid_uuid(id):
 
 
 def is_valid_lang(lang):
-    return lang in ["english", "hausa", "igbo", "pidgin", "yoruba"]
+    return lang in ["eng_NG", "hau_NG", "ibo_NG", "yor_NG", "pcm_NG"]
 
 
 def is_valid_msg_type(msg_type):
@@ -80,6 +71,70 @@ def calc_baby_age(today, baby_dob):
         return -1
 
 
+def get_messageset_short_name(stage, recipient, msg_type, weeks, voice_days,
+                              voice_times):
+
+    if recipient == "household":
+        msg_type = "text"
+
+    if stage == "prebirth":
+        week_range = "10_42"
+    elif stage == "postbirth":
+        if 0 <= weeks <= 12:
+            week_range = "0_12"
+        elif 13 <= weeks <= 52:
+            week_range = "13_52"
+    elif stage == "loss":
+        week_range = "0_2"
+
+    if msg_type == "text":
+        short_name = "%s.%s.%s.%s" % (
+            stage, recipient, msg_type, week_range)
+    else:
+        short_name = "%s.%s.%s.%s.%s.%s" % (
+            stage, recipient, msg_type, week_range, voice_days, voice_times)
+
+    return short_name
+
+
+def get_messageset(short_name):
+    url = settings.STAGE_BASED_URL + 'messageset/'
+    params = {'short_name': short_name}
+    headers = {'Authorization': ['Token %s' % settings.STAGE_BASED_TOKEN],
+               'Content-Type': ['application/json']}
+    r = requests.get(url, params=params, headers=headers)
+    return r.json()[0]  # messagesets should be unique, so return first object
+
+
+def get_schedule(schedule_id):
+    url = settings.STAGE_BASED_URL + 'schedule/%s/' % str(schedule_id)
+    headers = {'Authorization': ['Token %s' % settings.STAGE_BASED_TOKEN],
+               'Content-Type': ['application/json']}
+    r = requests.get(url, headers=headers)
+    return r.json()
+
+
+def get_messageset_schedule_sequence(short_name, weeks, voice_days,
+                                     voice_times):
+    # get messageset
+    messageset = get_messageset(short_name)
+
+    messageset_id = messageset["id"]
+    schedule_id = messageset["default_schedule"]
+    # get schedule
+    schedule = get_schedule(schedule_id)
+
+    # calculate next_sequence_number
+    # get schedule days of week: comma-seperated str e.g. '1,3' for Mon & Wed
+    days_of_week = schedule["day_of_week"]
+    # determine how many times a week messages are sent e.g. 2 for '1,3'
+    msgs_per_week = len(days_of_week.split(','))
+    # determine starting message
+    next_sequence_number = msgs_per_week * weeks
+
+    return (messageset_id, schedule_id, next_sequence_number)
+
+
 class ValidateRegistration(Task):
     """ Task to validate a registration model entry's registration
     data.
@@ -102,16 +157,18 @@ class ValidateRegistration(Task):
                 if not is_valid_date(registration_data[field]):
                     failures.append(field)
                 elif field == "last_period_date":
-                    # Check last_period_date is in the past and < 42 weeks ago
+                    # Check last_period_date is in valid week range
                     preg_weeks = calc_pregnancy_week_lmp(
                         get_today(), registration_data[field])
-                    if not (2 <= preg_weeks <= 42):
+                    if not (settings.PREBIRTH_MIN_WEEKS <= preg_weeks <=
+                            settings.PREBIRTH_MAX_WEEKS):
                         failures.append("last_period_date out of range")
                 elif field == "baby_dob":
-                    # Check baby_dob is in the past and < 104 weeks ago
+                    # Check baby_dob is in valid week range
                     preg_weeks = calc_baby_age(
                         get_today(), registration_data[field])
-                    if not (0 <= preg_weeks <= 104):
+                    if not (settings.POSTBIRTH_MIN_WEEKS <= preg_weeks <=
+                            settings.POSTBIRTH_MAX_WEEKS):
                         failures.append("baby_dob out of range")
             if field == "msg_receiver":
                 if not is_valid_msg_receiver(registration_data[field]):
@@ -220,25 +277,60 @@ class ValidateRegistration(Task):
         """ Create SubscriptionRequest(s) based on the
         validated registration.
         """
+
+        if 'voice_days' in registration.data:
+            voice_days = registration.data["voice_days"]
+            voice_times = registration.data["voice_times"]
+        else:
+            voice_days = None
+            voice_times = None
+
+        if 'preg_week' in registration.data:
+            weeks = registration.data["preg_week"]
+        else:
+            weeks = registration.data["baby_age"]
+
+        mother_short_name = get_messageset_short_name(
+            registration.stage, 'mother', registration.data["msg_type"],
+            weeks, voice_days, voice_times
+        )
+
+        mother_msgset_id, mother_msgset_schedule, next_sequence_number =\
+            get_messageset_schedule_sequence(
+                mother_short_name, weeks, voice_days, voice_times
+            )
+
         mother_sub = {
             "contact": registration.mother_id,
-            "messageset_id": 1,  # TODO
-            "next_sequence_number": 1,  # TODO
-            "lang": LANG_CODES[registration.data["language"]],
-            "schedule": 1,  # TODO
+            "messageset_id": mother_msgset_id,
+            "next_sequence_number": next_sequence_number,
+            "lang": registration.data["language"],
+            "schedule": mother_msgset_schedule
         }
         SubscriptionRequest.objects.create(**mother_sub)
 
-        if registration.data["msg_receiver"] in ["father_only",
-                                                 "mother_father"]:
-            father_sub = {
+        if registration.data["msg_receiver"] != 'mother_only':
+            if 'preg_week' in registration.data:
+                weeks = registration.data["preg_week"]
+            else:
+                weeks = registration.data["baby_age"]
+
+            household_short_name = get_messageset_short_name(
+                registration.stage, 'household', registration.data["msg_type"],
+                registration.data["preg_week"], None, None
+            )
+
+            household_msgset_id, household_msgset_schedule, seq_number =\
+                get_messageset_schedule_sequence(
+                    household_short_name, weeks, None, None)
+            household_sub = {
                 "contact": registration.data["receiver_id"],
-                "messageset_id": 2,  # TODO
-                "next_sequence_number": 1,  # TODO
-                "lang": LANG_CODES[registration.data["language"]],
-                "schedule": 1,  # TODO
+                "messageset_id": household_msgset_id,
+                "next_sequence_number": seq_number,
+                "lang": registration.data["language"],
+                "schedule": household_msgset_schedule
             }
-            SubscriptionRequest.objects.create(**father_sub)
+            SubscriptionRequest.objects.create(**household_sub)
             return "2 SubscriptionRequests created"
 
         return "1 SubscriptionRequest created"
