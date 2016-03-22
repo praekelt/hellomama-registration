@@ -2,8 +2,8 @@ from .models import Source, Change
 from rest_hooks.models import Hook
 from rest_framework import viewsets, mixins, generics
 from rest_framework.permissions import IsAuthenticated
-from .serializers import (ChangeSerializer,
-                          HookSerializer)
+from .serializers import ChangeSerializer
+from registrations.serializers import HookSerializer
 
 
 class HookViewSet(viewsets.ModelViewSet):
