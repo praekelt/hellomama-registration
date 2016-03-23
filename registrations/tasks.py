@@ -98,18 +98,23 @@ def get_messageset_short_name(stage, recipient, msg_type, weeks, voice_days,
 
 
 def get_messageset(short_name):
-    url = settings.STAGE_BASED_URL + 'messageset/'
+    url = settings.STAGE_BASED_MESSAGING_URL + 'messageset/'
     params = {'short_name': short_name}
-    headers = {'Authorization': ['Token %s' % settings.STAGE_BASED_TOKEN],
-               'Content-Type': ['application/json']}
+    headers = {'Authorization': [
+        'Token %s' % settings.STAGE_BASED_MESSAGING_TOKEN],
+        'Content-Type': ['application/json']
+    }
     r = requests.get(url, params=params, headers=headers)
     return r.json()[0]  # messagesets should be unique, so return first object
 
 
 def get_schedule(schedule_id):
-    url = settings.STAGE_BASED_URL + 'schedule/%s/' % str(schedule_id)
-    headers = {'Authorization': ['Token %s' % settings.STAGE_BASED_TOKEN],
-               'Content-Type': ['application/json']}
+    url = settings.STAGE_BASED_MESSAGING_URL + 'schedule/%s/' % str(
+        schedule_id)
+    headers = {'Authorization': [
+        'Token %s' % settings.STAGE_BASED_MESSAGING_TOKEN],
+        'Content-Type': ['application/json']
+    }
     r = requests.get(url, headers=headers)
     return r.json()
 

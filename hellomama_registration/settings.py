@@ -189,12 +189,9 @@ PREBIRTH_MAX_WEEKS = int(os.environ.get('PREBIRTH_MAX_WEEKS', '42'))
 POSTBIRTH_MIN_WEEKS = int(os.environ.get('POSTBIRTH_MIN_WEEKS', '0'))
 POSTBIRTH_MAX_WEEKS = int(os.environ.get('POSTBIRTH_MAX_WEEKS', '52'))
 
-STAGE_BASED_URL = os.environ.get('STAGE_BASED_URL',
-                                 'http://localhost:8005/api/v1/')
-STAGE_BASED_TOKEN = os.environ.get('STAGE_BASED_TOKEN', 'REPLACEME')
-
-IDENTITIES_URL = os.environ.get('IDENTITIES_URL',
-                                'http://localhost:8001/api/v1/')
-IDENTITIES_TOKEN = os.environ.get('IDENTITIES_TOKEN', 'REPLACEME')
+STAGE_BASED_MESSAGING_URL = os.environ.get('STAGE_BASED_MESSAGING_URL',
+                                           'http://localhost:8005/api/v1/')
+STAGE_BASED_MESSAGING_TOKEN = os.environ.get('STAGE_BASED_MESSAGING_TOKEN',
+                                             'REPLACEME')
 
 djcelery.setup_loader()

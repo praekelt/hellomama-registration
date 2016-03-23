@@ -19,58 +19,38 @@ def get_today():
 def get_subscription(identity):
     """ Gets the first active subscription found for an identity
     """
-    url = settings.STAGE_BASED_URL + 'subscriptions/'
+    url = settings.STAGE_BASED_MESSAGING_URL + 'subscriptions/'
     params = {'id': identity, 'active': True}
-    headers = {'Authorization': ['Token %s' % settings.STAGE_BASED_TOKEN],
-               'Content-Type': ['application/json']}
+    headers = {'Authorization': [
+        'Token %s' % settings.STAGE_BASED_MESSAGING_TOKEN],
+        'Content-Type': ['application/json']
+    }
     r = requests.get(url, params=params, headers=headers)
     return r.json()[0]  # return first object TODO: handle multiple
-
-
-# def get_identity(identity):
-#     url = settings.IDENTITIES_URL + 'identities/%s/' % str(identity)
-#     headers = {'Authorization': ['Token %s' % settings.IDENTITIES_TOKEN],
-#                'Content-Type': ['application/json']}
-#     r = requests.get(url, headers=headers)
-#     return r.json()
 
 
 def deactivate_subscription(subscription):
     """ Sets a subscription deactive via a Patch request
     """
-    url = settings.STAGE_BASED_URL + 'subscriptions/%s/' % subscription["id"]
+    url = settings.STAGE_BASED_MESSAGING_URL + 'subscriptions/%s/' % (
+        subscription["id"])
     data = {"active": False}
-    headers = {'Authorization': ['Token %s' % settings.STAGE_BASED_TOKEN],
-               'Content-Type': ['application/json']}
+    headers = {'Authorization': [
+        'Token %s' % settings.STAGE_BASED_MESSAGING_TOKEN],
+        'Content-Type': ['application/json']
+    }
     r = requests.patch(url, data=data, headers=headers)
     return r.json()
 
 
 def get_messageset(messageset_id):
-    url = settings.STAGE_BASED_URL + 'messageset/%s/' % messageset_id
-    headers = {'Authorization': ['Token %s' % settings.STAGE_BASED_TOKEN],
-               'Content-Type': ['application/json']}
+    url = settings.STAGE_BASED_MESSAGING_URL + 'messageset/%s/' % messageset_id
+    headers = {'Authorization': [
+        'Token %s' % settings.STAGE_BASED_MESSAGING_TOKEN],
+        'Content-Type': ['application/json']
+    }
     r = requests.get(url, headers=headers)
     return r.json()
-
-
-# def unsubscribe_identity(identity, reason):
-#     """ Send and unsubscribe request to the identity store
-#     """
-#     url = settings.IDENTITIES_URL + 'optout/%s/' % identity
-#     data = {
-#         "optout_type": "unsubscribe",
-#         "identity": identity,
-#         "reason": reason,
-#         "address_type": "",
-#         "address": "",
-#         "request_source": "change_backend",
-#         "requestor_source_id": None
-#     }
-#     headers = {'Authorization': ['Token %s' % settings.IDENTITIES_TOKEN],
-#                'Content-Type': ['application/json']}
-#     r = requests.post(url, data=data, headers=headers)
-#     return r.json()["id"]
 
 
 class ImplementAction(Task):
