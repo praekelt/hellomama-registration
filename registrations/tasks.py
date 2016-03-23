@@ -210,7 +210,7 @@ class ValidateRegistration(Task):
 
         mother_sub = {
             "contact": registration.mother_id,
-            "messageset_id": mother_msgset_id,
+            "messageset": mother_msgset_id,
             "next_sequence_number": next_sequence_number,
             "lang": registration.data["language"],
             "schedule": mother_msgset_schedule
@@ -233,7 +233,7 @@ class ValidateRegistration(Task):
                     household_short_name, weeks, None, None)
             household_sub = {
                 "contact": registration.data["receiver_id"],
-                "messageset_id": household_msgset_id,
+                "messageset": household_msgset_id,
                 "next_sequence_number": seq_number,
                 "lang": registration.data["language"],
                 "schedule": household_msgset_schedule

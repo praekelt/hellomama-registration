@@ -92,7 +92,7 @@ class SubscriptionRequest(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     contact = models.CharField(max_length=36, null=False, blank=False)
-    messageset_id = models.IntegerField(null=False, blank=False)
+    messageset = models.IntegerField(null=False, blank=False)
     next_sequence_number = models.IntegerField(default=1, null=False,
                                                blank=False)
     lang = models.CharField(max_length=6, null=False, blank=False)
@@ -109,7 +109,7 @@ class SubscriptionRequest(models.Model):
             'data': {
                 'id': str(self.id),
                 'contact': self.contact,
-                'messageset_id': self.messageset_id,
+                'messageset': self.messageset,
                 'next_sequence_number': self.next_sequence_number,
                 'lang': self.lang,
                 'schedule': self.schedule,

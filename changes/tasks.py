@@ -109,7 +109,7 @@ class ImplementAction(Task):
         # Make new subscription request object
         mother_sub = {
             "contact": change.mother_id,
-            "messageset_id": mother_msgset_id,
+            "messageset": mother_msgset_id,
             "next_sequence_number": next_sequence_number,
             "lang": subscriptions[0]["lang"],  # use first subscription's lang
             "schedule": mother_msgset_schedule
