@@ -16,7 +16,7 @@ def get_today():
     return datetime.datetime.today()
 
 
-def get_subscription(identity):
+def get_subscriptions(identity):
     """ Gets the first active subscription found for an identity
     """
     url = settings.STAGE_BASED_MESSAGING_URL + 'subscriptions/'
@@ -26,7 +26,7 @@ def get_subscription(identity):
         'Content-Type': ['application/json']
     }
     r = requests.get(url, params=params, headers=headers)
-    return r.json()["results"][0]  # return first object TODO: handle multiple
+    return r.json()["results"]
 
 
 def deactivate_subscription(subscription):
@@ -66,14 +66,15 @@ class ImplementAction(Task):
 
     def change_messaging(self, change):
         # Get mother's current subscription
-        subscription = get_subscription(change.mother_id)
-        # Deactivate subscription
-        subscription = deactivate_subscription(subscription)
+        subscriptions = get_subscriptions(change.mother_id)
+        # Deactivate subscriptions
+        for subscription in subscriptions:
+            deactivate_subscription(subscription)
         # Get mother's registration
         registration = Registration.objects.get(mother_id=change.mother_id)
 
         # Determine stage & week
-        # TODO: handle miscarriage stage
+        # TODO #33: handle miscarriage stage
         # if the registration was for postbirth, we can assume postbirth
         if registration.stage == 'postbirth':
             stage = 'postbirth'
@@ -83,7 +84,7 @@ class ImplementAction(Task):
             baby_switch = Change.objects.filter(mother_id=change.mother_id,
                                                 action='change_baby')
             if baby_switch.count() > 0:
-                # TODO: handle a person that has switched to baby for a
+                # TODO #32: handle a person that has switched to baby for a
                 # previous pregnancy
                 stage = 'postbirth'
                 weeks = calc_baby_age(
@@ -115,7 +116,7 @@ class ImplementAction(Task):
             "contact": change.mother_id,
             "messageset_id": mother_msgset_id,
             "next_sequence_number": next_sequence_number,
-            "lang": subscription["lang"],
+            "lang": subscriptions[0]["lang"],  # use first subscription's lang
             "schedule": mother_msgset_schedule
         }
         SubscriptionRequest.objects.create(**mother_sub)
@@ -136,18 +137,14 @@ class ImplementAction(Task):
         """
         change = Change.objects.get(id=change_id)
 
-        if change.action == 'change_baby':
-            self.change_baby(change)
-        elif change.action == 'change_loss':
-            self.change_loss(change)
-        elif change.action == 'change_messaging':
-            effect = self.change_messaging(change)
-            return effect
-        elif change.action == 'change_language':
-            self.change_language(change)
-        elif change.action == 'unsubscribe_household_only':
-            self.unsubscribe_household_only(change)
-        elif change.action == 'unsubscribe_mother_only':
-            self.unsubscribe_mother_only(change)
+        result = {
+            'change_baby': self.change_baby,
+            'change_loss': self.change_loss,
+            'change_messaging': self.change_messaging,
+            'change_language': self.change_language,
+            'unsubscribe_household_only': self.unsubscribe_household_only,
+            'unsubscribe_mother_only': self.unsubscribe_mother_only,
+        }.get(change.action, None)(change)
+        return result
 
 implement_action = ImplementAction()

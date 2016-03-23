@@ -139,7 +139,6 @@ HOOK_EVENTS = {
 }
 
 HOOK_DELIVERER = 'registrations.tasks.deliver_hook_wrapper'
-# TODO: Add changes hook deliverer?
 
 HOOK_AUTH_TOKEN = os.environ.get('HOOK_AUTH_TOKEN', 'REPLACEME')
 
