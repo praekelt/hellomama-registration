@@ -104,6 +104,8 @@ def get_messageset_short_name(stage, recipient, msg_type, weeks, voice_days,
 
     if stage == "prebirth":
         week_range = "10_42"
+    elif stage == "miscarriage":
+        week_range = "0_2"
     elif stage == "postbirth":
         if recipient == "household":
             week_range = "0_52"
@@ -140,7 +142,9 @@ def get_messageset_schedule_sequence(short_name, weeks):
     msgs_per_week = len(days_of_week.split(','))
     # determine starting message
     # check if in prebirth stage - only starting messaging in week 10
-    if 'prebirth' in short_name:
+    if 'miscarriage' in short_name:
+        next_sequence_number = 1  # always start loss messages at 1
+    elif 'prebirth' in short_name:
         next_sequence_number = msgs_per_week * (
             weeks - settings.PREBIRTH_MIN_WEEKS)
         if next_sequence_number == 0:
