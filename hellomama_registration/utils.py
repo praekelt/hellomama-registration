@@ -72,7 +72,9 @@ def get_messageset_short_name(stage, recipient, msg_type, weeks, voice_days,
     if stage == "prebirth":
         week_range = "10_42"
     elif stage == "postbirth":
-        if 0 <= weeks <= 12:
+        if recipient == "household":
+            week_range = "0_52"
+        elif 0 <= weeks <= 12:
             week_range = "0_12"
         elif 13 <= weeks <= 52:
             week_range = "13_52"
@@ -109,14 +111,14 @@ def get_messageset_schedule_sequence(short_name, weeks):
         next_sequence_number = msgs_per_week * (
             weeks - settings.PREBIRTH_MIN_WEEKS)
         if next_sequence_number == 0:
-            next_sequence_number = 1
+            next_sequence_number = 1  # next_sequence_number cannot be 0
     elif '13_52' in short_name:
         next_sequence_number = msgs_per_week * (weeks - 13)
         if next_sequence_number == 0:
-            next_sequence_number = 1
+            next_sequence_number = 1  # next_sequence_number cannot be 0
     else:
         next_sequence_number = msgs_per_week * weeks
         if next_sequence_number == 0:
-            next_sequence_number = 1
+            next_sequence_number = 1  # next_sequence_number cannot be 0
 
     return (messageset_id, schedule_id, next_sequence_number)
