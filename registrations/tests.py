@@ -854,7 +854,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         d_mom = SubscriptionRequest.objects.last()
         self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.messageset_id, 1)
-        self.assertEqual(d_mom.next_sequence_number, 45)
+        self.assertEqual(d_mom.next_sequence_number, 15)
         self.assertEqual(d_mom.lang, "eng_NG")
         self.assertEqual(d_mom.schedule, 1)
 
@@ -900,7 +900,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         d_mom = SubscriptionRequest.objects.last()
         self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.messageset_id, 2)
-        self.assertEqual(d_mom.next_sequence_number, 30)
+        self.assertEqual(d_mom.next_sequence_number, 10)
         self.assertEqual(d_mom.lang, "eng_NG")
         self.assertEqual(d_mom.schedule, 6)
 
@@ -960,7 +960,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             contact="mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.messageset_id, 1)
-        self.assertEqual(d_mom.next_sequence_number, 45)
+        self.assertEqual(d_mom.next_sequence_number, 15)
         self.assertEqual(d_mom.lang, "eng_NG")
         self.assertEqual(d_mom.schedule, 1)
 
@@ -969,7 +969,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         self.assertEqual(d_friend.contact,
                          "friend00-73a2-4d89-b045-d52004c025fe")
         self.assertEqual(d_friend.messageset_id, 3)
-        self.assertEqual(d_friend.next_sequence_number, 15)
+        self.assertEqual(d_friend.next_sequence_number, 5)
         self.assertEqual(d_friend.lang, "eng_NG")
         self.assertEqual(d_friend.schedule, 3)
 
@@ -1036,7 +1036,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             contact="mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.messageset_id, 2)
-        self.assertEqual(d_mom.next_sequence_number, 30)
+        self.assertEqual(d_mom.next_sequence_number, 10)
         self.assertEqual(d_mom.lang, "eng_NG")
         self.assertEqual(d_mom.schedule, 5)
 
@@ -1045,7 +1045,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         self.assertEqual(d_friend.contact,
                          "friend00-73a2-4d89-b045-d52004c025fe")
         self.assertEqual(d_friend.messageset_id, 3)
-        self.assertEqual(d_friend.next_sequence_number, 15)
+        self.assertEqual(d_friend.next_sequence_number, 5)
         self.assertEqual(d_friend.lang, "eng_NG")
         self.assertEqual(d_friend.schedule, 3)
 
@@ -1105,7 +1105,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             contact="mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.messageset_id, 1)
-        self.assertEqual(d_mom.next_sequence_number, 45)
+        self.assertEqual(d_mom.next_sequence_number, 15)
         self.assertEqual(d_mom.lang, "eng_NG")
         self.assertEqual(d_mom.schedule, 1)
 
@@ -1114,7 +1114,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         self.assertEqual(d_family.contact,
                          "family00-73a2-4d89-b045-d52004c025fe")
         self.assertEqual(d_family.messageset_id, 3)
-        self.assertEqual(d_family.next_sequence_number, 15)
+        self.assertEqual(d_family.next_sequence_number, 5)
         self.assertEqual(d_family.lang, "eng_NG")
         self.assertEqual(d_family.schedule, 3)
 
@@ -1176,7 +1176,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             contact="mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.messageset_id, 1)
-        self.assertEqual(d_mom.next_sequence_number, 90)
+        self.assertEqual(d_mom.next_sequence_number, 60)
         self.assertEqual(d_mom.lang, "eng_NG")
         self.assertEqual(d_mom.schedule, 1)
 
@@ -1184,7 +1184,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             contact="father00-73a2-4d89-b045-d52004c025fe")
         self.assertEqual(d_dad.contact, "father00-73a2-4d89-b045-d52004c025fe")
         self.assertEqual(d_dad.messageset_id, 3)
-        self.assertEqual(d_dad.next_sequence_number, 30)
+        self.assertEqual(d_dad.next_sequence_number, 20)
         self.assertEqual(d_dad.lang, "eng_NG")
         self.assertEqual(d_dad.schedule, 3)
 
@@ -1246,7 +1246,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             contact="mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.messageset_id, 1)
-        self.assertEqual(d_mom.next_sequence_number, 120)
+        self.assertEqual(d_mom.next_sequence_number, 90)
         self.assertEqual(d_mom.lang, "eng_NG")
         self.assertEqual(d_mom.schedule, 1)
 
@@ -1255,7 +1255,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         self.assertEqual(d_family.contact,
                          "family00-73a2-4d89-b045-d52004c025fe")
         self.assertEqual(d_family.messageset_id, 3)
-        self.assertEqual(d_family.next_sequence_number, 40)
+        self.assertEqual(d_family.next_sequence_number, 30)
         self.assertEqual(d_family.lang, "eng_NG")
         self.assertEqual(d_family.schedule, 3)
 

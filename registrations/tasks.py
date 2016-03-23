@@ -130,7 +130,14 @@ def get_messageset_schedule_sequence(short_name, weeks, voice_days,
     # determine how many times a week messages are sent e.g. 2 for '1,3'
     msgs_per_week = len(days_of_week.split(','))
     # determine starting message
-    next_sequence_number = msgs_per_week * weeks
+    # check if in prebirth stage - only starting messaging in week 10
+    if 'prebirth' in short_name:
+        next_sequence_number = msgs_per_week * (
+            weeks - settings.PREBIRTH_MIN_WEEKS)
+        if next_sequence_number <= 0:
+            next_sequence_number = 1
+    else:
+        next_sequence_number = msgs_per_week * weeks
 
     return (messageset_id, schedule_id, next_sequence_number)
 

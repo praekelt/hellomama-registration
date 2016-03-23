@@ -406,6 +406,6 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
         d = SubscriptionRequest.objects.last()
         self.assertEqual(d.contact, "846877e6-afaa-43de-acb1-09f61ad4de99")
         self.assertEqual(d.messageset_id, 4)
-        self.assertEqual(d.next_sequence_number, 56)  # week 28
+        self.assertEqual(d.next_sequence_number, 36)  # week 28 - 18*2
         self.assertEqual(d.lang, "eng_NG")
         self.assertEqual(d.schedule, 6)
