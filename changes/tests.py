@@ -820,3 +820,111 @@ class TestChangeLanguage(AuthenticatedAPITestCase):
         # Check
         self.assertEqual(result.get(), "Change language completed")
         assert len(responses.calls) == 4
+
+
+class TestChangeUnsubscribeHousehold(AuthenticatedAPITestCase):
+
+    @responses.activate
+    def test_unsubscribe_household(self):
+        # Setup
+        # make registration
+        self.make_registration_friend_only()
+        # make change object
+        change_data = {
+            "mother_id": "846877e6-afaa-43de-acb1-09f61ad4de99",
+            "action": "unsubscribe_household_only",
+            "data": {
+                "household_id": "629eaf3c-04e5-4404-8a27-3ab3b811326a",
+                "loss_reason": "miscarriage"
+            },
+            "source": self.make_source_adminuser()
+        }
+        change = Change.objects.create(**change_data)
+        # mock get subscription request
+        subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
+        query_string = '?active=True&id=%s' % change_data["data"][
+            "household_id"]
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": subscription_id,
+                    "identity": change_data["data"]["household_id"],
+                    "active": True,
+                    "lang": "eng_NG"
+                }],
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock patch subscription request
+        responses.add(
+            responses.PATCH,
+            'http://localhost:8005/api/v1/subscriptions/%s/' % subscription_id,
+            json={"active": False},
+            status=200, content_type='application/json',
+        )
+
+        # Execute
+        result = implement_action.apply_async(args=[change.id])
+
+        # Check
+        self.assertEqual(result.get(), "Unsubscribe household completed")
+        assert len(responses.calls) == 2
+
+
+class TestChangeUnsubscribeMother(AuthenticatedAPITestCase):
+
+    @responses.activate
+    def test_unsubscribe_mother(self):
+        # Setup
+        # make registration
+        self.make_registration_friend_only()
+        # make change object
+        change_data = {
+            "mother_id": "846877e6-afaa-43de-acb1-09f61ad4de99",
+            "action": "unsubscribe_mother_only",
+            "data": {
+                "loss_reason": "miscarriage"
+            },
+            "source": self.make_source_adminuser()
+        }
+        change = Change.objects.create(**change_data)
+        # mock get subscription request
+        subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
+        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": subscription_id,
+                    "identity": change_data["mother_id"],
+                    "active": True,
+                    "lang": "eng_NG"
+                }],
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock patch subscription request
+        responses.add(
+            responses.PATCH,
+            'http://localhost:8005/api/v1/subscriptions/%s/' % subscription_id,
+            json={"active": False},
+            status=200, content_type='application/json',
+        )
+
+        # Execute
+        result = implement_action.apply_async(args=[change.id])
+
+        # Check
+        self.assertEqual(result.get(), "Unsubscribe mother completed")
+        assert len(responses.calls) == 2

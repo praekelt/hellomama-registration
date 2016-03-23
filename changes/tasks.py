@@ -145,10 +145,24 @@ class ImplementAction(Task):
         return "Change language completed"
 
     def unsubscribe_household_only(self, change):
-        pass
+        # Get household's current subscriptions
+        subscriptions = utils.get_subscriptions(
+            change.data["household_id"])
+        # Deactivate subscriptions
+        for subscription in subscriptions:
+            utils.deactivate_subscription(subscription)
+
+        return "Unsubscribe household completed"
 
     def unsubscribe_mother_only(self, change):
-        pass
+        # Get mother's current subscriptions
+        subscriptions = utils.get_subscriptions(
+            change.mother_id)
+        # Deactivate subscriptions
+        for subscription in subscriptions:
+            utils.deactivate_subscription(subscription)
+
+        return "Unsubscribe mother completed"
 
     def run(self, change_id, **kwargs):
         """ Implements the appropriate action
