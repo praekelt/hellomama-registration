@@ -26,7 +26,7 @@ def get_subscription(identity):
         'Content-Type': ['application/json']
     }
     r = requests.get(url, params=params, headers=headers)
-    return r.json()[0]  # return first object TODO: handle multiple
+    return r.json()["results"][0]  # return first object TODO: handle multiple
 
 
 def deactivate_subscription(subscription):

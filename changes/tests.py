@@ -358,14 +358,21 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
         change = Change.objects.create(**change_data)
         # mock get subscription request
         subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
-        querystring = '?active=True&id=%s' % change_data["mother_id"]
+        query_string = '?active=True&id=%s' % change_data["mother_id"]
         responses.add(
             responses.GET,
-            'http://localhost:8005/api/v1/subscriptions/%s' % querystring,
-            json=[{"id": subscription_id,
-                   "identity": change_data["mother_id"],
-                   "active": True,
-                   "lang": "eng_NG"}],
+            'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": subscription_id,
+                    "identity": change_data["mother_id"],
+                    "active": True,
+                    "lang": "eng_NG"
+                }],
+            },
             status=200, content_type='application/json',
             match_querystring=True
         )
@@ -384,9 +391,16 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json=[{"id": 4,
-                   "short_name": 'prebirth.mother.audio.10_42.tue_thu.9_11',
-                   "default_schedule": 6}],
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 4,
+                    "short_name": 'prebirth.mother.audio.10_42.tue_thu.9_11',
+                    "default_schedule": 6
+                }]
+            },
             status=200, content_type='application/json',
             match_querystring=True
         )
@@ -396,7 +410,6 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
             'http://localhost:8005/api/v1/schedule/6/',
             json={"id": 6, "day_of_week": "2,4"},
             status=200, content_type='application/json',
-            match_querystring=True
         )
 
         # Execute

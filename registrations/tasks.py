@@ -105,7 +105,7 @@ def get_messageset(short_name):
         'Content-Type': ['application/json']
     }
     r = requests.get(url, params=params, headers=headers)
-    return r.json()[0]  # messagesets should be unique, so return first object
+    return r.json()["results"][0]  # messagesets should be unique, return 1st
 
 
 def get_schedule(schedule_id):

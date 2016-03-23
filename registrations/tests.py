@@ -660,8 +660,16 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json=[{"id": 1, "short_name": 'prebirth.mother.text.10_42',
-                   "default_schedule": 1}],
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 1,
+                    "short_name": 'prebirth.mother.text.10_42',
+                    "default_schedule": 1
+                }]
+            },
             status=200, content_type='application/json',
             match_querystring=True
         )
@@ -670,8 +678,16 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json=[{"id": 3, "short_name": 'prebirth.household.text.10_42',
-                   "default_schedule": 3}],
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 3,
+                    "short_name": 'prebirth.household.text.10_42',
+                    "default_schedule": 3
+                }]
+            },
             status=200, content_type='application/json',
             match_querystring=True
         )
@@ -818,8 +834,16 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json=[{"id": 1, "short_name": 'prebirth.mother.text.10_42',
-                   "default_schedule": 1}],
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 1,
+                    "short_name": 'prebirth.mother.text.10_42',
+                    "default_schedule": 1
+                }]
+            },
             status=200, content_type='application/json',
             match_querystring=True
         )
@@ -866,9 +890,16 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json=[{"id": 2,
-                   "short_name": 'prebirth.mother.audio.10_42.tue_thu.9_11',
-                   "default_schedule": 6}],
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 2,
+                    "short_name": 'prebirth.mother.audio.10_42.tue_thu.9_11',
+                    "default_schedule": 6
+                }]
+            },
             status=200, content_type='application/json',
             match_querystring=True
         )
@@ -912,8 +943,16 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json=[{"id": 1, "short_name": 'prebirth.mother.text.10_42',
-                   "default_schedule": 1}],
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 1,
+                    "short_name": 'prebirth.mother.text.10_42',
+                    "default_schedule": 1
+                }]
+            },
             status=200, content_type='application/json',
             match_querystring=True
         )
@@ -922,8 +961,16 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json=[{"id": 3, "short_name": 'prebirth.household.text.10_42',
-                   "default_schedule": 3}],
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 3,
+                    "short_name": 'prebirth.household.text.10_42',
+                    "default_schedule": 3
+                }]
+            },
             status=200, content_type='application/json',
             match_querystring=True
         )
@@ -981,9 +1028,16 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json=[{"id": 2,
-                   "short_name": 'prebirth.mother.audio.10_42.mon_wed.2_5',
-                   "default_schedule": 5}],
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 2,
+                    "short_name": 'prebirth.mother.audio.10_42.mon_wed.2_5',
+                    "default_schedule": 5
+                }]
+            },
             status=200, content_type='application/json',
             match_querystring=True
         )
@@ -992,8 +1046,16 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json=[{"id": 3, "short_name": 'prebirth.household.text.10_42',
-                   "default_schedule": 3}],
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 3,
+                    "short_name": 'prebirth.household.text.10_42',
+                    "default_schedule": 3
+                }]
+            },
             status=200, content_type='application/json',
             match_querystring=True
         )
@@ -1057,8 +1119,16 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json=[{"id": 1, "short_name": 'prebirth.mother.text.10_42',
-                   "default_schedule": 1}],
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 1,
+                    "short_name": 'prebirth.mother.text.10_42',
+                    "default_schedule": 1
+                }]
+            },
             status=200, content_type='application/json',
             match_querystring=True
         )
@@ -1067,8 +1137,16 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json=[{"id": 3, "short_name": 'prebirth.household.text.10_42',
-                   "default_schedule": 3}],
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 3,
+                    "short_name": 'prebirth.household.text.10_42',
+                    "default_schedule": 3
+                }]
+            },
             status=200, content_type='application/json',
             match_querystring=True
         )
@@ -1126,8 +1204,16 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json=[{"id": 1, "short_name": 'prebirth.mother.text.10_42',
-                   "default_schedule": 1}],
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 1,
+                    "short_name": 'prebirth.mother.text.10_42',
+                    "default_schedule": 1
+                }]
+            },
             status=200, content_type='application/json',
             match_querystring=True
         )
@@ -1136,8 +1222,16 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json=[{"id": 3, "short_name": 'prebirth.household.text.10_42',
-                   "default_schedule": 3}],
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 3,
+                    "short_name": 'prebirth.household.text.10_42',
+                    "default_schedule": 3
+                }]
+            },
             status=200, content_type='application/json',
             match_querystring=True
         )
@@ -1196,8 +1290,16 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json=[{"id": 1, "short_name": 'prebirth.mother.text.10_42',
-                   "default_schedule": 1}],
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 1,
+                    "short_name": 'prebirth.mother.text.10_42',
+                    "default_schedule": 1
+                }]
+            },
             status=200, content_type='application/json',
             match_querystring=True
         )
@@ -1206,8 +1308,16 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json=[{"id": 3, "short_name": 'prebirth.household.text.10_42',
-                   "default_schedule": 3}],
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 3,
+                    "short_name": 'prebirth.household.text.10_42',
+                    "default_schedule": 3
+                }]
+            },
             status=200, content_type='application/json',
             match_querystring=True
         )
