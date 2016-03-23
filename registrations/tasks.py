@@ -136,6 +136,10 @@ def get_messageset_schedule_sequence(short_name, weeks, voice_days,
             weeks - settings.PREBIRTH_MIN_WEEKS)
         if next_sequence_number <= 0:
             next_sequence_number = 1
+    elif '13_52' in short_name:
+        next_sequence_number = msgs_per_week * (weeks - 13)
+        if next_sequence_number <= 0:
+            next_sequence_number = 1
     else:
         next_sequence_number = msgs_per_week * weeks
 
