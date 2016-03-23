@@ -10,14 +10,15 @@ from rest_framework import status
 from rest_framework.test import APIClient
 from rest_framework.authtoken.models import Token
 
+from rest_hooks.models import model_saved, Hook
+
+from hellomama_registration import utils
 from .models import (Source, Registration, SubscriptionRequest,
                      registration_post_save)
-from rest_hooks.models import model_saved, Hook
 from .tasks import (
     validate_registration,
     is_valid_date, is_valid_uuid, is_valid_lang, is_valid_msg_type,
     is_valid_msg_receiver, is_valid_loss_reason)
-from registrations import tasks
 
 
 def override_get_today():
@@ -137,7 +138,7 @@ class APITestCase(TestCase):
         self.adminclient = APIClient()
         self.normalclient = APIClient()
         self.otherclient = APIClient()
-        tasks.get_today = override_get_today
+        utils.get_today = override_get_today
 
 
 class AuthenticatedAPITestCase(APITestCase):
@@ -660,8 +661,16 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json=[{"id": 1, "short_name": 'prebirth.mother.text.10_42',
-                   "default_schedule": 1}],
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 1,
+                    "short_name": 'prebirth.mother.text.10_42',
+                    "default_schedule": 1
+                }]
+            },
             status=200, content_type='application/json',
             match_querystring=True
         )
@@ -670,8 +679,16 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json=[{"id": 3, "short_name": 'prebirth.household.text.10_42',
-                   "default_schedule": 3}],
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 3,
+                    "short_name": 'prebirth.household.text.10_42',
+                    "default_schedule": 3
+                }]
+            },
             status=200, content_type='application/json',
             match_querystring=True
         )
@@ -818,8 +835,16 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json=[{"id": 1, "short_name": 'prebirth.mother.text.10_42',
-                   "default_schedule": 1}],
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 1,
+                    "short_name": 'prebirth.mother.text.10_42',
+                    "default_schedule": 1
+                }]
+            },
             status=200, content_type='application/json',
             match_querystring=True
         )
@@ -854,7 +879,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         d_mom = SubscriptionRequest.objects.last()
         self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.messageset_id, 1)
-        self.assertEqual(d_mom.next_sequence_number, 45)
+        self.assertEqual(d_mom.next_sequence_number, 15)
         self.assertEqual(d_mom.lang, "eng_NG")
         self.assertEqual(d_mom.schedule, 1)
 
@@ -866,14 +891,20 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json=[{"id": 2,
-                   "short_name": 'prebirth.mother.audio.10_42.tue_thu.9_11',
-                   "default_schedule": 6}],
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 2,
+                    "short_name": 'prebirth.mother.audio.10_42.tue_thu.9_11',
+                    "default_schedule": 6
+                }]
+            },
             status=200, content_type='application/json',
             match_querystring=True
         )
         # mock mother schedule lookup
-        query_string = '?cron_string=0+8+1%2C3+%2A+%2A'
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/schedule/6/',
@@ -901,7 +932,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         d_mom = SubscriptionRequest.objects.last()
         self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.messageset_id, 2)
-        self.assertEqual(d_mom.next_sequence_number, 30)
+        self.assertEqual(d_mom.next_sequence_number, 10)
         self.assertEqual(d_mom.lang, "eng_NG")
         self.assertEqual(d_mom.schedule, 6)
 
@@ -913,8 +944,16 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json=[{"id": 1, "short_name": 'prebirth.mother.text.10_42',
-                   "default_schedule": 1}],
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 1,
+                    "short_name": 'prebirth.mother.text.10_42',
+                    "default_schedule": 1
+                }]
+            },
             status=200, content_type='application/json',
             match_querystring=True
         )
@@ -923,8 +962,16 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json=[{"id": 3, "short_name": 'prebirth.household.text.10_42',
-                   "default_schedule": 3}],
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 3,
+                    "short_name": 'prebirth.household.text.10_42',
+                    "default_schedule": 3
+                }]
+            },
             status=200, content_type='application/json',
             match_querystring=True
         )
@@ -961,7 +1008,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             contact="mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.messageset_id, 1)
-        self.assertEqual(d_mom.next_sequence_number, 45)
+        self.assertEqual(d_mom.next_sequence_number, 15)
         self.assertEqual(d_mom.lang, "eng_NG")
         self.assertEqual(d_mom.schedule, 1)
 
@@ -970,7 +1017,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         self.assertEqual(d_friend.contact,
                          "friend00-73a2-4d89-b045-d52004c025fe")
         self.assertEqual(d_friend.messageset_id, 3)
-        self.assertEqual(d_friend.next_sequence_number, 15)
+        self.assertEqual(d_friend.next_sequence_number, 5)
         self.assertEqual(d_friend.lang, "eng_NG")
         self.assertEqual(d_friend.schedule, 3)
 
@@ -982,9 +1029,16 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json=[{"id": 2,
-                   "short_name": 'prebirth.mother.audio.10_42.mon_wed.2_5',
-                   "default_schedule": 5}],
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 2,
+                    "short_name": 'prebirth.mother.audio.10_42.mon_wed.2_5',
+                    "default_schedule": 5
+                }]
+            },
             status=200, content_type='application/json',
             match_querystring=True
         )
@@ -993,8 +1047,16 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json=[{"id": 3, "short_name": 'prebirth.household.text.10_42',
-                   "default_schedule": 3}],
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 3,
+                    "short_name": 'prebirth.household.text.10_42',
+                    "default_schedule": 3
+                }]
+            },
             status=200, content_type='application/json',
             match_querystring=True
         )
@@ -1037,7 +1099,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             contact="mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.messageset_id, 2)
-        self.assertEqual(d_mom.next_sequence_number, 30)
+        self.assertEqual(d_mom.next_sequence_number, 10)
         self.assertEqual(d_mom.lang, "eng_NG")
         self.assertEqual(d_mom.schedule, 5)
 
@@ -1046,7 +1108,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         self.assertEqual(d_friend.contact,
                          "friend00-73a2-4d89-b045-d52004c025fe")
         self.assertEqual(d_friend.messageset_id, 3)
-        self.assertEqual(d_friend.next_sequence_number, 15)
+        self.assertEqual(d_friend.next_sequence_number, 5)
         self.assertEqual(d_friend.lang, "eng_NG")
         self.assertEqual(d_friend.schedule, 3)
 
@@ -1058,8 +1120,16 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json=[{"id": 1, "short_name": 'prebirth.mother.text.10_42',
-                   "default_schedule": 1}],
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 1,
+                    "short_name": 'prebirth.mother.text.10_42',
+                    "default_schedule": 1
+                }]
+            },
             status=200, content_type='application/json',
             match_querystring=True
         )
@@ -1068,8 +1138,16 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json=[{"id": 3, "short_name": 'prebirth.household.text.10_42',
-                   "default_schedule": 3}],
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 3,
+                    "short_name": 'prebirth.household.text.10_42',
+                    "default_schedule": 3
+                }]
+            },
             status=200, content_type='application/json',
             match_querystring=True
         )
@@ -1106,7 +1184,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             contact="mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.messageset_id, 1)
-        self.assertEqual(d_mom.next_sequence_number, 45)
+        self.assertEqual(d_mom.next_sequence_number, 15)
         self.assertEqual(d_mom.lang, "eng_NG")
         self.assertEqual(d_mom.schedule, 1)
 
@@ -1115,7 +1193,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         self.assertEqual(d_family.contact,
                          "family00-73a2-4d89-b045-d52004c025fe")
         self.assertEqual(d_family.messageset_id, 3)
-        self.assertEqual(d_family.next_sequence_number, 15)
+        self.assertEqual(d_family.next_sequence_number, 5)
         self.assertEqual(d_family.lang, "eng_NG")
         self.assertEqual(d_family.schedule, 3)
 
@@ -1127,8 +1205,16 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json=[{"id": 1, "short_name": 'prebirth.mother.text.10_42',
-                   "default_schedule": 1}],
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 1,
+                    "short_name": 'prebirth.mother.text.10_42',
+                    "default_schedule": 1
+                }]
+            },
             status=200, content_type='application/json',
             match_querystring=True
         )
@@ -1137,8 +1223,16 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json=[{"id": 3, "short_name": 'prebirth.household.text.10_42',
-                   "default_schedule": 3}],
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 3,
+                    "short_name": 'prebirth.household.text.10_42',
+                    "default_schedule": 3
+                }]
+            },
             status=200, content_type='application/json',
             match_querystring=True
         )
@@ -1177,7 +1271,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             contact="mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.messageset_id, 1)
-        self.assertEqual(d_mom.next_sequence_number, 90)
+        self.assertEqual(d_mom.next_sequence_number, 60)
         self.assertEqual(d_mom.lang, "eng_NG")
         self.assertEqual(d_mom.schedule, 1)
 
@@ -1185,7 +1279,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             contact="father00-73a2-4d89-b045-d52004c025fe")
         self.assertEqual(d_dad.contact, "father00-73a2-4d89-b045-d52004c025fe")
         self.assertEqual(d_dad.messageset_id, 3)
-        self.assertEqual(d_dad.next_sequence_number, 30)
+        self.assertEqual(d_dad.next_sequence_number, 20)
         self.assertEqual(d_dad.lang, "eng_NG")
         self.assertEqual(d_dad.schedule, 3)
 
@@ -1197,8 +1291,16 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json=[{"id": 1, "short_name": 'prebirth.mother.text.10_42',
-                   "default_schedule": 1}],
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 1,
+                    "short_name": 'prebirth.mother.text.10_42',
+                    "default_schedule": 1
+                }]
+            },
             status=200, content_type='application/json',
             match_querystring=True
         )
@@ -1207,8 +1309,16 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
-            json=[{"id": 3, "short_name": 'prebirth.household.text.10_42',
-                   "default_schedule": 3}],
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 3,
+                    "short_name": 'prebirth.household.text.10_42',
+                    "default_schedule": 3
+                }]
+            },
             status=200, content_type='application/json',
             match_querystring=True
         )
@@ -1247,7 +1357,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             contact="mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.messageset_id, 1)
-        self.assertEqual(d_mom.next_sequence_number, 120)
+        self.assertEqual(d_mom.next_sequence_number, 90)
         self.assertEqual(d_mom.lang, "eng_NG")
         self.assertEqual(d_mom.schedule, 1)
 
@@ -1256,7 +1366,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         self.assertEqual(d_family.contact,
                          "family00-73a2-4d89-b045-d52004c025fe")
         self.assertEqual(d_family.messageset_id, 3)
-        self.assertEqual(d_family.next_sequence_number, 40)
+        self.assertEqual(d_family.next_sequence_number, 30)
         self.assertEqual(d_family.lang, "eng_NG")
         self.assertEqual(d_family.schedule, 3)
 

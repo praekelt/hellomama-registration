@@ -51,6 +51,7 @@ INSTALLED_APPS = (
     'rest_hooks',
     # us
     'registrations',
+    'changes'
 
 )
 
@@ -159,6 +160,7 @@ CELERY_ALWAYS_EAGER = False
 # Tell Celery where to find the tasks
 CELERY_IMPORTS = (
     'registrations.tasks',
+    'changes.tasks'
 )
 
 CELERY_CREATE_MISSING_QUEUES = True
@@ -167,6 +169,9 @@ CELERY_ROUTES = {
         'queue': 'mediumpriority',
     },
     'registrations.tasks.validate_registration': {
+        'queue': 'priority',
+    },
+    'changes.tasks.implement_action': {
         'queue': 'priority',
     },
     'registrations.tasks.deliver_hook_wrapper': {
@@ -183,8 +188,9 @@ PREBIRTH_MAX_WEEKS = int(os.environ.get('PREBIRTH_MAX_WEEKS', '42'))
 POSTBIRTH_MIN_WEEKS = int(os.environ.get('POSTBIRTH_MIN_WEEKS', '0'))
 POSTBIRTH_MAX_WEEKS = int(os.environ.get('POSTBIRTH_MAX_WEEKS', '52'))
 
-STAGE_BASED_URL = os.environ.get('STAGE_BASED_URL',
-                                 'http://localhost:8005/api/v1/')
-STAGE_BASED_TOKEN = os.environ.get('STAGE_BASED_TOKEN', 'REPLACEME')
+STAGE_BASED_MESSAGING_URL = os.environ.get('STAGE_BASED_MESSAGING_URL',
+                                           'http://localhost:8005/api/v1/')
+STAGE_BASED_MESSAGING_TOKEN = os.environ.get('STAGE_BASED_MESSAGING_TOKEN',
+                                             'REPLACEME')
 
 djcelery.setup_loader()
