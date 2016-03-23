@@ -89,8 +89,7 @@ def get_messageset_short_name(stage, recipient, msg_type, weeks, voice_days,
     return short_name
 
 
-def get_messageset_schedule_sequence(short_name, weeks, voice_days,
-                                     voice_times):
+def get_messageset_schedule_sequence(short_name, weeks):
     # get messageset
     messageset = get_messageset(short_name)
 

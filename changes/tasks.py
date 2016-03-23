@@ -69,9 +69,7 @@ class ImplementAction(Task):
             weeks, voice_days, voice_times)
 
         mother_msgset_id, mother_msgset_schedule, next_sequence_number =\
-            utils.get_messageset_schedule_sequence(
-                mother_short_name, weeks, voice_days, voice_times
-            )
+            utils.get_messageset_schedule_sequence(mother_short_name, weeks)
 
         # Make new subscription request object
         mother_sub = {
@@ -134,9 +132,7 @@ class ImplementAction(Task):
             weeks, voice_days, voice_times)
 
         mother_msgset_id, mother_msgset_schedule, next_sequence_number =\
-            utils.get_messageset_schedule_sequence(
-                mother_short_name, weeks, voice_days, voice_times
-            )
+            utils.get_messageset_schedule_sequence(mother_short_name, weeks)
 
         # Make new subscription request object
         mother_sub = {

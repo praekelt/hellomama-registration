@@ -204,9 +204,7 @@ class ValidateRegistration(Task):
         )
 
         mother_msgset_id, mother_msgset_schedule, next_sequence_number =\
-            utils.get_messageset_schedule_sequence(
-                mother_short_name, weeks, voice_days, voice_times
-            )
+            utils.get_messageset_schedule_sequence(mother_short_name, weeks)
 
         mother_sub = {
             "contact": registration.mother_id,
@@ -230,7 +228,7 @@ class ValidateRegistration(Task):
 
             household_msgset_id, household_msgset_schedule, seq_number =\
                 utils.get_messageset_schedule_sequence(
-                    household_short_name, weeks, None, None)
+                    household_short_name, weeks)
             household_sub = {
                 "contact": registration.data["receiver_id"],
                 "messageset": household_msgset_id,
