@@ -63,6 +63,47 @@ def get_schedule(schedule_id):
     return r.json()
 
 
+def get_subscriptions(identity):
+    """ Gets the first active subscription found for an identity
+    """
+    url = settings.STAGE_BASED_MESSAGING_URL + 'subscriptions/'
+    params = {'id': identity, 'active': True}
+    headers = {'Authorization': [
+        'Token %s' % settings.STAGE_BASED_MESSAGING_TOKEN],
+        'Content-Type': ['application/json']
+    }
+    r = requests.get(url, params=params, headers=headers)
+    return r.json()["results"]
+
+
+def patch_subscription(subscription, data):
+    """ Patches the given subscription with the data provided
+    """
+    url = settings.STAGE_BASED_MESSAGING_URL + 'subscriptions/%s/' % (
+        subscription["id"])
+    data = data
+    headers = {'Authorization': [
+        'Token %s' % settings.STAGE_BASED_MESSAGING_TOKEN],
+        'Content-Type': ['application/json']
+    }
+    r = requests.patch(url, data=data, headers=headers)
+    return r.json()
+
+
+def deactivate_subscription(subscription):
+    """ Sets a subscription deactive via a Patch request
+    """
+    url = settings.STAGE_BASED_MESSAGING_URL + 'subscriptions/%s/' % (
+        subscription["id"])
+    data = {"active": False}
+    headers = {'Authorization': [
+        'Token %s' % settings.STAGE_BASED_MESSAGING_TOKEN],
+        'Content-Type': ['application/json']
+    }
+    r = requests.patch(url, data=data, headers=headers)
+    return r.json()
+
+
 def get_messageset_short_name(stage, recipient, msg_type, weeks, voice_days,
                               voice_times):
 

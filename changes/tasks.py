@@ -1,62 +1,8 @@
-import requests
-
-from django.conf import settings
 from celery.task import Task
 
 from hellomama_registration import utils
 from registrations.models import Registration, SubscriptionRequest
 from .models import Change
-
-
-def get_subscriptions(identity):
-    """ Gets the first active subscription found for an identity
-    """
-    url = settings.STAGE_BASED_MESSAGING_URL + 'subscriptions/'
-    params = {'id': identity, 'active': True}
-    headers = {'Authorization': [
-        'Token %s' % settings.STAGE_BASED_MESSAGING_TOKEN],
-        'Content-Type': ['application/json']
-    }
-    r = requests.get(url, params=params, headers=headers)
-    return r.json()["results"]
-
-
-def patch_subscription(subscription, data):
-    """ Patches the given subscription with the data provided
-    """
-    url = settings.STAGE_BASED_MESSAGING_URL + 'subscriptions/%s/' % (
-        subscription["id"])
-    data = data
-    headers = {'Authorization': [
-        'Token %s' % settings.STAGE_BASED_MESSAGING_TOKEN],
-        'Content-Type': ['application/json']
-    }
-    r = requests.patch(url, data=data, headers=headers)
-    return r.json()
-
-
-def deactivate_subscription(subscription):
-    """ Sets a subscription deactive via a Patch request
-    """
-    url = settings.STAGE_BASED_MESSAGING_URL + 'subscriptions/%s/' % (
-        subscription["id"])
-    data = {"active": False}
-    headers = {'Authorization': [
-        'Token %s' % settings.STAGE_BASED_MESSAGING_TOKEN],
-        'Content-Type': ['application/json']
-    }
-    r = requests.patch(url, data=data, headers=headers)
-    return r.json()
-
-
-def get_messageset(messageset_id):
-    url = settings.STAGE_BASED_MESSAGING_URL + 'messageset/%s/' % messageset_id
-    headers = {'Authorization': [
-        'Token %s' % settings.STAGE_BASED_MESSAGING_TOKEN],
-        'Content-Type': ['application/json']
-    }
-    r = requests.get(url, headers=headers)
-    return r.json()
 
 
 class ImplementAction(Task):
@@ -66,10 +12,10 @@ class ImplementAction(Task):
 
     def change_baby(self, change):
         # Get mother's current subscription
-        subscriptions = get_subscriptions(change.mother_id)
+        subscriptions = utils.get_subscriptions(change.mother_id)
         # Deactivate subscriptions
         for subscription in subscriptions:
-            deactivate_subscription(subscription)
+            utils.deactivate_subscription(subscription)
         # Get mother's preferred msg_format
         mother = utils.get_identity(change.mother_id)
         # Get mother's registration
@@ -121,10 +67,10 @@ class ImplementAction(Task):
 
     def change_messaging(self, change):
         # Get mother's current subscription
-        subscriptions = get_subscriptions(change.mother_id)
+        subscriptions = utils.get_subscriptions(change.mother_id)
         # Deactivate subscriptions
         for subscription in subscriptions:
-            deactivate_subscription(subscription)
+            utils.deactivate_subscription(subscription)
         # Get mother's registration
         registration = Registration.objects.get(mother_id=change.mother_id)
 
@@ -181,18 +127,19 @@ class ImplementAction(Task):
 
     def change_language(self, change):
         # Get mother's current subscriptions
-        subscriptions = get_subscriptions(change.mother_id)
+        subscriptions = utils.get_subscriptions(change.mother_id)
         # Patch subscriptions languages
         for subscription in subscriptions:
-            patch_subscription(
+            utils.patch_subscription(
                 subscription, {"lang": change.data["new_language"]})
 
         if change.data["household_id"]:
             # Get household's current subscriptions
-            subscriptions = get_subscriptions(change.data["household_id"])
+            subscriptions = utils.get_subscriptions(
+                change.data["household_id"])
             # Patch subscriptions languages
             for subscription in subscriptions:
-                patch_subscription(
+                utils.patch_subscription(
                     subscription, {"lang": change.data["new_language"]})
 
         return "Change language completed"
