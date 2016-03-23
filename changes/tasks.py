@@ -51,7 +51,39 @@ class ImplementAction(Task):
     name = "hellomama_registration.changes.tasks.implement_action"
 
     def change_baby(self, change):
-        pass
+        # Get mother's current subscription
+        subscriptions = get_subscriptions(change.mother_id)
+        # Deactivate subscriptions
+        for subscription in subscriptions:
+            deactivate_subscription(subscription)
+        # Get mother's preferred msg_format
+        mother = utils.get_identity(change.mother_id)
+
+        stage = 'postbirth'
+        weeks = 0
+        voice_days = mother["details"]["preferred_msg_days"]
+        voice_times = mother["details"]["preferred_msg_times"]
+
+        mother_short_name = utils.get_messageset_short_name(
+            stage, 'mother', mother["details"]["preferred_msg_type"],
+            weeks, voice_days, voice_times)
+
+        mother_msgset_id, mother_msgset_schedule, next_sequence_number =\
+            utils.get_messageset_schedule_sequence(
+                mother_short_name, weeks, voice_days, voice_times
+            )
+
+        # Make new subscription request object
+        mother_sub = {
+            "contact": change.mother_id,
+            "messageset": mother_msgset_id,
+            "next_sequence_number": next_sequence_number,
+            "lang": mother["details"]["preferred_language"],
+            "schedule": mother_msgset_schedule
+        }
+        SubscriptionRequest.objects.create(**mother_sub)
+
+        return "Change baby completed"
 
     def change_loss(self, change):
         pass
