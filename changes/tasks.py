@@ -1,19 +1,11 @@
 import requests
-import datetime
 
 from django.conf import settings
 from celery.task import Task
 
+from hellomama_registration import utils
 from registrations.models import Registration, SubscriptionRequest
-from registrations.tasks import (get_messageset_short_name,
-                                 get_messageset_schedule_sequence,
-                                 calc_baby_age,
-                                 calc_pregnancy_week_lmp)
 from .models import Change
-
-
-def get_today():
-    return datetime.datetime.today()
 
 
 def get_subscriptions(identity):
@@ -78,7 +70,9 @@ class ImplementAction(Task):
         # if the registration was for postbirth, we can assume postbirth
         if registration.stage == 'postbirth':
             stage = 'postbirth'
-            weeks = calc_baby_age(get_today(), registration.data["baby_dob"])
+            weeks = utils.calc_baby_age(
+                utils.get_today(),
+                registration.data["baby_dob"])
         # otherwise, we need to look if the user has changed to baby
         else:
             baby_switch = Change.objects.filter(mother_id=change.mother_id,
@@ -87,12 +81,13 @@ class ImplementAction(Task):
                 # TODO #32: handle a person that has switched to baby for a
                 # previous pregnancy
                 stage = 'postbirth'
-                weeks = calc_baby_age(
-                    get_today(), baby_switch.created_at[0:10].replace('-', ''))
+                weeks = utils.calc_baby_age(
+                    utils.get_today(),
+                    baby_switch.created_at[0:10].replace('-', ''))
             else:
                 stage = 'prebirth'
-                weeks = calc_pregnancy_week_lmp(
-                    get_today(), registration.data["last_period_date"])
+                weeks = utils.calc_pregnancy_week_lmp(
+                    utils.get_today(), registration.data["last_period_date"])
 
         # Determine voice_days & voice_times
         if 'voice_days' in change.data:
@@ -102,12 +97,12 @@ class ImplementAction(Task):
             voice_days = None
             voice_times = None
 
-        mother_short_name = get_messageset_short_name(
+        mother_short_name = utils.get_messageset_short_name(
             stage, 'mother', change.data["msg_type"],
             weeks, voice_days, voice_times)
 
         mother_msgset_id, mother_msgset_schedule, next_sequence_number =\
-            get_messageset_schedule_sequence(
+            utils.get_messageset_schedule_sequence(
                 mother_short_name, weeks, voice_days, voice_times
             )
 

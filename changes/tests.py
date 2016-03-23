@@ -11,7 +11,7 @@ from rest_framework.test import APIClient
 from rest_framework.authtoken.models import Token
 from rest_hooks.models import model_saved
 
-from changes import tasks
+from hellomama_registration import utils
 from registrations.models import (Source, Registration, SubscriptionRequest,
                                   registration_post_save)
 from .models import Change, change_post_save
@@ -28,7 +28,7 @@ class APITestCase(TestCase):
         self.adminclient = APIClient()
         self.normalclient = APIClient()
         self.otherclient = APIClient()
-        tasks.get_today = override_get_today
+        utils.get_today = override_get_today
 
 
 class AuthenticatedAPITestCase(APITestCase):

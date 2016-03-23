@@ -10,14 +10,15 @@ from rest_framework import status
 from rest_framework.test import APIClient
 from rest_framework.authtoken.models import Token
 
+from rest_hooks.models import model_saved, Hook
+
+from hellomama_registration import utils
 from .models import (Source, Registration, SubscriptionRequest,
                      registration_post_save)
-from rest_hooks.models import model_saved, Hook
 from .tasks import (
     validate_registration,
     is_valid_date, is_valid_uuid, is_valid_lang, is_valid_msg_type,
     is_valid_msg_receiver, is_valid_loss_reason)
-from registrations import tasks
 
 
 def override_get_today():
@@ -137,7 +138,7 @@ class APITestCase(TestCase):
         self.adminclient = APIClient()
         self.normalclient = APIClient()
         self.otherclient = APIClient()
-        tasks.get_today = override_get_today
+        utils.get_today = override_get_today
 
 
 class AuthenticatedAPITestCase(APITestCase):
