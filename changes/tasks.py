@@ -21,6 +21,20 @@ def get_subscriptions(identity):
     return r.json()["results"]
 
 
+def patch_subscription(subscription, data):
+    """ Patches the given subscription with the data provided
+    """
+    url = settings.STAGE_BASED_MESSAGING_URL + 'subscriptions/%s/' % (
+        subscription["id"])
+    data = data
+    headers = {'Authorization': [
+        'Token %s' % settings.STAGE_BASED_MESSAGING_TOKEN],
+        'Content-Type': ['application/json']
+    }
+    r = requests.patch(url, data=data, headers=headers)
+    return r.json()
+
+
 def deactivate_subscription(subscription):
     """ Sets a subscription deactive via a Patch request
     """
@@ -166,7 +180,22 @@ class ImplementAction(Task):
         return "Change messaging completed"
 
     def change_language(self, change):
-        pass
+        # Get mother's current subscriptions
+        subscriptions = get_subscriptions(change.mother_id)
+        # Patch subscriptions languages
+        for subscription in subscriptions:
+            patch_subscription(
+                subscription, {"lang": change.data["new_language"]})
+
+        if change.data["household_id"]:
+            # Get household's current subscriptions
+            subscriptions = get_subscriptions(change.data["household_id"])
+            # Patch subscriptions languages
+            for subscription in subscriptions:
+                patch_subscription(
+                    subscription, {"lang": change.data["new_language"]})
+
+        return "Change language completed"
 
     def unsubscribe_household_only(self, change):
         pass
