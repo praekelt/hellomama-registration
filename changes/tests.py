@@ -400,10 +400,7 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
         responses.add(
             responses.PATCH,
             'http://localhost:8005/api/v1/subscriptions/%s/' % subscription_id,
-            json={"id": subscription_id,
-                  "identity": change_data["mother_id"],
-                  "active": False,
-                  "lang": "eng_NG"},
+            json={"active": False},
             status=200, content_type='application/json',
         )
         # mock mother messageset lookup
@@ -484,10 +481,7 @@ class TestChangeBaby(AuthenticatedAPITestCase):
         responses.add(
             responses.PATCH,
             'http://localhost:8005/api/v1/subscriptions/%s/' % subscription_id,
-            json={"id": subscription_id,
-                  "identity": change_data["mother_id"],
-                  "active": False,
-                  "lang": "eng_NG"},
+            json={"active": False},
             status=200, content_type='application/json',
         )
         # mock identity lookup
@@ -592,10 +586,7 @@ class TestChangeBaby(AuthenticatedAPITestCase):
         responses.add(
             responses.PATCH,
             'http://localhost:8005/api/v1/subscriptions/%s/' % subscription_id,
-            json={"id": subscription_id,
-                  "identity": change_data["mother_id"],
-                  "active": False,
-                  "lang": "eng_NG"},
+            json={"active": False},
             status=200, content_type='application/json',
         )
         # mock identity lookup
@@ -740,10 +731,7 @@ class TestChangeLanguage(AuthenticatedAPITestCase):
         responses.add(
             responses.PATCH,
             'http://localhost:8005/api/v1/subscriptions/%s/' % subscription_id,
-            json={"id": subscription_id,
-                  "identity": change_data["mother_id"],
-                  "active": True,
-                  "lang": "pcm_NG"},
+            json={"lang": "pcm_NG"},
             status=200, content_type='application/json',
         )
 
@@ -794,10 +782,7 @@ class TestChangeLanguage(AuthenticatedAPITestCase):
         responses.add(
             responses.PATCH,
             'http://localhost:8005/api/v1/subscriptions/%s/' % subscription_id,
-            json={"id": subscription_id,
-                  "identity": change_data["mother_id"],
-                  "active": True,
-                  "lang": "pcm_NG"},
+            json={"lang": "pcm_NG"},
             status=200, content_type='application/json',
         )
         # mock household get subscription request
@@ -825,10 +810,7 @@ class TestChangeLanguage(AuthenticatedAPITestCase):
         responses.add(
             responses.PATCH,
             'http://localhost:8005/api/v1/subscriptions/%s/' % subscription_id,
-            json={"id": subscription_id,
-                  "identity": change_data["data"]["household_id"],
-                  "active": True,
-                  "lang": "pcm_NG"},
+            json={"lang": "pcm_NG"},
             status=200, content_type='application/json',
         )
 

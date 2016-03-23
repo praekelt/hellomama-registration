@@ -93,15 +93,7 @@ def patch_subscription(subscription, data):
 def deactivate_subscription(subscription):
     """ Sets a subscription deactive via a Patch request
     """
-    url = settings.STAGE_BASED_MESSAGING_URL + 'subscriptions/%s/' % (
-        subscription["id"])
-    data = {"active": False}
-    headers = {'Authorization': [
-        'Token %s' % settings.STAGE_BASED_MESSAGING_TOKEN],
-        'Content-Type': ['application/json']
-    }
-    r = requests.patch(url, data=data, headers=headers)
-    return r.json()
+    return patch_subscription(subscription, {"active": False})
 
 
 def get_messageset_short_name(stage, recipient, msg_type, weeks, voice_days,
