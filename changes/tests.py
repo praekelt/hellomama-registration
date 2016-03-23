@@ -865,10 +865,7 @@ class TestChangeUnsubscribeHousehold(AuthenticatedAPITestCase):
         responses.add(
             responses.PATCH,
             'http://localhost:8005/api/v1/subscriptions/%s/' % subscription_id,
-            json={"id": subscription_id,
-                  "identity": change_data["data"]["household_id"],
-                  "active": False,
-                  "lang": "eng_NG"},
+            json={"active": False},
             status=200, content_type='application/json',
         )
 
