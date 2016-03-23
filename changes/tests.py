@@ -11,8 +11,9 @@ from rest_framework.test import APIClient
 from rest_framework.authtoken.models import Token
 from rest_hooks.models import model_saved
 
-from registrations import tasks
-from registrations.models import Source, Registration, registration_post_save
+from changes import tasks
+from registrations.models import (Source, Registration, SubscriptionRequest,
+                                  registration_post_save)
 from .models import Change, change_post_save
 from .tasks import implement_action
 
@@ -355,16 +356,56 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
             "source": self.make_source_adminuser()
         }
         change = Change.objects.create(**change_data)
-        # mock unsubscribe request
+        # mock get subscription request
+        subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
+        querystring = '?active=True&id=%s' % change_data["mother_id"]
         responses.add(
-            responses.POST,
-            'http://localhost:8001/api/v1/optout/%s/' % change_data[
-                "mother_id"],
-            json={"id": 1},
-            status=201, content_type='application/json',
+            responses.GET,
+            'http://localhost:8005/api/v1/subscriptions/%s' % querystring,
+            json=[{"id": subscription_id,
+                   "identity": change_data["mother_id"],
+                   "active": True,
+                   "lang": "eng_NG"}],
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock patch subscription request
+        responses.add(
+            responses.PATCH,
+            'http://localhost:8005/api/v1/subscriptions/%s/' % subscription_id,
+            json={"id": subscription_id,
+                  "identity": change_data["mother_id"],
+                  "active": False,
+                  "lang": "eng_NG"},
+            status=200, content_type='application/json',
+        )
+        # mock mother messageset lookup
+        query_string = '?short_name=prebirth.mother.audio.10_42.tue_thu.9_11'
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/%s' % query_string,
+            json=[{"id": 4,
+                   "short_name": 'prebirth.mother.audio.10_42.tue_thu.9_11',
+                   "default_schedule": 6}],
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock mother schedule lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/schedule/6/',
+            json={"id": 6, "day_of_week": "2,4"},
+            status=200, content_type='application/json',
+            match_querystring=True
         )
 
         # Execute
         result = implement_action.apply_async(args=[change.id])
         # Check
         self.assertEqual(result.get(), "Change messaging completed")
+        d = SubscriptionRequest.objects.last()
+        self.assertEqual(d.contact, "846877e6-afaa-43de-acb1-09f61ad4de99")
+        self.assertEqual(d.messageset_id, 4)
+        self.assertEqual(d.next_sequence_number, 56)  # week 28
+        self.assertEqual(d.lang, "eng_NG")
+        self.assertEqual(d.schedule, 6)

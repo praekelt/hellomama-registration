@@ -1,24 +1,49 @@
 import requests
+import datetime
 
 from django.conf import settings
-
 from celery.task import Task
 
-from registrations.models import SubscriptionRequest
+from registrations.models import Registration, SubscriptionRequest
 from registrations.tasks import (get_messageset_short_name,
-                                 get_messageset_schedule_sequence)
+                                 get_messageset_schedule_sequence,
+                                 calc_baby_age,
+                                 calc_pregnancy_week_lmp)
 from .models import Change
+
+
+def get_today():
+    return datetime.datetime.today()
 
 
 def get_subscription(identity):
     """ Gets the first active subscription found for an identity
     """
-    url = settings.IDENTITIES_URL + '/identities/'
+    url = settings.STAGE_BASED_URL + 'subscriptions/'
     params = {'id': identity, 'active': True}
-    headers = {'Authorization': ['Token %s' % settings.IDENTITIES_TOKEN],
+    headers = {'Authorization': ['Token %s' % settings.STAGE_BASED_TOKEN],
                'Content-Type': ['application/json']}
     r = requests.get(url, params=params, headers=headers)
-    return r.json()[0]  # return first object
+    return r.json()[0]  # return first object TODO: handle multiple
+
+
+# def get_identity(identity):
+#     url = settings.IDENTITIES_URL + 'identities/%s/' % str(identity)
+#     headers = {'Authorization': ['Token %s' % settings.IDENTITIES_TOKEN],
+#                'Content-Type': ['application/json']}
+#     r = requests.get(url, headers=headers)
+#     return r.json()
+
+
+def deactivate_subscription(subscription):
+    """ Sets a subscription deactive via a Patch request
+    """
+    url = settings.STAGE_BASED_URL + 'subscriptions/%s/' % subscription["id"]
+    data = {"active": False}
+    headers = {'Authorization': ['Token %s' % settings.STAGE_BASED_TOKEN],
+               'Content-Type': ['application/json']}
+    r = requests.patch(url, data=data, headers=headers)
+    return r.json()
 
 
 def get_messageset(messageset_id):
@@ -29,31 +54,23 @@ def get_messageset(messageset_id):
     return r.json()
 
 
-def get_schedule(schedule_id):
-    url = settings.STAGE_BASED_URL + 'schedule/%s/' % str(schedule_id)
-    headers = {'Authorization': ['Token %s' % settings.STAGE_BASED_TOKEN],
-               'Content-Type': ['application/json']}
-    r = requests.get(url, headers=headers)
-    return r.json()
-
-
-def unsubscribe_identity(identity, reason):
-    """ Send and unsubscribe request to the identity store
-    """
-    url = settings.IDENTITIES_URL + 'optout/%s/' % identity
-    data = {
-        "optout_type": "unsubscribe",
-        "identity": identity,
-        "reason": reason,
-        "address_type": "",
-        "address": "",
-        "request_source": "change_backend",
-        "requestor_source_id": None
-    }
-    headers = {'Authorization': ['Token %s' % settings.IDENTITIES_TOKEN],
-               'Content-Type': ['application/json']}
-    r = requests.post(url, data=data, headers=headers)
-    return r.json()["id"]
+# def unsubscribe_identity(identity, reason):
+#     """ Send and unsubscribe request to the identity store
+#     """
+#     url = settings.IDENTITIES_URL + 'optout/%s/' % identity
+#     data = {
+#         "optout_type": "unsubscribe",
+#         "identity": identity,
+#         "reason": reason,
+#         "address_type": "",
+#         "address": "",
+#         "request_source": "change_backend",
+#         "requestor_source_id": None
+#     }
+#     headers = {'Authorization': ['Token %s' % settings.IDENTITIES_TOKEN],
+#                'Content-Type': ['application/json']}
+#     r = requests.post(url, data=data, headers=headers)
+#     return r.json()["id"]
 
 
 class ImplementAction(Task):
@@ -70,41 +87,39 @@ class ImplementAction(Task):
     def change_messaging(self, change):
         # Get mother's current subscription
         subscription = get_subscription(change.mother_id)
-        # Get current messageset
-        messageset = get_messageset(subscription.messageset_id)
-        # Get current schedule
-        schedule = get_schedule(subscription.schedule)
+        # Deactivate subscription
+        subscription = deactivate_subscription(subscription)
+        # Get mother's registration
+        registration = Registration.objects.get(mother_id=change.mother_id)
 
-        # Try to find a manual switch to baby messages
-        # manual_baby_switch = Change.objects.filter(mother_id=change.mother_id)
-        # if len(manual_baby_switch) > 0:
-        #     print("Manually switched to baby", manual_baby_switch)
-        #     stage = 'postbirth'
-        #     weeks = 'calc from manual_baby_switch.created_at'
-        # # Check if
-        # elif
-
-        if 'postbirth' in messageset["short_name"]:
+        # Determine stage & week
+        # TODO: handle miscarriage stage
+        # if the registration was for postbirth, we can assume postbirth
+        if registration.stage == 'postbirth':
             stage = 'postbirth'
-        elif 'prebirth' in messageset["short_name"]:
-            stage = 'prebirth'
+            weeks = calc_baby_age(get_today(), registration.data["baby_dob"])
+        # otherwise, we need to look if the user has changed to baby
         else:
-            stage = 'miscarriage'
+            baby_switch = Change.objects.filter(mother_id=change.mother_id,
+                                                action='change_baby')
+            if baby_switch.count() > 0:
+                # TODO: handle a person that has switched to baby for a
+                # previous pregnancy
+                stage = 'postbirth'
+                weeks = calc_baby_age(
+                    get_today(), baby_switch.created_at[0:10].replace('-', ''))
+            else:
+                stage = 'prebirth'
+                weeks = calc_pregnancy_week_lmp(
+                    get_today(), registration.data["last_period_date"])
 
+        # Determine voice_days & voice_times
         if 'voice_days' in change.data:
             voice_days = change.data["voice_days"]
             voice_times = change.data["voice_times"]
         else:
             voice_days = None
             voice_times = None
-
-        # get schedule days of week: comma-seperated str e.g. '2' for Tue
-        days_of_week = schedule["day_of_week"]
-        # determine how many times a week messages are sent e.g. 2 for '1,3'
-        msgs_per_week = float(len(days_of_week.split(',')))
-        # determine approximate current week
-        weeks = int(round(
-            subscription["next_sequence_number"] / msgs_per_week))
 
         mother_short_name = get_messageset_short_name(
             stage, 'mother', change.data["msg_type"],
@@ -115,16 +130,9 @@ class ImplementAction(Task):
                 mother_short_name, weeks, voice_days, voice_times
             )
 
-        # Unsubscribe from current subscriptions
-        unsubscribe_identity(change.mother_id, 'change_messaging')
-
-        # Find previous registration object
-        # registration = Registration.objects.get(mother_id=change.mother_id)
-        # print("Registration data -----------", registration.data)
-
         # Make new subscription request object
         mother_sub = {
-            "contact": change.data["mother_id"],
+            "contact": change.mother_id,
             "messageset_id": mother_msgset_id,
             "next_sequence_number": next_sequence_number,
             "lang": subscription["lang"],
@@ -132,7 +140,7 @@ class ImplementAction(Task):
         }
         SubscriptionRequest.objects.create(**mother_sub)
 
-        return "Change incomplete"
+        return "Change messaging completed"
 
     def change_language(self, change):
         pass

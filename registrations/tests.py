@@ -873,7 +873,6 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             match_querystring=True
         )
         # mock mother schedule lookup
-        query_string = '?cron_string=0+8+1%2C3+%2A+%2A'
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/schedule/6/',
