@@ -33,6 +33,14 @@ def calc_baby_age(today, baby_dob):
         return -1
 
 
+def get_identity(identity):
+    url = settings.IDENTITY_STORE_URL + 'identities/%s/' % str(identity)
+    headers = {'Authorization': ['Token %s' % settings.IDENTITY_STORE_TOKEN],
+               'Content-Type': ['application/json']}
+    r = requests.get(url, headers=headers)
+    return r.json()
+
+
 def get_messageset(short_name):
     url = settings.STAGE_BASED_MESSAGING_URL + 'messageset/'
     params = {'short_name': short_name}
@@ -64,7 +72,9 @@ def get_messageset_short_name(stage, recipient, msg_type, weeks, voice_days,
     if stage == "prebirth":
         week_range = "10_42"
     elif stage == "postbirth":
-        if 0 <= weeks <= 12:
+        if recipient == "household":
+            week_range = "0_52"
+        elif 0 <= weeks <= 12:
             week_range = "0_12"
         elif 13 <= weeks <= 52:
             week_range = "13_52"
@@ -81,8 +91,7 @@ def get_messageset_short_name(stage, recipient, msg_type, weeks, voice_days,
     return short_name
 
 
-def get_messageset_schedule_sequence(short_name, weeks, voice_days,
-                                     voice_times):
+def get_messageset_schedule_sequence(short_name, weeks):
     # get messageset
     messageset = get_messageset(short_name)
 
@@ -102,12 +111,14 @@ def get_messageset_schedule_sequence(short_name, weeks, voice_days,
         next_sequence_number = msgs_per_week * (
             weeks - settings.PREBIRTH_MIN_WEEKS)
         if next_sequence_number == 0:
-            next_sequence_number = 1
+            next_sequence_number = 1  # next_sequence_number cannot be 0
     elif '13_52' in short_name:
         next_sequence_number = msgs_per_week * (weeks - 13)
         if next_sequence_number == 0:
-            next_sequence_number = 1
+            next_sequence_number = 1  # next_sequence_number cannot be 0
     else:
         next_sequence_number = msgs_per_week * weeks
+        if next_sequence_number == 0:
+            next_sequence_number = 1  # next_sequence_number cannot be 0
 
     return (messageset_id, schedule_id, next_sequence_number)
