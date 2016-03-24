@@ -93,17 +93,15 @@ class ImplementAction(Task):
         }
         SubscriptionRequest.objects.create(**mother_sub)
 
-        # The code below is currently implemented a bit differently in JS,
-        # but perhaps we should rather do it here? See state_switch_loss.
-        # # Get mother's registration
-        # registration = Registration.objects.get(mother_id=change.mother_id)
-        # if registration.data["msg_receiver"] != 'mother_only':
-        #     # Get household's current subscriptions
-        #     subscriptions = utils.get_subscriptions(
-        #         mother["details"]["linked_to"])
-        #     # Deactivate subscriptions
-        #     for subscription in subscriptions:
-        #         utils.deactivate_subscription(subscription)
+        # Get mother's registration
+        registration = Registration.objects.get(mother_id=change.mother_id)
+        if registration.data["msg_receiver"] != 'mother_only':
+            # Get household's current subscriptions
+            subscriptions = utils.get_subscriptions(
+                mother["details"]["linked_to"])
+            # Deactivate subscriptions
+            for subscription in subscriptions:
+                utils.deactivate_subscription(subscription)
 
         return "Change loss completed"
 
