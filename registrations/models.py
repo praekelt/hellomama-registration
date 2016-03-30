@@ -97,6 +97,7 @@ class SubscriptionRequest(models.Model):
                                                blank=False)
     lang = models.CharField(max_length=6, null=False, blank=False)
     schedule = models.IntegerField(default=1)
+    metadata = JSONField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -113,6 +114,7 @@ class SubscriptionRequest(models.Model):
                 'next_sequence_number': self.next_sequence_number,
                 'lang': self.lang,
                 'schedule': self.schedule,
+                'metadata': self.metadata,
                 'created_at': self.created_at.isoformat(),
                 'updated_at': self.updated_at.isoformat()
             }

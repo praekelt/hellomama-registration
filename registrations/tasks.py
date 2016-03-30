@@ -211,8 +211,20 @@ class ValidateRegistration(Task):
             "messageset": mother_msgset_id,
             "next_sequence_number": next_sequence_number,
             "lang": registration.data["language"],
-            "schedule": mother_msgset_schedule
+            "schedule": mother_msgset_schedule,
+            "metadata": {}
         }
+
+        # Add mother welcome message
+        if 'voice_days' in registration.data:
+            mother_sub["metadata"]["prepend_next_delivery"] = \
+                "%s/static/audio/registation/%s/welcome_mother.mp3" % (
+                settings.PUBLIC_HOST,
+                registration.data["language"])
+        else:
+            mother_sub["metadata"]["prepend_next_delivery"] = \
+                settings.MOTHER_WELCOME_TEXT_NG_ENG
+
         SubscriptionRequest.objects.create(**mother_sub)
 
         if registration.data["msg_receiver"] != 'mother_only':
@@ -234,8 +246,18 @@ class ValidateRegistration(Task):
                 "messageset": household_msgset_id,
                 "next_sequence_number": seq_number,
                 "lang": registration.data["language"],
-                "schedule": household_msgset_schedule
+                "schedule": household_msgset_schedule,
+                "metadata": {}
             }
+            # Add household welcome message
+            if 'voice_days' in registration.data:
+                household_sub["metadata"]["prepend_next_delivery"] = \
+                    "%s/static/audio/registation/%s/welcome_household.mp3" % (
+                    settings.PUBLIC_HOST,
+                    registration.data["language"])
+            else:
+                household_sub["metadata"]["prepend_next_delivery"] = \
+                    settings.HOUSEHOLD_WELCOME_TEXT_NG_ENG
             SubscriptionRequest.objects.create(**household_sub)
             return "2 SubscriptionRequests created"
 

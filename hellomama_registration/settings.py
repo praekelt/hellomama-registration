@@ -196,6 +196,11 @@ IDENTITY_STORE_URL = os.environ.get('IDENTITY_STORE_URL',
                                     'http://localhost:8001/api/v1/')
 IDENTITY_STORE_TOKEN = os.environ.get('IDENTITY_STORE_TOKEN',
                                       'REPLACEME')
-
+PUBLIC_HOST = os.environ.get('PUBLIC_HOST',
+                             'http://registration.dev.example.org')
+MOTHER_WELCOME_TEXT_NG_ENG = os.environ.get(
+    'MOTHER_WELCOME_TEXT_NG_ENG', 'Welcome to HelloMama!')
+HOUSEHOLD_WELCOME_TEXT_NG_ENG = os.environ.get(
+    'HOUSEHOLD_WELCOME_TEXT_NG_ENG', 'Welcome household to HelloMama!')
 
 djcelery.setup_loader()
