@@ -107,7 +107,7 @@ class AuthenticatedAPITestCase(APITestCase):
             "mother_id": "846877e6-afaa-43de-acb1-09f61ad4de99",
             "action": "change_language",
             "data": {"test_normaluser_change": "test_normaluser_changed"},
-            "source": self.make_source_adminuser()
+            "source": self.make_source_normaluser()
         }
         return Change.objects.create(**data)
 
@@ -835,7 +835,7 @@ class TestChangeUnsubscribeHousehold(AuthenticatedAPITestCase):
             "action": "unsubscribe_household_only",
             "data": {
                 "household_id": "629eaf3c-04e5-4404-8a27-3ab3b811326a",
-                "loss_reason": "miscarriage"
+                "reason": "miscarriage"
             },
             "source": self.make_source_adminuser()
         }
@@ -889,7 +889,7 @@ class TestChangeUnsubscribeMother(AuthenticatedAPITestCase):
             "mother_id": "846877e6-afaa-43de-acb1-09f61ad4de99",
             "action": "unsubscribe_mother_only",
             "data": {
-                "loss_reason": "miscarriage"
+                "reason": "miscarriage"
             },
             "source": self.make_source_adminuser()
         }
@@ -941,7 +941,7 @@ class TestChangeLoss(AuthenticatedAPITestCase):
         change_data = {
             "mother_id": "846877e6-afaa-43de-acb1-09f61ad4de99",
             "action": "change_loss",
-            "data": {"loss_reason": "miscarriage"},
+            "data": {"reason": "miscarriage"},
             "source": self.make_source_adminuser()
         }
         change = Change.objects.create(**change_data)
@@ -1046,7 +1046,7 @@ class TestChangeLoss(AuthenticatedAPITestCase):
         change_data = {
             "mother_id": "846877e6-afaa-43de-acb1-09f61ad4de99",
             "action": "change_loss",
-            "data": {"loss_reason": "miscarriage"},
+            "data": {"reason": "miscarriage"},
             "source": self.make_source_adminuser()
         }
         change = Change.objects.create(**change_data)

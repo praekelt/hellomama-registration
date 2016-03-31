@@ -1,21 +1,7 @@
 from .models import Source, Change
-from rest_hooks.models import Hook
-from rest_framework import viewsets, mixins, generics
+from rest_framework import mixins, generics
 from rest_framework.permissions import IsAuthenticated
 from .serializers import ChangeSerializer
-from registrations.serializers import HookSerializer
-
-
-class HookViewSet(viewsets.ModelViewSet):
-    """
-    Retrieve, create, update or destroy webhooks.
-    """
-    permission_classes = (IsAuthenticated,)
-    queryset = Hook.objects.all()
-    serializer_class = HookSerializer
-
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
 
 
 class ChangePost(mixins.CreateModelMixin, generics.GenericAPIView):
