@@ -185,7 +185,7 @@ class ValidateRegistration(Task):
         """ Create SubscriptionRequest(s) based on the
         validated registration.
         """
-
+        print(registration)
         if 'voice_days' in registration.data:
             voice_days = registration.data["voice_days"]
             voice_times = registration.data["voice_times"]
@@ -222,9 +222,16 @@ class ValidateRegistration(Task):
                 settings.PUBLIC_HOST,
                 registration.data["language"])
         else:
+            # mother_identity =
+            if registration.data["msg_receiver"] in [
+                    "father_only", "friend_only", "family_only"]:
+                to_addr = utils.get_identity_address(
+                    registration.data["receiver_id"])
+            else:
+                to_addr = utils.get_identity_address(
+                    registration.mother_id)
             payload = {
-                "to_addr": utils.get_identity_address(
-                    registration.mother_id),
+                "to_addr": to_addr,
                 "content": settings.MOTHER_WELCOME_TEXT_NG_ENG,
                 "metadata": {}
             }

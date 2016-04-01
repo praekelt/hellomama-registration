@@ -1050,17 +1050,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             status=200, content_type='application/json',
             match_querystring=True
         )
-        # mock mother MSISDN lookup again?
-        responses.add(
-            responses.GET,
-            'http://localhost:8001/api/v1/identities/mother00-9d89-4aa6-99ff-13c225365b5d/addresses/msisdn?default=True',  # noqa
-            json={
-                "count": 1, "next": None, "previous": None,
-                "results": [{"address": "+234123"}]
-            },
-            status=200, content_type='application/json',
-            match_querystring=True
-        )
+
         # mock friend MSISDN lookup
         responses.add(
             responses.GET,
@@ -1495,18 +1485,6 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             status=200, content_type='application/json',
         )
         # mock mother MSISDN lookup
-        responses.add(
-            responses.GET,
-            'http://localhost:8001/api/v1/identities/mother00-9d89-4aa6-99ff-13c225365b5d/addresses/msisdn?default=True',  # noqa
-            json={
-                "count": 1, "next": None, "previous": None,
-                "results": [{"address": "+234123"}]
-            },
-            status=200, content_type='application/json',
-            match_querystring=True
-        )
-
-        # mock mother MSISDN lookup again?
         responses.add(
             responses.GET,
             'http://localhost:8001/api/v1/identities/mother00-9d89-4aa6-99ff-13c225365b5d/addresses/msisdn?default=True',  # noqa
