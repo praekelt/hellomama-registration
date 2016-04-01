@@ -1,5 +1,6 @@
 import datetime
 import requests
+import json
 
 from django.conf import settings
 
@@ -34,15 +35,29 @@ def calc_baby_age(today, baby_dob):
 
 
 def get_identity(identity):
-    url = settings.IDENTITY_STORE_URL + 'identities/%s/' % str(identity)
+    url = "%s/%s/%s/" % (settings.IDENTITY_STORE_URL, "identities", identity)
     headers = {'Authorization': ['Token %s' % settings.IDENTITY_STORE_TOKEN],
                'Content-Type': ['application/json']}
     r = requests.get(url, headers=headers)
     return r.json()
 
 
+def get_identity_address(identity):
+    url = "%s/%s/%s/addresses/msisdn" % (settings.IDENTITY_STORE_URL,
+                                         "identities", identity)
+    params = {"default": True}
+    headers = {'Authorization': ['Token %s' % (
+        settings.IDENTITY_STORE_TOKEN, )],
+        'Content-Type': ['application/json']}
+    r = requests.get(url, params=params, headers=headers).json()
+    if len(r["results"]) > 0:
+        return r["results"][0]
+    else:
+        return None
+
+
 def get_messageset(short_name):
-    url = settings.STAGE_BASED_MESSAGING_URL + 'messageset/'
+    url = "%s/%s/" % (settings.STAGE_BASED_MESSAGING_URL, "messageset")
     params = {'short_name': short_name}
     headers = {'Authorization': [
         'Token %s' % settings.STAGE_BASED_MESSAGING_TOKEN],
@@ -53,8 +68,8 @@ def get_messageset(short_name):
 
 
 def get_schedule(schedule_id):
-    url = settings.STAGE_BASED_MESSAGING_URL + 'schedule/%s/' % str(
-        schedule_id)
+    url = "%s/%s/%s/" % (settings.STAGE_BASED_MESSAGING_URL,
+                         "schedule", schedule_id)
     headers = {'Authorization': [
         'Token %s' % settings.STAGE_BASED_MESSAGING_TOKEN],
         'Content-Type': ['application/json']
@@ -66,7 +81,7 @@ def get_schedule(schedule_id):
 def get_subscriptions(identity):
     """ Gets the first active subscription found for an identity
     """
-    url = settings.STAGE_BASED_MESSAGING_URL + 'subscriptions/'
+    url = "%s/%s/" % (settings.STAGE_BASED_MESSAGING_URL, "subscriptions")
     params = {'id': identity, 'active': True}
     headers = {'Authorization': [
         'Token %s' % settings.STAGE_BASED_MESSAGING_TOKEN],
@@ -79,8 +94,8 @@ def get_subscriptions(identity):
 def patch_subscription(subscription, data):
     """ Patches the given subscription with the data provided
     """
-    url = settings.STAGE_BASED_MESSAGING_URL + 'subscriptions/%s/' % (
-        subscription["id"])
+    url = "%s/%s/%s/" % (settings.STAGE_BASED_MESSAGING_URL,
+                         "subscriptions", subscription["id"])
     data = data
     headers = {'Authorization': [
         'Token %s' % settings.STAGE_BASED_MESSAGING_TOKEN],
@@ -159,3 +174,16 @@ def get_messageset_schedule_sequence(short_name, weeks):
             next_sequence_number = 1  # next_sequence_number cannot be 0
 
     return (messageset_id, schedule_id, next_sequence_number)
+
+
+def post_message(payload):
+    result = requests.post(
+        url="%s/outbound/" % settings.MESSAGE_SENDER_URL,
+        data=json.dumps(payload),
+        headers={
+            'Content-Type': 'application/json',
+            'Authorization': 'Token %s' % (
+                settings.MESSAGE_SENDER_TOKEN,)
+        }
+    ).json()
+    return result
