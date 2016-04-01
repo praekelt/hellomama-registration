@@ -222,8 +222,13 @@ class ValidateRegistration(Task):
                 settings.PUBLIC_HOST,
                 registration.data["language"])
         else:
-            mother_sub["metadata"]["prepend_next_delivery"] = \
-                settings.MOTHER_WELCOME_TEXT_NG_ENG
+            payload = {
+                "to_addr": utils.get_identity_address(
+                    registration.mother_id),
+                "content": settings.MOTHER_WELCOME_TEXT_NG_ENG,
+                "metadata": {}
+            }
+            utils.post_message(payload)
 
         SubscriptionRequest.objects.create(**mother_sub)
 
@@ -256,8 +261,13 @@ class ValidateRegistration(Task):
                     settings.PUBLIC_HOST,
                     registration.data["language"])
             else:
-                household_sub["metadata"]["prepend_next_delivery"] = \
-                    settings.HOUSEHOLD_WELCOME_TEXT_NG_ENG
+                payload = {
+                    "to_addr": utils.get_identity_address(
+                        registration.data["receiver_id"]),
+                    "content": settings.HOUSEHOLD_WELCOME_TEXT_NG_ENG,
+                    "metadata": {}
+                }
+                utils.post_message(payload)
             SubscriptionRequest.objects.create(**household_sub)
             return "2 SubscriptionRequests created"
 

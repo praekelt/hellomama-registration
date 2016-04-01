@@ -706,6 +706,36 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
             json={"id": 3, "day_of_week": "5"},
             status=200, content_type='application/json',
         )
+        # mock mother MSISDN lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8001/api/v1/identities/mother00-9d89-4aa6-99ff-13c225365b5d/addresses/msisdn?default=True',  # noqa
+            json={
+                "count": 1, "next": None, "previous": None,
+                "results": [{"address": "+234123"}]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock friend MSISDN lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8001/api/v1/identities/friend00-73a2-4d89-b045-d52004c025fe/addresses/msisdn?default=True',  # noqa
+            json={
+                "count": 1, "next": None, "previous": None,
+                "results": [{"address": "+234124"}]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+
+        # mock household SMS send
+        responses.add(
+            responses.POST,
+            'http://localhost:8006/api/v1/outbound/',
+            json={"id": 1},
+            status=200, content_type='application/json',
+        )
         # prepare registration data
         registration_data = {
             "stage": "prebirth",
@@ -862,6 +892,26 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             json={"id": 3, "day_of_week": "5"},
             status=200, content_type='application/json',
         )
+        # mock mother MSISDN lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8001/api/v1/identities/mother00-9d89-4aa6-99ff-13c225365b5d/addresses/msisdn?default=True',  # noqa
+            json={
+                "count": 1, "next": None, "previous": None,
+                "results": [{"address": "+234123"}]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+
+        # mock household SMS send
+        responses.add(
+            responses.POST,
+            'http://localhost:8006/api/v1/outbound/',
+            json={"id": 1},
+            status=200, content_type='application/json',
+        )
+
         # prepare registration data
         registration_data = {
             "stage": "prebirth",
@@ -987,6 +1037,47 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/schedule/3/',
             json={"id": 3, "day_of_week": "5"},
+            status=200, content_type='application/json',
+        )
+        # mock mother MSISDN lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8001/api/v1/identities/mother00-9d89-4aa6-99ff-13c225365b5d/addresses/msisdn?default=True',  # noqa
+            json={
+                "count": 1, "next": None, "previous": None,
+                "results": [{"address": "+234123"}]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock mother MSISDN lookup again?
+        responses.add(
+            responses.GET,
+            'http://localhost:8001/api/v1/identities/mother00-9d89-4aa6-99ff-13c225365b5d/addresses/msisdn?default=True',  # noqa
+            json={
+                "count": 1, "next": None, "previous": None,
+                "results": [{"address": "+234123"}]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock friend MSISDN lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8001/api/v1/identities/friend00-73a2-4d89-b045-d52004c025fe/addresses/msisdn?default=True',  # noqa
+            json={
+                "count": 1, "next": None, "previous": None,
+                "results": [{"address": "+234123"}]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+
+        # mock household SMS send
+        responses.add(
+            responses.POST,
+            'http://localhost:8006/api/v1/outbound/',
+            json={"id": 1},
             status=200, content_type='application/json',
         )
         # prepare registration data
@@ -1169,6 +1260,39 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             json={"id": 3, "day_of_week": "5"},
             status=200, content_type='application/json',
         )
+
+        # mock mother MSISDN lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8001/api/v1/identities/mother00-9d89-4aa6-99ff-13c225365b5d/addresses/msisdn?default=True',  # noqa
+            json={
+                "count": 1, "next": None, "previous": None,
+                "results": [{"address": "+234123"}]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+
+        # mock family MSISDN lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8001/api/v1/identities/family00-73a2-4d89-b045-d52004c025fe/addresses/msisdn?default=True',  # noqa
+            json={
+                "count": 1, "next": None, "previous": None,
+                "results": [{"address": "+234124"}]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+
+        # mock household SMS send
+        responses.add(
+            responses.POST,
+            'http://localhost:8006/api/v1/outbound/',
+            json={"id": 1},
+            status=200, content_type='application/json',
+        )
+
         # prepare registration data
         registration_data = {
             "stage": "prebirth",
@@ -1191,8 +1315,6 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         self.assertEqual(d_mom.next_sequence_number, 15)
         self.assertEqual(d_mom.lang, "eng_NG")
         self.assertEqual(d_mom.schedule, 1)
-        self.assertEqual(d_mom.metadata["prepend_next_delivery"],
-                         "Welcome to HelloMama!")
 
         d_family = SubscriptionRequest.objects.get(
             contact="family00-73a2-4d89-b045-d52004c025fe")
@@ -1202,8 +1324,6 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         self.assertEqual(d_family.next_sequence_number, 5)
         self.assertEqual(d_family.lang, "eng_NG")
         self.assertEqual(d_family.schedule, 3)
-        self.assertEqual(d_family.metadata["prepend_next_delivery"],
-                         "Welcome household to HelloMama!")
 
     @responses.activate
     def test_mother_and_father_prebirth_sms(self):
@@ -1258,6 +1378,36 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             json={"id": 3, "day_of_week": "5"},
             status=200, content_type='application/json',
         )
+        # mock mother MSISDN lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8001/api/v1/identities/mother00-9d89-4aa6-99ff-13c225365b5d/addresses/msisdn?default=True',  # noqa
+            json={
+                "count": 1, "next": None, "previous": None,
+                "results": [{"address": "+234123"}]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock father MSISDN lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8001/api/v1/identities/father00-73a2-4d89-b045-d52004c025fe/addresses/msisdn?default=True',  # noqa
+            json={
+                "count": 1, "next": None, "previous": None,
+                "results": [{"address": "+234124"}]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+
+        # mock household SMS send
+        responses.add(
+            responses.POST,
+            'http://localhost:8006/api/v1/outbound/',
+            json={"id": 1},
+            status=200, content_type='application/json',
+        )
         # prepare registration data
         registration_data = {
             "stage": "prebirth",
@@ -1282,8 +1432,6 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         self.assertEqual(d_mom.next_sequence_number, 60)
         self.assertEqual(d_mom.lang, "eng_NG")
         self.assertEqual(d_mom.schedule, 1)
-        self.assertEqual(d_mom.metadata["prepend_next_delivery"],
-                         "Welcome to HelloMama!")
 
         d_dad = SubscriptionRequest.objects.get(
             contact="father00-73a2-4d89-b045-d52004c025fe")
@@ -1292,8 +1440,6 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         self.assertEqual(d_dad.next_sequence_number, 20)
         self.assertEqual(d_dad.lang, "eng_NG")
         self.assertEqual(d_dad.schedule, 3)
-        self.assertEqual(d_dad.metadata["prepend_next_delivery"],
-                         "Welcome household to HelloMama!")
 
     @responses.activate
     def test_mother_and_family_prebirth_sms(self):
@@ -1346,6 +1492,49 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/schedule/3/',
             json={"id": 3, "day_of_week": "5"},
+            status=200, content_type='application/json',
+        )
+        # mock mother MSISDN lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8001/api/v1/identities/mother00-9d89-4aa6-99ff-13c225365b5d/addresses/msisdn?default=True',  # noqa
+            json={
+                "count": 1, "next": None, "previous": None,
+                "results": [{"address": "+234123"}]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+
+        # mock mother MSISDN lookup again?
+        responses.add(
+            responses.GET,
+            'http://localhost:8001/api/v1/identities/mother00-9d89-4aa6-99ff-13c225365b5d/addresses/msisdn?default=True',  # noqa
+            json={
+                "count": 1, "next": None, "previous": None,
+                "results": [{"address": "+234123"}]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+
+        # mock family MSISDN lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8001/api/v1/identities/family00-73a2-4d89-b045-d52004c025fe/addresses/msisdn?default=True',  # noqa
+            json={
+                "count": 1, "next": None, "previous": None,
+                "results": [{"address": "+234124"}]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+
+        # mock household SMS send
+        responses.add(
+            responses.POST,
+            'http://localhost:8006/api/v1/outbound/',
+            json={"id": 1},
             status=200, content_type='application/json',
         )
         # prepare registration data
