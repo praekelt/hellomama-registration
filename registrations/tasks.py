@@ -185,7 +185,6 @@ class ValidateRegistration(Task):
         """ Create SubscriptionRequest(s) based on the
         validated registration.
         """
-        print(registration)
         if 'voice_days' in registration.data:
             voice_days = registration.data["voice_days"]
             voice_times = registration.data["voice_times"]
