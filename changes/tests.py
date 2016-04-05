@@ -360,7 +360,7 @@ class TestRegistrationCreation(AuthenticatedAPITestCase):
 class TestChangeMessaging(AuthenticatedAPITestCase):
 
     @responses.activate
-    def test_mother_only_audio_to_text(self):
+    def test_prebirth_text_to_audio(self):
         # Setup
         # make registration
         self.make_registration_mother_only()
@@ -390,11 +390,33 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
                     "id": subscription_id,
                     "identity": change_data["mother_id"],
                     "active": True,
-                    "lang": "eng_NG"
+                    "lang": "eng_NG",
+                    "next_sequence_number": 54,
+                    "messageset": 1,
+                    "schedule": 1
                 }],
             },
             status=200, content_type='application/json',
             match_querystring=True
+        )
+        # mock current messageset lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/1/',
+            json={
+                "id": 1,
+                "short_name": 'prebirth.mother.text.10_42',
+                "default_schedule": 1
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock schedule 1 lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/schedule/1/',
+            json={"id": 1, "day_of_week": "1,3,5"},
+            status=200, content_type='application/json',
         )
         # mock patch subscription request
         responses.add(
@@ -403,7 +425,7 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
             json={"active": False},
             status=200, content_type='application/json',
         )
-        # mock mother messageset lookup
+        # mock messageset via shortname lookup
         query_string = '?short_name=prebirth.mother.audio.10_42.tue_thu.9_11'
         responses.add(
             responses.GET,
@@ -421,7 +443,7 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
             status=200, content_type='application/json',
             match_querystring=True
         )
-        # mock mother schedule lookup
+        # mock schedule 6 lookup
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/schedule/6/',

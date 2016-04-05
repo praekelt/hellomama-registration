@@ -80,6 +80,8 @@ class ImplementAction(Task):
             stage, 'mother', mother["details"]["preferred_msg_type"],
             weeks, voice_days, voice_times)
 
+        print(mother_short_name)
+
         mother_msgset_id, mother_msgset_schedule, next_sequence_number =\
             utils.get_messageset_schedule_sequence(mother_short_name, weeks)
 
@@ -108,60 +110,106 @@ class ImplementAction(Task):
     def change_messaging(self, change):
         # Get mother's current subscriptions
         subscriptions = utils.get_subscriptions(change.mother_id)
+        current_sub = subscriptions[0]  # necessary assumption
+        current_nsn = current_sub["next_sequence_number"]
+
+        # get current subscription's messageset
+        current_msgset = utils.get_messageset(current_sub["messageset"])
+        current_msgset_short_name = current_msgset["short_name"]
+
+        # get current subscription's schedule
+        current_sched = utils.get_schedule(current_sub["schedule"])
+        current_days = current_sched["day_of_week"]
+        current_rate = len(current_days.split(','))  # msgs per week
+
         # Deactivate subscriptions
         for subscription in subscriptions:
             utils.deactivate_subscription(subscription)
-        # Get mother's registration
-        registration = Registration.objects.get(mother_id=change.mother_id)
-
-        # Determine stage & week
-        # TODO #33: handle miscarriage stage
-        # if the registration was for postbirth, we can assume postbirth
-        if registration.stage == 'postbirth':
-            stage = 'postbirth'
-            weeks = utils.calc_baby_age(
-                utils.get_today(),
-                registration.data["baby_dob"])
-        # otherwise, we need to look if the user has changed to baby
-        else:
-            baby_switch = Change.objects.filter(mother_id=change.mother_id,
-                                                action='change_baby')
-            if baby_switch.count() > 0:
-                # TODO #32: handle a person that has switched to baby for a
-                # previous pregnancy
-                stage = 'postbirth'
-                weeks = utils.calc_baby_age(
-                    utils.get_today(),
-                    baby_switch.created_at[0:10].replace('-', ''))
-            else:
-                stage = 'prebirth'
-                weeks = utils.calc_pregnancy_week_lmp(
-                    utils.get_today(), registration.data["last_period_date"])
 
         # Determine voice_days & voice_times
         if 'voice_days' in change.data:
+            to_type = 'audio'
             voice_days = change.data["voice_days"]
             voice_times = change.data["voice_times"]
         else:
+            to_type = 'text'
             voice_days = None
             voice_times = None
 
-        mother_short_name = utils.get_messageset_short_name(
-            stage, 'mother', change.data["msg_type"],
+        if 'audio' in current_msgset_short_name:
+            from_type = 'audio'
+        else:
+            from_type = 'text'
+
+        if 'miscarriage' in current_msgset_short_name:
+            stage = 'miscarriage'
+            weeks = 1  # just a placeholder to get the messageset_short_name
+        elif 'postbirth' in current_msgset_short_name:
+            stage = 'postbirth'
+            # set placeholder weeks for getting the messageset_short_name
+            if '0_12' in current_msgset_short_name:
+                weeks = 1
+            else:
+                weeks = 13
+        else:
+            stage = 'prebirth'
+            weeks = 11  # just a placeholder to get the messageset_short_name
+
+        new_short_name = utils.get_messageset_short_name(
+            stage, 'mother', to_type,
             weeks, voice_days, voice_times)
 
-        mother_msgset_id, mother_msgset_schedule, next_sequence_number =\
-            utils.get_messageset_schedule_sequence(mother_short_name, weeks)
+        new_msgset_id, new_msgset_schedule, next_sequence_number =\
+            utils.get_messageset_schedule_sequence(new_short_name, weeks)
+
+        # calc new_nsn rather than using next_sequence_number
+        if from_type == to_type:
+            new_nsn = current_nsn
+        else:
+            new_sched = utils.get_schedule(new_msgset_schedule)
+            new_days = new_sched["day_of_week"]
+            new_rate = len(new_days.split(','))  # msgs per week
+
+        new_nsn = int(current_nsn * new_rate / float(current_rate))
 
         # Make new subscription request object
         mother_sub = {
             "contact": change.mother_id,
-            "messageset": mother_msgset_id,
-            "next_sequence_number": next_sequence_number,
-            "lang": subscriptions[0]["lang"],  # use first subscription's lang
-            "schedule": mother_msgset_schedule
+            "messageset": new_msgset_id,
+            "next_sequence_number": new_nsn,
+            "lang": current_sub["lang"],  # use first subscription's lang
+            "schedule": new_msgset_schedule
         }
         SubscriptionRequest.objects.create(**mother_sub)
+
+        # # Get mother's registration
+        # registration = Registration.objects.get(mother_id=change.mother_id)
+
+        # # Determine stage & week
+        # # if the registration was for postbirth, we can assume postbirth
+        # if registration.stage == 'postbirth':
+        #     stage = 'postbirth'
+        #     weeks = utils.calc_baby_age(
+        #         utils.get_today(),
+        #         registration.data["baby_dob"])
+        # # otherwise, we need to look if the user has changed to baby
+        # else:
+        #     baby_switch = Change.objects.filter(mother_id=change.mother_id,
+        #                                         action='change_baby')
+        #     if baby_switch.count() > 0:
+        #         # TODO #32: handle a person that has switched to baby for a
+        #         # previous pregnancy
+        #         stage = 'postbirth'
+        #         weeks = utils.calc_baby_age(
+        #             utils.get_today(),
+        #             baby_switch.created_at[0:10].replace('-', ''))
+        #     else:
+        #         stage = 'prebirth'
+        #         weeks = utils.calc_pregnancy_week_lmp(
+        #             utils.get_today(), registration.data["last_period_date"])
+
+
+
 
         return "Change messaging completed"
 
