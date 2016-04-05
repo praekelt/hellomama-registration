@@ -182,35 +182,6 @@ class ImplementAction(Task):
         }
         SubscriptionRequest.objects.create(**mother_sub)
 
-        # # Get mother's registration
-        # registration = Registration.objects.get(mother_id=change.mother_id)
-
-        # # Determine stage & week
-        # # if the registration was for postbirth, we can assume postbirth
-        # if registration.stage == 'postbirth':
-        #     stage = 'postbirth'
-        #     weeks = utils.calc_baby_age(
-        #         utils.get_today(),
-        #         registration.data["baby_dob"])
-        # # otherwise, we need to look if the user has changed to baby
-        # else:
-        #     baby_switch = Change.objects.filter(mother_id=change.mother_id,
-        #                                         action='change_baby')
-        #     if baby_switch.count() > 0:
-        #         # TODO #32: handle a person that has switched to baby for a
-        #         # previous pregnancy
-        #         stage = 'postbirth'
-        #         weeks = utils.calc_baby_age(
-        #             utils.get_today(),
-        #             baby_switch.created_at[0:10].replace('-', ''))
-        #     else:
-        #         stage = 'prebirth'
-        #         weeks = utils.calc_pregnancy_week_lmp(
-        #             utils.get_today(), registration.data["last_period_date"])
-
-
-
-
         return "Change messaging completed"
 
     def change_language(self, change):
