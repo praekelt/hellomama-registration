@@ -360,10 +360,8 @@ class TestRegistrationCreation(AuthenticatedAPITestCase):
 class TestChangeMessaging(AuthenticatedAPITestCase):
 
     @responses.activate
-    def test_prebirth_text_to_audio(self):
+    def test_prebirth_text_to_audio_week28(self):
         # Setup
-        # make registration
-        self.make_registration_mother_only()
         # make change object
         change_data = {
             "mother_id": "846877e6-afaa-43de-acb1-09f61ad4de99",
@@ -462,6 +460,606 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
         self.assertEqual(d.next_sequence_number, 36)  # week 28 - 18*2
         self.assertEqual(d.lang, "eng_NG")
         self.assertEqual(d.schedule, 6)
+
+    @responses.activate
+    def test_postbirth_text_to_audio_week12(self):
+        # Setup
+        # make change object
+        change_data = {
+            "mother_id": "846877e6-afaa-43de-acb1-09f61ad4de99",
+            "action": "change_messaging",
+            "data": {
+                "msg_type": "audio",
+                "voice_days": "mon_wed",
+                "voice_times": "9_11"
+            },
+            "source": self.make_source_adminuser()
+        }
+        change = Change.objects.create(**change_data)
+        # mock get subscription request
+        subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
+        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": subscription_id,
+                    "identity": change_data["mother_id"],
+                    "active": True,
+                    "lang": "eng_NG",
+                    "next_sequence_number": 36,
+                    "messageset": 7,
+                    "schedule": 1
+                }],
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock current messageset lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/7/',
+            json={
+                "id": 7,
+                "short_name": 'postbirth.mother.text.0_12',
+                "default_schedule": 1
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock schedule 1 lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/schedule/1/',
+            json={"id": 1, "day_of_week": "1,3,5"},
+            status=200, content_type='application/json',
+        )
+        # mock patch subscription request
+        responses.add(
+            responses.PATCH,
+            'http://localhost:8005/api/v1/subscriptions/%s/' % subscription_id,
+            json={"active": False},
+            status=200, content_type='application/json',
+        )
+        # mock new messageset via shortname lookup
+        query_string = '?short_name=postbirth.mother.audio.0_12.mon_wed.9_11'
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/%s' % query_string,
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 9,
+                    "short_name": 'postbirth.mother.audio.0_12.mon_wed.9_11',
+                    "default_schedule": 4
+                }]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock schedule 4 lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/schedule/4/',
+            json={"id": 4, "day_of_week": "1,3"},
+            status=200, content_type='application/json',
+        )
+
+        # Execute
+        result = implement_action.apply_async(args=[change.id])
+
+        # Check
+        self.assertEqual(result.get(), "Change messaging completed")
+        d = SubscriptionRequest.objects.last()
+        self.assertEqual(d.messageset, 9)
+        self.assertEqual(d.next_sequence_number, 24)  # week 12 - 12*2
+        self.assertEqual(d.schedule, 4)
+
+    @responses.activate
+    def test_postbirth_text_to_audio_week13(self):
+        # Setup
+        # make change object
+        change_data = {
+            "mother_id": "846877e6-afaa-43de-acb1-09f61ad4de99",
+            "action": "change_messaging",
+            "data": {
+                "msg_type": "audio",
+                "voice_days": "mon_wed",
+                "voice_times": "9_11"
+            },
+            "source": self.make_source_adminuser()
+        }
+        change = Change.objects.create(**change_data)
+        # mock get subscription request
+        subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
+        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": subscription_id,
+                    "identity": change_data["mother_id"],
+                    "active": True,
+                    "lang": "eng_NG",
+                    "next_sequence_number": 2,
+                    "messageset": 8,
+                    "schedule": 2
+                }],
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock current messageset lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/8/',
+            json={
+                "id": 8,
+                "short_name": 'postbirth.mother.text.13_52',
+                "default_schedule": 2
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock schedule 2 lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/schedule/2/',
+            json={"id": 2, "day_of_week": "2,4"},
+            status=200, content_type='application/json',
+        )
+        # mock patch subscription request
+        responses.add(
+            responses.PATCH,
+            'http://localhost:8005/api/v1/subscriptions/%s/' % subscription_id,
+            json={"active": False},
+            status=200, content_type='application/json',
+        )
+        # mock new messageset via shortname lookup
+        query_string = '?short_name=postbirth.mother.audio.13_52.mon_wed.9_11'
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/%s' % query_string,
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 13,
+                    "short_name": 'postbirth.mother.audio.13_52.mon_wed.9_11',
+                    "default_schedule": 8
+                }]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock schedule 8 lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/schedule/8/',
+            json={"id": 8, "day_of_week": "3"},
+            status=200, content_type='application/json',
+        )
+
+        # Execute
+        result = implement_action.apply_async(args=[change.id])
+
+        # Check
+        self.assertEqual(result.get(), "Change messaging completed")
+        d = SubscriptionRequest.objects.last()
+        self.assertEqual(d.messageset, 13)
+        self.assertEqual(d.next_sequence_number, 1)  # week 13 - 1*1
+        self.assertEqual(d.schedule, 8)
+
+    @responses.activate
+    def test_postbirth_text_to_audio_week14(self):
+        # Setup
+        # make change object
+        change_data = {
+            "mother_id": "846877e6-afaa-43de-acb1-09f61ad4de99",
+            "action": "change_messaging",
+            "data": {
+                "msg_type": "audio",
+                "voice_days": "mon_wed",
+                "voice_times": "9_11"
+            },
+            "source": self.make_source_adminuser()
+        }
+        change = Change.objects.create(**change_data)
+        # mock get subscription request
+        subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
+        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": subscription_id,
+                    "identity": change_data["mother_id"],
+                    "active": True,
+                    "lang": "eng_NG",
+                    "next_sequence_number": 4,
+                    "messageset": 8,
+                    "schedule": 2
+                }],
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock current messageset lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/8/',
+            json={
+                "id": 8,
+                "short_name": 'postbirth.mother.text.13_52',
+                "default_schedule": 2
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock schedule 2 lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/schedule/2/',
+            json={"id": 2, "day_of_week": "2,4"},
+            status=200, content_type='application/json',
+        )
+        # mock patch subscription request
+        responses.add(
+            responses.PATCH,
+            'http://localhost:8005/api/v1/subscriptions/%s/' % subscription_id,
+            json={"active": False},
+            status=200, content_type='application/json',
+        )
+        # mock new messageset via shortname lookup
+        query_string = '?short_name=postbirth.mother.audio.13_52.mon_wed.9_11'
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/%s' % query_string,
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 13,
+                    "short_name": 'postbirth.mother.audio.13_52.mon_wed.9_11',
+                    "default_schedule": 8
+                }]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock schedule 8 lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/schedule/8/',
+            json={"id": 8, "day_of_week": "3"},
+            status=200, content_type='application/json',
+        )
+
+        # Execute
+        result = implement_action.apply_async(args=[change.id])
+
+        # Check
+        self.assertEqual(result.get(), "Change messaging completed")
+        d = SubscriptionRequest.objects.last()
+        self.assertEqual(d.messageset, 13)
+        self.assertEqual(d.next_sequence_number, 2)  # week 14 - 2*1
+        self.assertEqual(d.schedule, 8)
+
+    @responses.activate
+    def test_miscarriage_text_to_audio_week1(self):
+        # Setup
+        # make change object
+        change_data = {
+            "mother_id": "846877e6-afaa-43de-acb1-09f61ad4de99",
+            "action": "change_messaging",
+            "data": {
+                "msg_type": "audio",
+                "voice_days": "mon_wed",
+                "voice_times": "9_11"
+            },
+            "source": self.make_source_adminuser()
+        }
+        change = Change.objects.create(**change_data)
+        # mock get current subscription request
+        subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
+        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": subscription_id,
+                    "identity": change_data["mother_id"],
+                    "active": True,
+                    "lang": "eng_NG",
+                    "next_sequence_number": 1,
+                    "messageset": 18,
+                    "schedule": 1
+                }],
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock current messageset lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/18/',
+            json={
+                "id": 18,
+                "short_name": 'miscarriage.mother.text.0_2',
+                "default_schedule": 1
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock schedule 1 lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/schedule/1/',
+            json={"id": 1, "day_of_week": "1,3,5"},
+            status=200, content_type='application/json',
+        )
+        # mock patch subscription request
+        responses.add(
+            responses.PATCH,
+            'http://localhost:8005/api/v1/subscriptions/%s/' % subscription_id,
+            json={"active": False},
+            status=200, content_type='application/json',
+        )
+        # mock new messageset via shortname lookup
+        query_string = '?short_name=miscarriage.mother.audio.0_2.mon_wed.9_11'
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/%s' % query_string,
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 19,
+                    "short_name": 'miscarriage.mother.audio.0_2.mon_wed.9_11',
+                    "default_schedule": 4
+                }]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock schedule 4 lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/schedule/4/',
+            json={"id": 4, "day_of_week": "1,3"},
+            status=200, content_type='application/json',
+        )
+
+        # Execute
+        result = implement_action.apply_async(args=[change.id])
+
+        # Check
+        self.assertEqual(result.get(), "Change messaging completed")
+        d = SubscriptionRequest.objects.last()
+        self.assertEqual(d.messageset, 19)
+        self.assertEqual(d.next_sequence_number, 1)
+        self.assertEqual(d.schedule, 4)
+
+    @responses.activate
+    def test_miscarriage_text_to_audio_week2(self):
+        # Setup
+        # make change object
+        change_data = {
+            "mother_id": "846877e6-afaa-43de-acb1-09f61ad4de99",
+            "action": "change_messaging",
+            "data": {
+                "msg_type": "audio",
+                "voice_days": "mon_wed",
+                "voice_times": "9_11"
+            },
+            "source": self.make_source_adminuser()
+        }
+        change = Change.objects.create(**change_data)
+        # mock get current subscription request
+        subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
+        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": subscription_id,
+                    "identity": change_data["mother_id"],
+                    "active": True,
+                    "lang": "eng_NG",
+                    "next_sequence_number": 3,
+                    "messageset": 18,
+                    "schedule": 1
+                }],
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock current messageset lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/18/',
+            json={
+                "id": 18,
+                "short_name": 'miscarriage.mother.text.0_2',
+                "default_schedule": 1
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock schedule 1 lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/schedule/1/',
+            json={"id": 1, "day_of_week": "1,3,5"},
+            status=200, content_type='application/json',
+        )
+        # mock patch subscription request
+        responses.add(
+            responses.PATCH,
+            'http://localhost:8005/api/v1/subscriptions/%s/' % subscription_id,
+            json={"active": False},
+            status=200, content_type='application/json',
+        )
+        # mock new messageset via shortname lookup
+        query_string = '?short_name=miscarriage.mother.audio.0_2.mon_wed.9_11'
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/%s' % query_string,
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 19,
+                    "short_name": 'miscarriage.mother.audio.0_2.mon_wed.9_11',
+                    "default_schedule": 4
+                }]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock schedule 4 lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/schedule/4/',
+            json={"id": 4, "day_of_week": "1,3"},
+            status=200, content_type='application/json',
+        )
+
+        # Execute
+        result = implement_action.apply_async(args=[change.id])
+
+        # Check
+        self.assertEqual(result.get(), "Change messaging completed")
+        d = SubscriptionRequest.objects.last()
+        self.assertEqual(d.messageset, 19)
+        self.assertEqual(d.next_sequence_number, 2)
+        self.assertEqual(d.schedule, 4)
+
+    @responses.activate
+    def test_prebirth_audio_to_text_week28(self):
+        # Setup
+        # make change object
+        change_data = {
+            "mother_id": "846877e6-afaa-43de-acb1-09f61ad4de99",
+            "action": "change_messaging",
+            "data": {
+                "msg_type": "text",
+                "voice_days": None,
+                "voice_times": None
+            },
+            "source": self.make_source_adminuser()
+        }
+        change = Change.objects.create(**change_data)
+        # mock get subscription request
+        subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
+        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": subscription_id,
+                    "identity": change_data["mother_id"],
+                    "active": True,
+                    "lang": "eng_NG",
+                    "next_sequence_number": 36,
+                    "messageset": 2,
+                    "schedule": 4
+                }],
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock current messageset lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/2/',
+            json={
+                "id": 2,
+                "short_name": 'prebirth.mother.audio.10_42.mon_wed.9_11',
+                "default_schedule": 4
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock schedule 4 lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/schedule/4/',
+            json={"id": 4, "day_of_week": "1,3"},
+            status=200, content_type='application/json',
+        )
+        # mock patch subscription request
+        responses.add(
+            responses.PATCH,
+            'http://localhost:8005/api/v1/subscriptions/%s/' % subscription_id,
+            json={"active": False},
+            status=200, content_type='application/json',
+        )
+        # mock new messageset via shortname lookup
+        query_string = '?short_name=prebirth.mother.text.10_42'
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/%s' % query_string,
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 1,
+                    "short_name": 'prebirth.mother.text.10_42',
+                    "default_schedule": 1
+                }]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock schedule 1 lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/schedule/1/',
+            json={"id": 1, "day_of_week": "1,3,5"},
+            status=200, content_type='application/json',
+        )
+
+        # Execute
+        result = implement_action.apply_async(args=[change.id])
+
+        # Check
+        self.assertEqual(result.get(), "Change messaging completed")
+        d = SubscriptionRequest.objects.last()
+        self.assertEqual(d.messageset, 1)
+        self.assertEqual(d.next_sequence_number, 54)  # week 28 - 18*3
+        self.assertEqual(d.schedule, 1)
 
 
 class TestChangeBaby(AuthenticatedAPITestCase):
