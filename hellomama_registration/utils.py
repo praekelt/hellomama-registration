@@ -56,7 +56,7 @@ def get_identity_address(identity):
         return None
 
 
-def get_messageset(short_name):
+def get_messageset_by_shortname(short_name):
     url = "%s/%s/" % (settings.STAGE_BASED_MESSAGING_URL, "messageset")
     params = {'short_name': short_name}
     headers = {'Authorization': [
@@ -65,6 +65,17 @@ def get_messageset(short_name):
     }
     r = requests.get(url, params=params, headers=headers)
     return r.json()["results"][0]  # messagesets should be unique, return 1st
+
+
+def get_messageset(messageset_id):
+    url = "%s/%s/%s/" % (settings.STAGE_BASED_MESSAGING_URL, "messageset",
+                         messageset_id)
+    headers = {'Authorization': [
+        'Token %s' % settings.STAGE_BASED_MESSAGING_TOKEN],
+        'Content-Type': ['application/json']
+    }
+    r = requests.get(url, headers=headers)
+    return r.json()
 
 
 def get_schedule(schedule_id):
@@ -79,7 +90,7 @@ def get_schedule(schedule_id):
 
 
 def get_subscriptions(identity):
-    """ Gets the first active subscription found for an identity
+    """ Gets the active subscriptions for an identity
     """
     url = "%s/%s/" % (settings.STAGE_BASED_MESSAGING_URL, "subscriptions")
     params = {'id': identity, 'active': True}
@@ -128,8 +139,6 @@ def get_messageset_short_name(stage, recipient, msg_type, weeks, voice_days,
             week_range = "0_12"
         elif 13 <= weeks <= 52:
             week_range = "13_52"
-    elif stage == "loss":
-        week_range = "0_2"
 
     if msg_type == "text":
         short_name = "%s.%s.%s.%s" % (
@@ -143,7 +152,7 @@ def get_messageset_short_name(stage, recipient, msg_type, weeks, voice_days,
 
 def get_messageset_schedule_sequence(short_name, weeks):
     # get messageset
-    messageset = get_messageset(short_name)
+    messageset = get_messageset_by_shortname(short_name)
 
     messageset_id = messageset["id"]
     schedule_id = messageset["default_schedule"]
