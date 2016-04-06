@@ -80,8 +80,6 @@ class ImplementAction(Task):
             stage, 'mother', mother["details"]["preferred_msg_type"],
             weeks, voice_days, voice_times)
 
-        print(mother_short_name)
-
         mother_msgset_id, mother_msgset_schedule, next_sequence_number =\
             utils.get_messageset_schedule_sequence(mother_short_name, weeks)
 
@@ -127,7 +125,7 @@ class ImplementAction(Task):
             utils.deactivate_subscription(subscription)
 
         # Determine voice_days & voice_times
-        if 'voice_days' in change.data:
+        if change.data["msg_type"] == 'audio':
             to_type = 'audio'
             voice_days = change.data["voice_days"]
             voice_times = change.data["voice_times"]
@@ -171,6 +169,9 @@ class ImplementAction(Task):
             new_rate = len(new_days.split(','))  # msgs per week
 
         new_nsn = int(current_nsn * new_rate / float(current_rate))
+        # prevent rounding nsn to 0
+        if new_nsn == 0:
+            new_nsn = 1
 
         # Make new subscription request object
         mother_sub = {
