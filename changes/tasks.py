@@ -113,7 +113,6 @@ class ImplementAction(Task):
 
         # get current subscription's messageset
         current_msgset = utils.get_messageset(current_sub["messageset"])
-        current_msgset_short_name = current_msgset["short_name"]
 
         # get current subscription's schedule
         current_sched = utils.get_schedule(current_sub["schedule"])
@@ -134,18 +133,18 @@ class ImplementAction(Task):
             voice_days = None
             voice_times = None
 
-        if 'audio' in current_msgset_short_name:
+        if 'audio' in current_msgset["short_name"]:
             from_type = 'audio'
         else:
             from_type = 'text'
 
-        if 'miscarriage' in current_msgset_short_name:
+        if 'miscarriage' in current_msgset["short_name"]:
             stage = 'miscarriage'
             weeks = 1  # just a placeholder to get the messageset_short_name
-        elif 'postbirth' in current_msgset_short_name:
+        elif 'postbirth' in current_msgset["short_name"]:
             stage = 'postbirth'
             # set placeholder weeks for getting the messageset_short_name
-            if '0_12' in current_msgset_short_name:
+            if '0_12' in current_msgset["short_name"]:
                 weeks = 1
             else:
                 weeks = 13
