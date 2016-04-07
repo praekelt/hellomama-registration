@@ -13,6 +13,13 @@ from kombu import Exchange, Queue
 import os
 import djcelery
 import dj_database_url
+import mimetypes
+
+
+# Support SVG on admin
+mimetypes.add_type("image/svg+xml", ".svg", True)
+mimetypes.add_type("image/svg+xml", ".svgz", True)
+
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
