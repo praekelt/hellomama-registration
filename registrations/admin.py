@@ -1,4 +1,5 @@
 from django.contrib import admin
+from .models import Source, Registration
 
 
 class RegistrationAdmin(admin.ModelAdmin):
@@ -7,9 +8,6 @@ class RegistrationAdmin(admin.ModelAdmin):
         "created_at", "updated_at", "created_by", "updated_by"]
     list_filter = ["source", "validated", "created_at"]
     search_fields = ["mother_id", "to_addr"]
-
-
-from .models import Source, Registration
 
 admin.site.register(Source)
 admin.site.register(Registration, RegistrationAdmin)

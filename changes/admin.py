@@ -1,4 +1,5 @@
 from django.contrib import admin
+from .models import Change
 
 
 class ChangeAdmin(admin.ModelAdmin):
@@ -7,7 +8,5 @@ class ChangeAdmin(admin.ModelAdmin):
         "created_at", "updated_at", "created_by", "updated_by"]
     list_filter = ["source", "validated", "created_at"]
     search_fields = ["mother_id", "to_addr"]
-
-from .models import Change
 
 admin.site.register(Change, ChangeAdmin)
