@@ -1,6 +1,7 @@
 import datetime
 import json
 import requests
+import uuid
 
 from celery.task import Task
 from celery.utils.log import get_task_logger
@@ -319,10 +320,10 @@ class DeliverHook(Task):
 
 
 def deliver_hook_wrapper(target, payload, instance, hook):
-    if instance is not None:
-        instance_id = instance.id
+    if isinstance(instance.id, uuid.UUID):
+        instance_id = str(instance.id)
     else:
-        instance_id = None
+        instance_id = instance.id
     kwargs = dict(target=target, payload=payload,
                   instance_id=instance_id, hook_id=hook.id)
     DeliverHook.apply_async(kwargs=kwargs)
