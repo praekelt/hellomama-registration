@@ -36,8 +36,10 @@ def calc_baby_age(today, baby_dob):
 
 def get_identity(identity):
     url = "%s/%s/%s/" % (settings.IDENTITY_STORE_URL, "identities", identity)
-    headers = {'Authorization': ['Token %s' % settings.IDENTITY_STORE_TOKEN],
-               'Content-Type': ['application/json']}
+    headers = {
+        'Authorization': 'Token %s' % settings.IDENTITY_STORE_TOKEN,
+        'Content-Type': 'application/json'
+    }
     r = requests.get(url, headers=headers)
     return r.json()
 
@@ -46,9 +48,10 @@ def get_identity_address(identity):
     url = "%s/%s/%s/addresses/msisdn" % (settings.IDENTITY_STORE_URL,
                                          "identities", identity)
     params = {"default": True}
-    headers = {'Authorization': ['Token %s' % (
-        settings.IDENTITY_STORE_TOKEN, )],
-        'Content-Type': ['application/json']}
+    headers = {
+        'Authorization': 'Token %s' % settings.IDENTITY_STORE_TOKEN,
+        'Content-Type': 'application/json'
+    }
     r = requests.get(url, params=params, headers=headers).json()
     if len(r["results"]) > 0:
         return r["results"][0]
@@ -59,9 +62,9 @@ def get_identity_address(identity):
 def get_messageset_by_shortname(short_name):
     url = "%s/%s/" % (settings.STAGE_BASED_MESSAGING_URL, "messageset")
     params = {'short_name': short_name}
-    headers = {'Authorization': [
-        'Token %s' % settings.STAGE_BASED_MESSAGING_TOKEN],
-        'Content-Type': ['application/json']
+    headers = {
+        'Authorization': 'Token %s' % settings.STAGE_BASED_MESSAGING_TOKEN,
+        'Content-Type': 'application/json'
     }
     r = requests.get(url, params=params, headers=headers)
     return r.json()["results"][0]  # messagesets should be unique, return 1st
@@ -70,9 +73,9 @@ def get_messageset_by_shortname(short_name):
 def get_messageset(messageset_id):
     url = "%s/%s/%s/" % (settings.STAGE_BASED_MESSAGING_URL, "messageset",
                          messageset_id)
-    headers = {'Authorization': [
-        'Token %s' % settings.STAGE_BASED_MESSAGING_TOKEN],
-        'Content-Type': ['application/json']
+    headers = {
+        'Authorization': 'Token %s' % settings.STAGE_BASED_MESSAGING_TOKEN,
+        'Content-Type': 'application/json'
     }
     r = requests.get(url, headers=headers)
     return r.json()
@@ -81,9 +84,9 @@ def get_messageset(messageset_id):
 def get_schedule(schedule_id):
     url = "%s/%s/%s/" % (settings.STAGE_BASED_MESSAGING_URL,
                          "schedule", schedule_id)
-    headers = {'Authorization': [
-        'Token %s' % settings.STAGE_BASED_MESSAGING_TOKEN],
-        'Content-Type': ['application/json']
+    headers = {
+        'Authorization': 'Token %s' % settings.STAGE_BASED_MESSAGING_TOKEN,
+        'Content-Type': 'application/json'
     }
     r = requests.get(url, headers=headers)
     return r.json()
@@ -94,9 +97,9 @@ def get_subscriptions(identity):
     """
     url = "%s/%s/" % (settings.STAGE_BASED_MESSAGING_URL, "subscriptions")
     params = {'id': identity, 'active': True}
-    headers = {'Authorization': [
-        'Token %s' % settings.STAGE_BASED_MESSAGING_TOKEN],
-        'Content-Type': ['application/json']
+    headers = {
+        'Authorization': 'Token %s' % settings.STAGE_BASED_MESSAGING_TOKEN,
+        'Content-Type': 'application/json'
     }
     r = requests.get(url, params=params, headers=headers)
     return r.json()["results"]
@@ -108,9 +111,10 @@ def patch_subscription(subscription, data):
     url = "%s/%s/%s/" % (settings.STAGE_BASED_MESSAGING_URL,
                          "subscriptions", subscription["id"])
     data = data
-    headers = {'Authorization': [
-        'Token %s' % settings.STAGE_BASED_MESSAGING_TOKEN],
-        'Content-Type': ['application/json']
+    headers = {
+        'Authorization':
+        'Token %s' % settings.STAGE_BASED_MESSAGING_TOKEN,
+        'Content-Type': 'application/json'
     }
     r = requests.patch(url, data=data, headers=headers)
     return r.json()
