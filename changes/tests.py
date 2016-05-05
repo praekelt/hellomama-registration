@@ -13,7 +13,7 @@ from rest_hooks.models import model_saved
 
 from hellomama_registration import utils
 from registrations.models import (Source, Registration, SubscriptionRequest,
-                                  registration_post_save)
+                                  registration_post_save, fire_metrics_if_new)
 from .models import Change, change_post_save
 from .tasks import implement_action
 
@@ -53,7 +53,10 @@ class AuthenticatedAPITestCase(APITestCase):
         assert not has_listeners(), (
             "Change model still has post_save listeners. Make sure"
             " helpers removed them properly in earlier tests.")
-        post_save.connect(change_post_save, sender=Change)
+        post_save.connect(receiver=change_post_save,
+                          sender=Change)
+        post_save.connect(receiver=model_saved,
+                          dispatch_uid='instance-saved-hook')
 
     def _replace_post_save_hooks_registration(self):
         def has_listeners():
@@ -62,6 +65,8 @@ class AuthenticatedAPITestCase(APITestCase):
             "Registration model has no post_save listeners. Make sure"
             " helpers cleaned up properly in earlier tests.")
         post_save.disconnect(receiver=registration_post_save,
+                             sender=Registration)
+        post_save.disconnect(receiver=fire_metrics_if_new,
                              sender=Registration)
         post_save.disconnect(receiver=model_saved,
                              dispatch_uid='instance-saved-hook')
@@ -72,10 +77,12 @@ class AuthenticatedAPITestCase(APITestCase):
     def _restore_post_save_hooks_registration(self):
         def has_listeners():
             return post_save.has_listeners(Registration)
-        assert not has_listeners(), (
-            "Registration model still has post_save listeners. Make sure"
-            " helpers removed them properly in earlier tests.")
-        post_save.connect(registration_post_save, sender=Registration)
+        post_save.connect(receiver=registration_post_save,
+                          sender=Registration)
+        post_save.connect(receiver=fire_metrics_if_new,
+                          sender=Registration)
+        post_save.connect(receiver=model_saved,
+                          dispatch_uid='instance-saved-hook')
 
     def make_source_adminuser(self):
         data = {

@@ -3,18 +3,25 @@ import uuid
 import datetime
 import responses
 
+try:
+    from urllib.parse import urlparse
+except ImportError:
+    from urlparse import urlparse
+
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.db.models.signals import post_save
+from django.conf import settings
 from rest_framework import status
 from rest_framework.test import APIClient
 from rest_framework.authtoken.models import Token
-
 from rest_hooks.models import model_saved, Hook
+from requests_testadapter import TestAdapter, TestSession
+from go_http.metrics import MetricsApiClient
 
 from hellomama_registration import utils
 from .models import (Source, Registration, SubscriptionRequest,
-                     registration_post_save)
+                     registration_post_save, fire_metrics_if_new)
 from .tasks import (
     validate_registration,
     is_valid_date, is_valid_uuid, is_valid_lang, is_valid_msg_type,
@@ -23,6 +30,17 @@ from .tasks import (
 
 def override_get_today():
     return datetime.datetime.strptime("20150817", "%Y%m%d")
+
+
+class RecordingAdapter(TestAdapter):
+
+    """ Record the request that was handled by the adapter.
+    """
+    request = None
+
+    def send(self, request, *args, **kw):
+        self.request = request
+        return super(RecordingAdapter, self).send(request, *args, **kw)
 
 
 REG_FIELDS = {
@@ -138,6 +156,7 @@ class APITestCase(TestCase):
         self.adminclient = APIClient()
         self.normalclient = APIClient()
         self.otherclient = APIClient()
+        self.session = TestSession()
         utils.get_today = override_get_today
 
 
@@ -151,6 +170,8 @@ class AuthenticatedAPITestCase(APITestCase):
             " helpers cleaned up properly in earlier tests.")
         post_save.disconnect(receiver=registration_post_save,
                              sender=Registration)
+        post_save.disconnect(receiver=fire_metrics_if_new,
+                             sender=Registration)
         post_save.disconnect(receiver=model_saved,
                              dispatch_uid='instance-saved-hook')
         assert not has_listeners(), (
@@ -163,7 +184,24 @@ class AuthenticatedAPITestCase(APITestCase):
         assert not has_listeners(), (
             "Registration model still has post_save listeners. Make sure"
             " helpers removed them properly in earlier tests.")
-        post_save.connect(registration_post_save, sender=Registration)
+        post_save.connect(receiver=registration_post_save,
+                          sender=Registration)
+        post_save.connect(receiver=fire_metrics_if_new,
+                          sender=Registration)
+        post_save.connect(receiver=model_saved,
+                          dispatch_uid='instance-saved-hook')
+
+    def _replace_get_metric_client(self, session=None):
+        return MetricsApiClient(
+            auth_token=settings.METRICS_AUTH_TOKEN,
+            api_url=settings.METRICS_URL,
+            session=self.session)
+
+    def _restore_get_metric_client(self, session=None):
+        return MetricsApiClient(
+            auth_token=settings.METRICS_AUTH_TOKEN,
+            api_url=settings.METRICS_URL,
+            session=session)
 
     def make_source_adminuser(self):
         data = {
@@ -200,6 +238,7 @@ class AuthenticatedAPITestCase(APITestCase):
     def setUp(self):
         super(AuthenticatedAPITestCase, self).setUp()
         self._replace_post_save_hooks()
+        utils.get_metric_client = self._replace_get_metric_client
 
         # Normal User setup
         self.normalusername = 'testnormaluser'
@@ -227,6 +266,7 @@ class AuthenticatedAPITestCase(APITestCase):
 
     def tearDown(self):
         self._restore_post_save_hooks()
+        utils.get_metric_client = self._restore_get_metric_client
 
 
 class TestLogin(AuthenticatedAPITestCase):
@@ -1548,6 +1588,69 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         self.assertEqual(d_family.next_sequence_number, 30)
         self.assertEqual(d_family.lang, "eng_NG")
         self.assertEqual(d_family.schedule, 3)
+
+
+class TestMetrics(AuthenticatedAPITestCase):
+
+    def _check_request(
+            self, request, method, params=None, data=None, headers=None):
+        self.assertEqual(request.method, method)
+        if params is not None:
+            url = urlparse.urlparse(request.url)
+            qs = urlparse.parse_qsl(url.query)
+            self.assertEqual(dict(qs), params)
+        if headers is not None:
+            for key, value in headers.items():
+                self.assertEqual(request.headers[key], value)
+        if data is None:
+            self.assertEqual(request.body, None)
+        else:
+            self.assertEqual(json.loads(request.body), data)
+
+    def _mount_session(self):
+        response = [{
+            'name': 'foo',
+            'value': 9000,
+            'aggregator': 'bar',
+        }]
+        adapter = RecordingAdapter(json.dumps(response).encode('utf-8'))
+        self.session.mount(
+            "http://metrics-url/metrics/", adapter)
+        return adapter
+
+    def test_direct_fire(self):
+        # Setup
+        adapter = self._mount_session()
+        # Execute
+        result = utils.fire_metric.apply_async(kwargs={
+            "metric_name": 'foo.last',
+            "metric_value": 1,
+            "session": self.session
+        })
+        # Check
+        self._check_request(
+            adapter.request, 'POST',
+            data={"foo.last": 1.0}
+        )
+        self.assertEqual(result.get(),
+                         "Fired metric <foo.last> with value <1.0>")
+
+    def test_created_metrics(self):
+        # Setup
+        adapter = self._mount_session()
+        # reconnect metric post_save hook
+        post_save.connect(fire_metrics_if_new, sender=Registration)
+
+        # Execute
+        self.make_registration_adminuser()
+
+        # Check
+        self._check_request(
+            adapter.request, 'POST',
+            data={"registrations.created.sum": 1.0}
+        )
+        # remove post_save hooks to prevent teardown errors
+        post_save.disconnect(fire_metrics_if_new, sender=Registration)
 
 
 class TestSubscriptionRequestWebhook(AuthenticatedAPITestCase):
