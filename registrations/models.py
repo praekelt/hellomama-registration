@@ -83,6 +83,16 @@ def registration_post_save(sender, instance, created, **kwargs):
             kwargs={"registration_id": str(instance.id)})
 
 
+@receiver(post_save, sender=Registration)
+def fire_metrics_if_new(sender, instance, created, **kwargs):
+    from .tasks import fire_metric
+    if created:
+        fire_metric.apply_async(kwargs={
+            "metric_name": 'registrations.created.sum',
+            "metric_value": 1.0
+        })
+
+
 @python_2_unicode_compatible
 class SubscriptionRequest(models.Model):
     """ A data model that maps to the Stagebased Store
