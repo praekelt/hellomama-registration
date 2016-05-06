@@ -184,7 +184,7 @@ CELERY_ROUTES = {
     'registrations.tasks.deliver_hook_wrapper': {
         'queue': 'priority',
     },
-    'hellomama_registration.utils.fire_metric': {
+    'registrations.tasks.fire_metric': {
         'queue': 'metrics',
     },
 }

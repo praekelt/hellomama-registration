@@ -20,6 +20,7 @@ from requests_testadapter import TestAdapter, TestSession
 from go_http.metrics import MetricsApiClient
 
 from hellomama_registration import utils
+from registrations import tasks
 from .models import (Source, Registration, SubscriptionRequest,
                      registration_post_save, fire_metrics_if_new)
 from .tasks import (
@@ -238,7 +239,7 @@ class AuthenticatedAPITestCase(APITestCase):
     def setUp(self):
         super(AuthenticatedAPITestCase, self).setUp()
         self._replace_post_save_hooks()
-        utils.get_metric_client = self._replace_get_metric_client
+        tasks.get_metric_client = self._replace_get_metric_client
 
         # Normal User setup
         self.normalusername = 'testnormaluser'
@@ -266,7 +267,7 @@ class AuthenticatedAPITestCase(APITestCase):
 
     def tearDown(self):
         self._restore_post_save_hooks()
-        utils.get_metric_client = self._restore_get_metric_client
+        tasks.get_metric_client = self._restore_get_metric_client
 
 
 class TestLogin(AuthenticatedAPITestCase):
@@ -1622,7 +1623,7 @@ class TestMetrics(AuthenticatedAPITestCase):
         # Setup
         adapter = self._mount_session()
         # Execute
-        result = utils.fire_metric.apply_async(kwargs={
+        result = tasks.fire_metric.apply_async(kwargs={
             "metric_name": 'foo.last',
             "metric_value": 1,
             "session": self.session

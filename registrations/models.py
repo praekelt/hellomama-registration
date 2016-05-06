@@ -85,7 +85,7 @@ def registration_post_save(sender, instance, created, **kwargs):
 
 @receiver(post_save, sender=Registration)
 def fire_metrics_if_new(sender, instance, created, **kwargs):
-    from hellomama_registration.utils import fire_metric
+    from .tasks import fire_metric
     if created:
         fire_metric.apply_async(kwargs={
             "metric_name": 'registrations.created.sum',
