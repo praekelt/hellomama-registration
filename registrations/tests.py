@@ -23,6 +23,7 @@ from hellomama_registration import utils
 from registrations import tasks
 from .models import (Source, Registration, SubscriptionRequest,
                      registration_post_save, fire_created_metric,
+                     fire_source_metric,
                      fire_unique_operator_metric)
 from .tasks import (
     validate_registration,
@@ -174,6 +175,8 @@ class AuthenticatedAPITestCase(APITestCase):
                              sender=Registration)
         post_save.disconnect(receiver=fire_created_metric,
                              sender=Registration)
+        post_save.disconnect(receiver=fire_source_metric,
+                             sender=Registration)
         post_save.disconnect(receiver=fire_unique_operator_metric,
                              sender=Registration)
         post_save.disconnect(receiver=model_saved,
@@ -191,6 +194,8 @@ class AuthenticatedAPITestCase(APITestCase):
         post_save.connect(receiver=registration_post_save,
                           sender=Registration)
         post_save.connect(receiver=fire_created_metric,
+                          sender=Registration)
+        post_save.connect(receiver=fire_source_metric,
                           sender=Registration)
         post_save.connect(receiver=fire_unique_operator_metric,
                           sender=Registration)
@@ -211,7 +216,7 @@ class AuthenticatedAPITestCase(APITestCase):
 
     def make_source_adminuser(self):
         data = {
-            "name": "test_source_adminuser",
+            "name": "test_ussd_source_adminuser",
             "authority": "hw_full",
             "user": User.objects.get(username='testadminuser')
         }
@@ -219,7 +224,7 @@ class AuthenticatedAPITestCase(APITestCase):
 
     def make_source_normaluser(self):
         data = {
-            "name": "test_source_normaluser",
+            "name": "test_voice_source_normaluser",
             "authority": "patient",
             "user": User.objects.get(username='testnormaluser')
         }
@@ -357,7 +362,7 @@ class TestSourceAPI(AuthenticatedAPITestCase):
         # Check
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["authority"], "hw_full")
-        self.assertEqual(response.data["name"], "test_source_adminuser")
+        self.assertEqual(response.data["name"], 'test_ussd_source_adminuser')
 
     def test_get_source_normaluser(self):
         # Setup
@@ -444,7 +449,7 @@ class TestRegistrationAPI(AuthenticatedAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         d = Registration.objects.last()
-        self.assertEqual(d.source.name, 'test_source_adminuser')
+        self.assertEqual(d.source.name, 'test_ussd_source_adminuser')
         self.assertEqual(d.stage, 'prebirth')
         self.assertEqual(d.validated, False)
         self.assertEqual(d.data, {"test_key1": "test_value1"})
@@ -465,7 +470,7 @@ class TestRegistrationAPI(AuthenticatedAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         d = Registration.objects.last()
-        self.assertEqual(d.source.name, 'test_source_normaluser')
+        self.assertEqual(d.source.name, 'test_voice_source_normaluser')
         self.assertEqual(d.stage, 'postbirth')
         self.assertEqual(d.validated, False)
         self.assertEqual(d.data, {"test_key1": "test_value1"})
@@ -487,7 +492,7 @@ class TestRegistrationAPI(AuthenticatedAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         d = Registration.objects.last()
-        self.assertEqual(d.source.name, 'test_source_adminuser')
+        self.assertEqual(d.source.name, 'test_ussd_source_adminuser')
         self.assertEqual(d.stage, 'prebirth')
         self.assertEqual(d.validated, False)  # Should ignore True post_data
         self.assertEqual(d.data, {"test_key1": "test_value1"})
@@ -1609,6 +1614,8 @@ class TestMetricsAPI(AuthenticatedAPITestCase):
         self.assertEqual(
             response.data["metrics_available"], [
                 'registrations.created.sum',
+                'registrations.source.ussd.sum',
+                'registrations.source.ivr.sum',
                 'registrations.unique_operators.sum',
             ]
         )
@@ -1675,7 +1682,7 @@ class TestMetrics(AuthenticatedAPITestCase):
         self.assertEqual(result.get(),
                          "Fired metric <foo.last> with value <1.0>")
 
-    def test_created_metrics(self):
+    def test_created_metric(self):
         # Setup
         adapter = self._mount_session()
         # reconnect metric post_save hook
@@ -1691,6 +1698,40 @@ class TestMetrics(AuthenticatedAPITestCase):
         )
         # remove post_save hooks to prevent teardown errors
         post_save.disconnect(fire_created_metric, sender=Registration)
+
+    def test_ussd_source_metric(self):
+        # Setup
+        adapter = self._mount_session()
+        # reconnect metric post_save hook
+        post_save.connect(fire_source_metric, sender=Registration)
+
+        # Execute
+        self.make_registration_adminuser()
+
+        # Check
+        self._check_request(
+            adapter.request, 'POST',
+            data={"registrations.source.ussd.sum": 1.0}
+        )
+        # remove post_save hooks to prevent teardown errors
+        post_save.disconnect(fire_source_metric, sender=Registration)
+
+    def test_ivr_source_metric(self):
+        # Setup
+        adapter = self._mount_session()
+        # reconnect metric post_save hook
+        post_save.connect(fire_source_metric, sender=Registration)
+
+        # Execute
+        self.make_registration_normaluser()
+
+        # Check
+        self._check_request(
+            adapter.request, 'POST',
+            data={"registrations.source.ivr.sum": 1.0}
+        )
+        # remove post_save hooks to prevent teardown errors
+        post_save.disconnect(fire_source_metric, sender=Registration)
 
     def test_unique_operator_metric_single(self):
         # Setup

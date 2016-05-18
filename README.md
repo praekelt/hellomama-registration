@@ -13,5 +13,11 @@ HelloMama Registration accepts registrations for the Hello Mama project.
 ##### registrations.created.sum
 `sum` Total number of registrations created
 
+##### registrations.source.ussd.sum
+`sum` Total number of registrations created via USSD
+
+##### registrations.source.ivr.sum
+`sum` Total number of registrations created via IVR
+
 ##### registrations.unique_operators.sum
 `sum` Total number of unique health workers who have completed registrations
