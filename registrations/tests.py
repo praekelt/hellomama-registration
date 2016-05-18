@@ -285,7 +285,7 @@ class TestLogin(AuthenticatedAPITestCase):
         post_auth = {"username": "testnormaluser",
                      "password": "testnormalpass"}
         # Execute
-        request = self.client.post(
+        request = self.normalclient.post(
             '/api/token-auth/', post_auth)
         token = request.data.get('token', None)
         # Check
@@ -303,7 +303,7 @@ class TestLogin(AuthenticatedAPITestCase):
         post_auth = {"username": "testadminuser",
                      "password": "testadminpass"}
         # Execute
-        request = self.client.post(
+        request = self.adminclient.post(
             '/api/token-auth/', post_auth)
         token = request.data.get('token', None)
         # Check
@@ -321,7 +321,7 @@ class TestLogin(AuthenticatedAPITestCase):
         post_auth = {"username": "testadminuser",
                      "password": "wrongpass"}
         # Execute
-        request = self.client.post(
+        request = self.adminclient.post(
             '/api/token-auth/', post_auth)
         token = request.data.get('token', None)
         # Check
@@ -1595,6 +1595,39 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         self.assertEqual(d_family.next_sequence_number, 30)
         self.assertEqual(d_family.lang, "eng_NG")
         self.assertEqual(d_family.schedule, 3)
+
+
+class TestMetricsAPI(AuthenticatedAPITestCase):
+
+    def test_metrics_read(self):
+        # Setup
+        # Execute
+        response = self.adminclient.get(
+            '/api/metrics/', content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data["metrics_available"], [
+                'registrations.created.sum',
+                'registrations.unique_operators.sum',
+            ]
+        )
+
+    @responses.activate
+    def test_post_metrics(self):
+        # Setup
+        # deactivate Testsession for this test
+        self.session = None
+        responses.add(responses.POST,
+                      "http://metrics-url/metrics/",
+                      json={"foo": "bar"},
+                      status=200, content_type='application/json')
+        # Execute
+        response = self.adminclient.post(
+            '/api/metrics/', content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["scheduled_metrics_initiated"], True)
 
 
 class TestMetrics(AuthenticatedAPITestCase):
