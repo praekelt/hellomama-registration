@@ -190,7 +190,8 @@ CELERY_ROUTES = {
 }
 
 METRICS_REALTIME = [
-    'registrations.created.sum'
+    'registrations.created.sum',
+    'registrations.unique_operators.sum'
 ]
 METRICS_SCHEDULED = [
 ]

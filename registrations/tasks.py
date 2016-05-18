@@ -341,7 +341,7 @@ class FireMetric(Task):
 
     """ Fires a metric using the MetricsApiClient
     """
-    name = "hellomama_registration.utils.fire_metric"
+    name = "hellomama_registration.tasks.fire_metric"
 
     def run(self, metric_name, metric_value, session=None, **kwargs):
         metric_value = float(metric_value)

@@ -22,7 +22,8 @@ from go_http.metrics import MetricsApiClient
 from hellomama_registration import utils
 from registrations import tasks
 from .models import (Source, Registration, SubscriptionRequest,
-                     registration_post_save, fire_metrics_if_new)
+                     registration_post_save, fire_created_metric,
+                     fire_unique_operator_metric)
 from .tasks import (
     validate_registration,
     is_valid_date, is_valid_uuid, is_valid_lang, is_valid_msg_type,
@@ -107,7 +108,7 @@ REG_DATA = {
     },
     "hw_post": {
         "receiver_id": str(uuid.uuid4()),
-        "operator_id": str(uuid.uuid4()),
+        "operator_id": "nurse111-6a07-4377-a4f6-c0485ccba234",
         "language": "eng_NG",
         "msg_type": "text",
         "gravida": "2",
@@ -171,7 +172,9 @@ class AuthenticatedAPITestCase(APITestCase):
             " helpers cleaned up properly in earlier tests.")
         post_save.disconnect(receiver=registration_post_save,
                              sender=Registration)
-        post_save.disconnect(receiver=fire_metrics_if_new,
+        post_save.disconnect(receiver=fire_created_metric,
+                             sender=Registration)
+        post_save.disconnect(receiver=fire_unique_operator_metric,
                              sender=Registration)
         post_save.disconnect(receiver=model_saved,
                              dispatch_uid='instance-saved-hook')
@@ -187,7 +190,9 @@ class AuthenticatedAPITestCase(APITestCase):
             " helpers removed them properly in earlier tests.")
         post_save.connect(receiver=registration_post_save,
                           sender=Registration)
-        post_save.connect(receiver=fire_metrics_if_new,
+        post_save.connect(receiver=fire_created_metric,
+                          sender=Registration)
+        post_save.connect(receiver=fire_unique_operator_metric,
                           sender=Registration)
         post_save.connect(receiver=model_saved,
                           dispatch_uid='instance-saved-hook')
@@ -220,18 +225,19 @@ class AuthenticatedAPITestCase(APITestCase):
         }
         return Source.objects.create(**data)
 
-    def make_registration_adminuser(self):
-        data = {
-            "stage": "prebirth",
-            "data": {"test_adminuser_reg_key": "test_adminuser_reg_value"},
-            "source": self.make_source_adminuser()
-        }
+    def make_registration_adminuser(self, data=None):
+        if data is None:
+            data = {
+                "stage": "prebirth",
+                "data": REG_DATA['hw_pre_mother'],
+                "source": self.make_source_adminuser()
+            }
         return Registration.objects.create(**data)
 
     def make_registration_normaluser(self):
         data = {
             "stage": "postbirth",
-            "data": {"test_normaluser_reg_key": "test_normaluser_reg_value"},
+            "data": REG_DATA['hw_pre_mother'],
             "source": self.make_source_normaluser()
         }
         return Registration.objects.create(**data)
@@ -1640,7 +1646,7 @@ class TestMetrics(AuthenticatedAPITestCase):
         # Setup
         adapter = self._mount_session()
         # reconnect metric post_save hook
-        post_save.connect(fire_metrics_if_new, sender=Registration)
+        post_save.connect(fire_created_metric, sender=Registration)
 
         # Execute
         self.make_registration_adminuser()
@@ -1651,7 +1657,57 @@ class TestMetrics(AuthenticatedAPITestCase):
             data={"registrations.created.sum": 1.0}
         )
         # remove post_save hooks to prevent teardown errors
-        post_save.disconnect(fire_metrics_if_new, sender=Registration)
+        post_save.disconnect(fire_created_metric, sender=Registration)
+
+    def test_unique_operator_metric_single(self):
+        # Setup
+        adapter = self._mount_session()
+        # reconnect operator metric post_save hook
+        post_save.connect(fire_unique_operator_metric, sender=Registration)
+
+        # Execute
+        self.make_registration_adminuser()
+
+        # Check
+        self._check_request(
+            adapter.request, 'POST',
+            data={"registrations.unique_operators.sum": 1.0}
+        )
+
+        # Teardown
+        # remove post_save hooks to prevent teardown errors
+        post_save.disconnect(fire_unique_operator_metric, sender=Registration)
+
+    @responses.activate
+    def test_unique_operator_metric_multiple(self):
+        # Setup
+        # deactivate Testsession for this test
+        self.session = None
+        # reconnect operator metric post_save hook
+        post_save.connect(fire_unique_operator_metric, sender=Registration)
+        # prep for a different operator
+        new_user_data = {
+            "stage": "prebirth",
+            "data": REG_DATA['hw_post'],
+            "source": self.make_source_adminuser()
+        }
+
+        # add metric post response
+        responses.add(responses.POST,
+                      "http://metrics-url/metrics/",
+                      json={"foo": "bar"},
+                      status=200, content_type='application/json')
+
+        # Execute
+        self.make_registration_adminuser()
+        self.make_registration_adminuser()
+        self.make_registration_adminuser()
+        self.make_registration_adminuser(data=new_user_data)
+
+        # Check
+        self.assertEqual(len(responses.calls), 2)
+        # remove post_save hooks to prevent teardown errors
+        post_save.disconnect(fire_unique_operator_metric, sender=Registration)
 
 
 class TestSubscriptionRequestWebhook(AuthenticatedAPITestCase):
