@@ -1711,7 +1711,7 @@ class TestMetrics(AuthenticatedAPITestCase):
         # Check
         self._check_request(
             adapter.request, 'POST',
-            data={"registrations.source.user.testadminuser.sum": 1.0}
+            data={"registrations.source.testadminuser.sum": 1.0}
         )
         # remove post_save hooks to prevent teardown errors
         post_save.disconnect(fire_source_metric, sender=Registration)
