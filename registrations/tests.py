@@ -1614,9 +1614,9 @@ class TestMetricsAPI(AuthenticatedAPITestCase):
         self.assertEqual(
             response.data["metrics_available"], [
                 'registrations.created.sum',
-                'registrations.source.ussd.sum',
-                'registrations.source.ivr.sum',
                 'registrations.unique_operators.sum',
+                'registrations.source.testnormaluser.sum',
+                'registrations.source.testadminuser.sum',
             ]
         )
 
@@ -1699,7 +1699,7 @@ class TestMetrics(AuthenticatedAPITestCase):
         # remove post_save hooks to prevent teardown errors
         post_save.disconnect(fire_created_metric, sender=Registration)
 
-    def test_ussd_source_metric(self):
+    def test_source_metric(self):
         # Setup
         adapter = self._mount_session()
         # reconnect metric post_save hook
@@ -1711,24 +1711,7 @@ class TestMetrics(AuthenticatedAPITestCase):
         # Check
         self._check_request(
             adapter.request, 'POST',
-            data={"registrations.source.ussd.sum": 1.0}
-        )
-        # remove post_save hooks to prevent teardown errors
-        post_save.disconnect(fire_source_metric, sender=Registration)
-
-    def test_ivr_source_metric(self):
-        # Setup
-        adapter = self._mount_session()
-        # reconnect metric post_save hook
-        post_save.connect(fire_source_metric, sender=Registration)
-
-        # Execute
-        self.make_registration_normaluser()
-
-        # Check
-        self._check_request(
-            adapter.request, 'POST',
-            data={"registrations.source.ivr.sum": 1.0}
+            data={"registrations.source.user.testadminuser.sum": 1.0}
         )
         # remove post_save hooks to prevent teardown errors
         post_save.disconnect(fire_source_metric, sender=Registration)

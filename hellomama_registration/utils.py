@@ -2,6 +2,7 @@ import datetime
 import requests
 import json
 from django.conf import settings
+from django.contrib.auth.models import User
 
 
 def get_today():
@@ -205,5 +206,11 @@ def get_available_metrics():
     available_metrics = []
     available_metrics.extend(settings.METRICS_REALTIME)
     available_metrics.extend(settings.METRICS_SCHEDULED)
+
+    users = User.objects.all()
+    for user in users:
+        print(user.username)
+        available_metrics.append(
+            "registrations.source.%s.sum" % user.username)
 
     return available_metrics

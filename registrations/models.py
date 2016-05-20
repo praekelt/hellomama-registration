@@ -96,14 +96,10 @@ def fire_created_metric(sender, instance, created, **kwargs):
 @receiver(post_save, sender=Registration)
 def fire_source_metric(sender, instance, created, **kwargs):
     from .tasks import fire_metric
-    if created and 'ussd' in instance.source.name:
+    if created:
         fire_metric.apply_async(kwargs={
-            "metric_name": 'registrations.source.ussd.sum',
-            "metric_value": 1.0
-        })
-    elif created and 'voice' in instance.source.name:
-        fire_metric.apply_async(kwargs={
-            "metric_name": 'registrations.source.ivr.sum',
+            "metric_name": 'registrations.source.%s.sum' % (
+                instance.source.user.username),
             "metric_value": 1.0
         })
 
