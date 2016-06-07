@@ -129,7 +129,7 @@ def get_messageset_short_name(stage, recipient, msg_type, weeks, voice_days,
                               voice_times):
 
     if recipient == "household":
-        msg_type = "text"
+        msg_type = "audio"
 
     if stage == "prebirth":
         week_range = "10_42"

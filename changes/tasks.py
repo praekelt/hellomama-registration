@@ -47,7 +47,7 @@ class ImplementAction(Task):
         if registration.data["msg_receiver"] != 'mother_only':
             household_short_name = utils.get_messageset_short_name(
                 stage, 'household', mother["details"]["preferred_msg_type"],
-                weeks, None, None)
+                weeks, "fri", "9_11")
             household_msgset_id, household_msgset_schedule, seq_number =\
                 utils.get_messageset_schedule_sequence(
                     household_short_name, weeks)

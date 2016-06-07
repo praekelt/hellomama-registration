@@ -722,7 +722,7 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
             match_querystring=True
         )
         # mock household messageset lookup
-        query_string = '?short_name=prebirth.household.text.10_42'
+        query_string = '?short_name=prebirth.household.audio.10_42.fri.9_11'
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
@@ -732,7 +732,7 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
                 "previous": None,
                 "results": [{
                     "id": 3,
-                    "short_name": 'prebirth.household.text.10_42',
+                    "short_name": 'prebirth.household.audio.10_42.fri.9_11',
                     "default_schedule": 3
                 }]
             },
@@ -776,7 +776,7 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
             match_querystring=True
         )
 
-        # mock household SMS send
+        # mock mother welcome SMS send
         responses.add(
             responses.POST,
             'http://localhost:8006/api/v1/outbound/',
@@ -951,7 +951,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             match_querystring=True
         )
 
-        # mock household SMS send
+        # mock mother SMS send
         responses.add(
             responses.POST,
             'http://localhost:8006/api/v1/outbound/',
@@ -1055,7 +1055,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             match_querystring=True
         )
         # mock household messageset lookup
-        query_string = '?short_name=prebirth.household.text.10_42'
+        query_string = '?short_name=prebirth.household.audio.10_42.fri.9_11'
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
@@ -1065,7 +1065,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
                 "previous": None,
                 "results": [{
                     "id": 3,
-                    "short_name": 'prebirth.household.text.10_42',
+                    "short_name": 'prebirth.household.audio.10_42.fri.9_11',
                     "default_schedule": 3
                 }]
             },
@@ -1110,7 +1110,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             match_querystring=True
         )
 
-        # mock household SMS send
+        # mock mother SMS send
         responses.add(
             responses.POST,
             'http://localhost:8006/api/v1/outbound/',
@@ -1171,7 +1171,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             match_querystring=True
         )
         # mock household messageset lookup
-        query_string = '?short_name=prebirth.household.text.10_42'
+        query_string = '?short_name=prebirth.household.audio.10_42.fri.9_11'
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
@@ -1181,7 +1181,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
                 "previous": None,
                 "results": [{
                     "id": 3,
-                    "short_name": 'prebirth.household.text.10_42',
+                    "short_name": 'prebirth.household.audio.10_42.fri.9_11',
                     "default_schedule": 3
                 }]
             },
@@ -1266,7 +1266,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             match_querystring=True
         )
         # mock household messageset lookup
-        query_string = '?short_name=prebirth.household.text.10_42'
+        query_string = '?short_name=prebirth.household.audio.10_42.fri.9_11'
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
@@ -1276,7 +1276,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
                 "previous": None,
                 "results": [{
                     "id": 3,
-                    "short_name": 'prebirth.household.text.10_42',
+                    "short_name": 'prebirth.household.audio.10_42.fri.9_11',
                     "default_schedule": 3
                 }]
             },
@@ -1322,7 +1322,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             match_querystring=True
         )
 
-        # mock household SMS send
+        # mock mother SMS send
         responses.add(
             responses.POST,
             'http://localhost:8006/api/v1/outbound/',
@@ -1384,7 +1384,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             match_querystring=True
         )
         # mock household messageset lookup
-        query_string = '?short_name=prebirth.household.text.10_42'
+        query_string = '?short_name=prebirth.household.audio.10_42.fri.9_11'
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
@@ -1394,7 +1394,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
                 "previous": None,
                 "results": [{
                     "id": 3,
-                    "short_name": 'prebirth.household.text.10_42',
+                    "short_name": 'prebirth.household.audio.10_42.fri.9_11',
                     "default_schedule": 3
                 }]
             },
@@ -1438,7 +1438,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             match_querystring=True
         )
 
-        # mock household SMS send
+        # mock mother SMS send
         responses.add(
             responses.POST,
             'http://localhost:8006/api/v1/outbound/',
@@ -1500,7 +1500,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             match_querystring=True
         )
         # mock household messageset lookup
-        query_string = '?short_name=prebirth.household.text.10_42'
+        query_string = '?short_name=prebirth.household.audio.10_42.fri.9_11'
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
@@ -1510,7 +1510,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
                 "previous": None,
                 "results": [{
                     "id": 3,
-                    "short_name": 'prebirth.household.text.10_42',
+                    "short_name": 'prebirth.household.audio.10_42.fri.9_11',
                     "default_schedule": 3
                 }]
             },
@@ -1555,7 +1555,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             match_querystring=True
         )
 
-        # mock household SMS send
+        # mock mother SMS send
         responses.add(
             responses.POST,
             'http://localhost:8006/api/v1/outbound/',

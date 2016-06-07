@@ -1567,7 +1567,7 @@ class TestChangeBaby(AuthenticatedAPITestCase):
             match_querystring=True
         )
         # mock household messageset lookup
-        query_string = '?short_name=postbirth.household.text.0_52'
+        query_string = '?short_name=postbirth.household.audio.0_52.fri.9_11'
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
@@ -1577,7 +1577,7 @@ class TestChangeBaby(AuthenticatedAPITestCase):
                 "previous": None,
                 "results": [{
                     "id": 17,
-                    "short_name": 'postbirth.household.text.0_52',
+                    "short_name": 'postbirth.household.audio.0_52.fri.9_11',
                     "default_schedule": 3
                 }]
             },
