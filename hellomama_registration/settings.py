@@ -181,7 +181,7 @@ CELERY_ROUTES = {
     'changes.tasks.implement_action': {
         'queue': 'priority',
     },
-    'registrations.tasks.deliver_hook_wrapper': {
+    'registrations.tasks.DeliverHook': {
         'queue': 'priority',
     },
     'registrations.tasks.fire_metric': {
