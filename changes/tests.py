@@ -467,7 +467,7 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
         # Check
         self.assertEqual(result.get(), "Change messaging completed")
         d = SubscriptionRequest.objects.last()
-        self.assertEqual(d.contact, "846877e6-afaa-43de-acb1-09f61ad4de99")
+        self.assertEqual(d.identity, "846877e6-afaa-43de-acb1-09f61ad4de99")
         self.assertEqual(d.messageset, 4)
         self.assertEqual(d.next_sequence_number, 36)  # week 28 - 18*2
         self.assertEqual(d.lang, "eng_NG")
@@ -1475,7 +1475,7 @@ class TestChangeBaby(AuthenticatedAPITestCase):
         # Check
         self.assertEqual(result.get(), "Change baby completed")
         d = SubscriptionRequest.objects.last()
-        self.assertEqual(d.contact, "846877e6-afaa-43de-acb1-09f61ad4de99")
+        self.assertEqual(d.identity, "846877e6-afaa-43de-acb1-09f61ad4de99")
         self.assertEqual(d.messageset, 2)
         self.assertEqual(d.next_sequence_number, 1)
         self.assertEqual(d.lang, "hau_NG")
@@ -1605,16 +1605,17 @@ class TestChangeBaby(AuthenticatedAPITestCase):
         # Check
         self.assertEqual(result.get(), "Change baby completed")
         d_mom = SubscriptionRequest.objects.filter(
-            contact=change_data["mother_id"])[0]
-        self.assertEqual(d_mom.contact, "846877e6-afaa-43de-acb1-09f61ad4de99")
+            identity=change_data["mother_id"])[0]
+        self.assertEqual(d_mom.identity,
+                         "846877e6-afaa-43de-acb1-09f61ad4de99")
         self.assertEqual(d_mom.messageset, 2)
         self.assertEqual(d_mom.next_sequence_number, 1)
         self.assertEqual(d_mom.lang, "hau_NG")
         self.assertEqual(d_mom.schedule, 4)
 
         d_hh = SubscriptionRequest.objects.filter(
-            contact="629eaf3c-04e5-4404-8a27-3ab3b811326a")[0]
-        self.assertEqual(d_hh.contact, "629eaf3c-04e5-4404-8a27-3ab3b811326a")
+            identity="629eaf3c-04e5-4404-8a27-3ab3b811326a")[0]
+        self.assertEqual(d_hh.identity, "629eaf3c-04e5-4404-8a27-3ab3b811326a")
         self.assertEqual(d_hh.messageset, 17)
         self.assertEqual(d_hh.next_sequence_number, 1)
         self.assertEqual(d_hh.lang, "hau_NG")
@@ -1963,7 +1964,7 @@ class TestChangeLoss(AuthenticatedAPITestCase):
         # Check
         self.assertEqual(result.get(), "Change loss completed")
         d = SubscriptionRequest.objects.last()
-        self.assertEqual(d.contact, "846877e6-afaa-43de-acb1-09f61ad4de99")
+        self.assertEqual(d.identity, "846877e6-afaa-43de-acb1-09f61ad4de99")
         self.assertEqual(d.messageset, 19)
         self.assertEqual(d.next_sequence_number, 1)
         self.assertEqual(d.lang, "hau_NG")
@@ -2096,7 +2097,7 @@ class TestChangeLoss(AuthenticatedAPITestCase):
         # Check
         self.assertEqual(result.get(), "Change loss completed")
         d = SubscriptionRequest.objects.last()
-        self.assertEqual(d.contact, "846877e6-afaa-43de-acb1-09f61ad4de99")
+        self.assertEqual(d.identity, "846877e6-afaa-43de-acb1-09f61ad4de99")
         self.assertEqual(d.messageset, 19)
         self.assertEqual(d.next_sequence_number, 1)
         self.assertEqual(d.lang, "hau_NG")
