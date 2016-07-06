@@ -97,7 +97,8 @@ def fire_created_metric(sender, instance, created, **kwargs):
 def fire_unique_operator_metric(sender, instance, created, **kwargs):
     # if registration is made by a new unique user (operator), fire a metric
     from .tasks import fire_metric
-    if (created and Registration.objects.filter(
+    if (created and instance.data and instance.data['operator_id'] and
+        Registration.objects.filter(
             data__operator_id=instance.data['operator_id']).count() == 1):
         fire_metric.apply_async(kwargs={
             "metric_name": 'registrations.unique_operators.sum',
