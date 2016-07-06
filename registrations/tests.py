@@ -974,7 +974,8 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         # Check
         self.assertEqual(result, "1 SubscriptionRequest created")
         d_mom = SubscriptionRequest.objects.last()
-        self.assertEqual(d_mom.identity, "mother00-9d89-4aa6-99ff-13c225365b5d")
+        self.assertEqual(d_mom.identity,
+                         "mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.messageset, 1)
         self.assertEqual(d_mom.next_sequence_number, 15)
         self.assertEqual(d_mom.lang, "eng_NG")
@@ -1027,7 +1028,8 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         # Check
         self.assertEqual(result, "1 SubscriptionRequest created")
         d_mom = SubscriptionRequest.objects.last()
-        self.assertEqual(d_mom.identity, "mother00-9d89-4aa6-99ff-13c225365b5d")
+        self.assertEqual(d_mom.identity,
+                         "mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.messageset, 2)
         self.assertEqual(d_mom.next_sequence_number, 10)
         self.assertEqual(d_mom.lang, "eng_NG")
@@ -1134,7 +1136,8 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
 
         d_mom = SubscriptionRequest.objects.get(
             identity="mother00-9d89-4aa6-99ff-13c225365b5d")
-        self.assertEqual(d_mom.identity, "mother00-9d89-4aa6-99ff-13c225365b5d")
+        self.assertEqual(d_mom.identity,
+                         "mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.messageset, 1)
         self.assertEqual(d_mom.next_sequence_number, 15)
         self.assertEqual(d_mom.lang, "eng_NG")
@@ -1225,7 +1228,8 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
 
         d_mom = SubscriptionRequest.objects.get(
             identity="mother00-9d89-4aa6-99ff-13c225365b5d")
-        self.assertEqual(d_mom.identity, "mother00-9d89-4aa6-99ff-13c225365b5d")
+        self.assertEqual(d_mom.identity,
+                         "mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.messageset, 2)
         self.assertEqual(d_mom.next_sequence_number, 10)
         self.assertEqual(d_mom.lang, "eng_NG")
@@ -1347,7 +1351,8 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
 
         d_mom = SubscriptionRequest.objects.get(
             identity="mother00-9d89-4aa6-99ff-13c225365b5d")
-        self.assertEqual(d_mom.identity, "mother00-9d89-4aa6-99ff-13c225365b5d")
+        self.assertEqual(d_mom.identity,
+                         "mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.messageset, 1)
         self.assertEqual(d_mom.next_sequence_number, 15)
         self.assertEqual(d_mom.lang, "eng_NG")
@@ -1464,7 +1469,8 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
 
         d_mom = SubscriptionRequest.objects.get(
             identity="mother00-9d89-4aa6-99ff-13c225365b5d")
-        self.assertEqual(d_mom.identity, "mother00-9d89-4aa6-99ff-13c225365b5d")
+        self.assertEqual(d_mom.identity,
+                         "mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.messageset, 1)
         self.assertEqual(d_mom.next_sequence_number, 60)
         self.assertEqual(d_mom.lang, "eng_NG")
@@ -1472,7 +1478,8 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
 
         d_dad = SubscriptionRequest.objects.get(
             identity="father00-73a2-4d89-b045-d52004c025fe")
-        self.assertEqual(d_dad.identity, "father00-73a2-4d89-b045-d52004c025fe")
+        self.assertEqual(d_dad.identity,
+                         "father00-73a2-4d89-b045-d52004c025fe")
         self.assertEqual(d_dad.messageset, 3)
         self.assertEqual(d_dad.next_sequence_number, 20)
         self.assertEqual(d_dad.lang, "eng_NG")
@@ -1581,7 +1588,8 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
 
         d_mom = SubscriptionRequest.objects.get(
             identity="mother00-9d89-4aa6-99ff-13c225365b5d")
-        self.assertEqual(d_mom.identity, "mother00-9d89-4aa6-99ff-13c225365b5d")
+        self.assertEqual(d_mom.identity,
+                         "mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.messageset, 1)
         self.assertEqual(d_mom.next_sequence_number, 90)
         self.assertEqual(d_mom.lang, "eng_NG")

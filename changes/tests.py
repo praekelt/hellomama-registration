@@ -1606,7 +1606,8 @@ class TestChangeBaby(AuthenticatedAPITestCase):
         self.assertEqual(result.get(), "Change baby completed")
         d_mom = SubscriptionRequest.objects.filter(
             identity=change_data["mother_id"])[0]
-        self.assertEqual(d_mom.identity, "846877e6-afaa-43de-acb1-09f61ad4de99")
+        self.assertEqual(d_mom.identity,
+                         "846877e6-afaa-43de-acb1-09f61ad4de99")
         self.assertEqual(d_mom.messageset, 2)
         self.assertEqual(d_mom.next_sequence_number, 1)
         self.assertEqual(d_mom.lang, "hau_NG")
