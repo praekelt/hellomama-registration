@@ -35,7 +35,7 @@ class ImplementAction(Task):
 
         # Make new subscription request object
         mother_sub = {
-            "contact": change.mother_id,
+            "identity": change.mother_id,
             "messageset": mother_msgset_id,
             "next_sequence_number": next_sequence_number,
             "lang": mother["details"]["preferred_language"],
@@ -52,7 +52,7 @@ class ImplementAction(Task):
                 utils.get_messageset_schedule_sequence(
                     household_short_name, weeks)
             household_sub = {
-                "contact": mother["details"]["linked_to"],
+                "identity": mother["details"]["linked_to"],
                 "messageset": household_msgset_id,
                 "next_sequence_number": seq_number,
                 "lang": mother["details"]["preferred_language"],
@@ -85,7 +85,7 @@ class ImplementAction(Task):
 
         # Make new subscription request object
         mother_sub = {
-            "contact": change.mother_id,
+            "identity": change.mother_id,
             "messageset": mother_msgset_id,
             "next_sequence_number": next_sequence_number,
             "lang": mother["details"]["preferred_language"],
@@ -174,7 +174,7 @@ class ImplementAction(Task):
 
         # Make new subscription request object
         mother_sub = {
-            "contact": change.mother_id,
+            "identity": change.mother_id,
             "messageset": new_msgset_id,
             "next_sequence_number": new_nsn,
             "lang": current_sub["lang"],  # use first subscription's lang

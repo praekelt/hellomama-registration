@@ -12,10 +12,10 @@ class RegistrationAdmin(admin.ModelAdmin):
 
 class SubscriptionRequestAdmin(admin.ModelAdmin):
     list_display = [
-        "id", "contact", "messageset", "next_sequence_number", "lang",
+        "id", "identity", "messageset", "next_sequence_number", "lang",
         "schedule", "created_at", "updated_at"]
     list_filter = ["messageset", "created_at"]
-    search_fields = ["contact"]
+    search_fields = ["identity"]
 
 
 admin.site.register(Source)

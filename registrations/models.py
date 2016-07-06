@@ -114,7 +114,7 @@ class SubscriptionRequest(models.Model):
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    contact = models.CharField(max_length=36, null=False, blank=False)
+    identity = models.CharField(max_length=36, null=False, blank=False)
     messageset = models.IntegerField(null=False, blank=False)
     next_sequence_number = models.IntegerField(default=1, null=False,
                                                blank=False)
@@ -132,7 +132,7 @@ class SubscriptionRequest(models.Model):
             'hook': hook.dict(),
             'data': {
                 'id': str(self.id),
-                'identity': self.contact,
+                'identity': self.identity,
                 'messageset': self.messageset,
                 'next_sequence_number': self.next_sequence_number,
                 'lang': self.lang,
