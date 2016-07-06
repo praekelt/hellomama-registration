@@ -1782,7 +1782,7 @@ class TestSubscriptionRequestWebhook(AuthenticatedAPITestCase):
     #         "data": {
     #             "messageset": 1,
     #             "updated_at": "2016-02-17T07:59:42.831568+00:00",
-    #             "contact": "mother00-9d89-4aa6-99ff-13c225365b5d",
+    #             "identity": "mother00-9d89-4aa6-99ff-13c225365b5d",
     #             "lang": "eng_NG",
     #             "created_at": "2016-02-17T07:59:42.831533+00:00",
     #             "id": "5282ed58-348f-4a54-b1ff-f702e36ec3cc",

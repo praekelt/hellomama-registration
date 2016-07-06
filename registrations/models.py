@@ -132,7 +132,7 @@ class SubscriptionRequest(models.Model):
             'hook': hook.dict(),
             'data': {
                 'id': str(self.id),
-                'contact': self.contact,
+                'identity': self.contact,
                 'messageset': self.messageset,
                 'next_sequence_number': self.next_sequence_number,
                 'lang': self.lang,
