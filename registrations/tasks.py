@@ -217,7 +217,8 @@ class ValidateRegistration(Task):
         }
 
         # Add mother welcome message
-        if 'voice_days' in registration.data:
+        if 'voice_days' in registration.data and \
+                registration.data["voice_days"] != "":
             mother_sub["metadata"]["prepend_next_delivery"] = \
                 "%s/static/audio/registation/%s/welcome_mother.mp3" % (
                 settings.PUBLIC_HOST,
