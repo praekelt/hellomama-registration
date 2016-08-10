@@ -58,6 +58,20 @@ def get_identity_address(identity):
         return None
 
 
+def patch_identity(identity, data):
+    """ Patches the given identity with the data provided
+    """
+    url = "%s/%s/%s/" % (settings.IDENTITY_STORE_URL, "identities", identity)
+    data = data
+    headers = {
+        'Authorization': 'Token %s' % settings.IDENTITY_STORE_TOKEN,
+        'Content-Type': 'application/json'
+    }
+    r = requests.patch(url, data=json.dumps(data), headers=headers)
+    r.raise_for_status()
+    return r.json()
+
+
 def get_messageset_by_shortname(short_name):
     url = "%s/%s/" % (settings.STAGE_BASED_MESSAGING_URL, "messageset")
     params = {'short_name': short_name}

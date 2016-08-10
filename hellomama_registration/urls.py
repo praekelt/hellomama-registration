@@ -17,4 +17,5 @@ urlpatterns = patterns(
     url(r'^api/metrics/', views.MetricsView.as_view()),
     url(r'^', include('registrations.urls')),
     url(r'^', include('changes.urls')),
+    url(r'^', include('uniqueids.urls')),
 )
