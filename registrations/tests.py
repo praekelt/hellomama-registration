@@ -1638,6 +1638,84 @@ class TestMetricsAPI(AuthenticatedAPITestCase):
         self.assertEqual(response.data["scheduled_metrics_initiated"], True)
 
 
+class TestUserCreation(AuthenticatedAPITestCase):
+
+    def test_create_user_and_token(self):
+        # Setup
+        user_request = {"email": "test@example.org"}
+        # Execute
+        request = self.adminclient.post('/api/v1/user/token/', user_request)
+        token = request.json().get('token', None)
+        # Check
+        self.assertIsNotNone(
+            token, "Could not receive authentication token on post.")
+        self.assertEqual(
+            request.status_code, 201,
+            "Status code on /api/v1/user/token/ was %s (should be 201)."
+            % request.status_code)
+
+    def test_create_user_and_token_fail_nonadmin(self):
+        # Setup
+        user_request = {"email": "test@example.org"}
+        # Execute
+        request = self.normalclient.post('/api/v1/user/token/', user_request)
+        error = request.json().get('detail', None)
+        # Check
+        self.assertIsNotNone(
+            error, "Could not receive error on post.")
+        self.assertEqual(
+            error, "You do not have permission to perform this action.",
+            "Error message was unexpected: %s."
+            % error)
+
+    def test_create_user_and_token_not_created(self):
+        # Setup
+        user_request = {"email": "test@example.org"}
+        # Execute
+        request = self.adminclient.post('/api/v1/user/token/', user_request)
+        token = request.json().get('token', None)
+        # And again, to get the same token
+        request2 = self.adminclient.post('/api/v1/user/token/', user_request)
+        token2 = request2.json().get('token', None)
+
+        # Check
+        self.assertEqual(
+            token, token2,
+            "Tokens are not equal, should be the same as not recreated.")
+
+    def test_create_user_new_token_nonadmin(self):
+        # Setup
+        user_request = {"email": "test@example.org"}
+        request = self.adminclient.post('/api/v1/user/token/', user_request)
+        token = request.json().get('token', None)
+        cleanclient = APIClient()
+        cleanclient.credentials(HTTP_AUTHORIZATION='Token %s' % token)
+        # Execute
+        request = cleanclient.post('/api/v1/user/token/', user_request)
+        error = request.json().get('detail', None)
+        # Check
+        # new user should not be admin
+        self.assertIsNotNone(
+            error, "Could not receive error on post.")
+        self.assertEqual(
+            error, "You do not have permission to perform this action.",
+            "Error message was unexpected: %s."
+            % error)
+
+
+class TestHealthcheckAPI(AuthenticatedAPITestCase):
+
+    def test_healthcheck_read(self):
+        # Setup
+        # Execute
+        response = self.normalclient.get('/api/health/',
+                                         content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["up"], True)
+        self.assertEqual(response.data["result"]["database"], "Accessible")
+
+
 class TestMetrics(AuthenticatedAPITestCase):
 
     def _check_request(

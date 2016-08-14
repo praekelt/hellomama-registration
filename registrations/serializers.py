@@ -16,6 +16,10 @@ class GroupSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('url', 'name')
 
 
+class CreateUserSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
 class SourceSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
