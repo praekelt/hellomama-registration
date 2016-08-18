@@ -24,7 +24,8 @@ setup(
         'pytz==2015.7',
         'six==1.10.0',
         'django-rest-hooks==1.3.1',
-        'go-http==0.3.0'
+        'go-http==0.3.0',
+        'django-filter==0.12.0',
     ],
     classifiers=[
         'Development Status :: 4 - Beta',

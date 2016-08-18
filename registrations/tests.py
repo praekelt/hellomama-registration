@@ -448,6 +448,7 @@ class TestRegistrationAPI(AuthenticatedAPITestCase):
         self.assertEqual(d.stage, 'prebirth')
         self.assertEqual(d.validated, False)
         self.assertEqual(d.data, {"test_key1": "test_value1"})
+        self.assertEqual(d.created_by, self.adminuser)
 
     def test_create_registration_normaluser(self):
         # Setup
@@ -491,6 +492,149 @@ class TestRegistrationAPI(AuthenticatedAPITestCase):
         self.assertEqual(d.stage, 'prebirth')
         self.assertEqual(d.validated, False)  # Should ignore True post_data
         self.assertEqual(d.data, {"test_key1": "test_value1"})
+
+    def test_list_registrations(self):
+        # Setup
+        registration1 = self.make_registration_normaluser()
+        registration2 = self.make_registration_adminuser()
+        # Execute
+        response = self.normalclient.get(
+            '/api/v1/registrations/', content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 2)
+        result1, result2 = response.data["results"]
+        self.assertEqual(result1["id"], str(registration1.id))
+        self.assertEqual(result2["id"], str(registration2.id))
+
+    def make_different_registrations(self):
+        self.make_source_adminuser()
+        registration1_data = {
+            "stage": "prebirth",
+            "mother_id": "mother01-63e2-4acc-9b94-26663b9bc267",
+            "data": REG_DATA["hw_pre_mother"].copy(),
+            "source": self.make_source_adminuser(),
+            "validated": True
+        }
+        registration1 = Registration.objects.create(**registration1_data)
+        registration2_data = {
+            "stage": "postbirth",
+            "mother_id": "mother02-63e2-4acc-9b94-26663b9bc267",
+            "data": REG_DATA["hw_pre_friend"].copy(),
+            "source": self.make_source_normaluser(),
+            "validated": False
+        }
+        registration2 = Registration.objects.create(**registration2_data)
+
+        return (registration1, registration2)
+
+    def test_filter_registration_mother_id(self):
+        # Setup
+        registration1, registration2 = self.make_different_registrations()
+        # Execute
+        response = self.adminclient.get(
+            '/api/v1/registrations/?mother_id=%s' % registration1.mother_id,
+            content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        result = response.data["results"][0]
+        self.assertEqual(result["id"], str(registration1.id))
+
+    def test_filter_registration_stage(self):
+        # Setup
+        registration1, registration2 = self.make_different_registrations()
+        # Execute
+        response = self.adminclient.get(
+            '/api/v1/registrations/?stage=%s' % registration2.stage,
+            content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        result = response.data["results"][0]
+        self.assertEqual(result["id"], str(registration2.id))
+
+    def test_filter_registration_validated(self):
+        # Setup
+        registration1, registration2 = self.make_different_registrations()
+        # Execute
+        response = self.adminclient.get(
+            '/api/v1/registrations/?validated=%s' % registration1.validated,
+            content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        result = response.data["results"][0]
+        self.assertEqual(result["id"], str(registration1.id))
+
+    def test_filter_registration_source(self):
+        # Setup
+        registration1, registration2 = self.make_different_registrations()
+        # Execute
+        response = self.adminclient.get(
+            '/api/v1/registrations/?source=%s' % registration2.source.id,
+            content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        result = response.data["results"][0]
+        self.assertEqual(result["id"], str(registration2.id))
+
+    def test_filter_registration_created_after(self):
+        # Setup
+        registration1, registration2 = self.make_different_registrations()
+        # While the '+00:00' is valid according to ISO 8601, the version of
+        # django-filter we are using does not support it
+        date_string = registration2.created_at.isoformat().replace(
+            "+00:00", "Z")
+        # Execute
+        response = self.adminclient.get(
+            '/api/v1/registrations/?created_after=%s' % date_string,
+            content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        result = response.data["results"][0]
+        self.assertEqual(result["id"], str(registration2.id))
+
+    def test_filter_registration_created_before(self):
+        # Setup
+        registration1, registration2 = self.make_different_registrations()
+        # While the '+00:00' is valid according to ISO 8601, the version of
+        # django-filter we are using does not support it
+        date_string = registration1.created_at.isoformat().replace(
+            "+00:00", "Z")
+        # Execute
+        response = self.adminclient.get(
+            '/api/v1/registrations/?created_before=%s' % date_string,
+            content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        result = response.data["results"][0]
+        self.assertEqual(result["id"], str(registration1.id))
+
+    def test_filter_registration_no_matches(self):
+        # Setup
+        registration1, registration2 = self.make_different_registrations()
+        # Execute
+        response = self.adminclient.get(
+            '/api/v1/registrations/?mother_id=test_id',
+            content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 0)
+
+    def test_filter_registration_unknown_filter(self):
+        # Setup
+        registration1, registration2 = self.make_different_registrations()
+        # Execute
+        response = self.adminclient.get(
+            '/api/v1/registrations/?something=test_id',
+            content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 2)
 
 
 class TestFieldValidation(AuthenticatedAPITestCase):
