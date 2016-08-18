@@ -312,6 +312,7 @@ class TestChangeAPI(AuthenticatedAPITestCase):
         self.assertEqual(d.action, 'change_language')
         self.assertEqual(d.validated, False)
         self.assertEqual(d.data, {"test_key1": "test_value1"})
+        self.assertEqual(d.created_by, self.adminuser)
 
     def test_create_change_normaluser(self):
         # Setup

@@ -448,6 +448,7 @@ class TestRegistrationAPI(AuthenticatedAPITestCase):
         self.assertEqual(d.stage, 'prebirth')
         self.assertEqual(d.validated, False)
         self.assertEqual(d.data, {"test_key1": "test_value1"})
+        self.assertEqual(d.created_by, self.adminuser)
 
     def test_create_registration_normaluser(self):
         # Setup
