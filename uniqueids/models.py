@@ -77,7 +77,7 @@ def calculate_luhn(partial_number):
 
 
 def generate_unique_id(length=10, attempts=0):
-    source = random_digits(length-1)
+    source = random_digits(int(length)-1)
     checksum = calculate_luhn(source)
     unique_id = int(str(source) + str(checksum))
 
