@@ -14,7 +14,7 @@ import os
 import djcelery
 import dj_database_url
 import mimetypes
-
+from hellomama_registration.utils import MSG_TYPES
 
 # Support SVG on admin
 mimetypes.add_type("image/svg+xml", ".svg", True)
@@ -197,6 +197,8 @@ METRICS_REALTIME = [
     'registrations.created.sum',
     'registrations.unique_operators.sum'
 ]
+METRICS_REALTIME.extend(
+    ['registrations.msg_type.%s.sum' % mt for mt in MSG_TYPES])
 METRICS_SCHEDULED = [
 ]
 METRICS_SCHEDULED_TASKS = [

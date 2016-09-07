@@ -1764,6 +1764,8 @@ class TestMetricsAPI(AuthenticatedAPITestCase):
             response.data["metrics_available"], [
                 'registrations.created.sum',
                 'registrations.unique_operators.sum',
+                'registrations.msg_type.text.sum',
+                'registrations.msg_type.audio.sum',
             ]
         )
 
