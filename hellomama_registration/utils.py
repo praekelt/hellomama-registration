@@ -55,9 +55,23 @@ def get_identity_address(identity):
     }
     r = requests.get(url, params=params, headers=headers).json()
     if len(r["results"]) > 0:
-        return r["results"][0]
+        return r["results"][0]["address"]
     else:
         return None
+
+
+def patch_identity(identity, data):
+    """ Patches the given identity with the data provided
+    """
+    url = "%s/%s/%s/" % (settings.IDENTITY_STORE_URL, "identities", identity)
+    data = data
+    headers = {
+        'Authorization': 'Token %s' % settings.IDENTITY_STORE_TOKEN,
+        'Content-Type': 'application/json'
+    }
+    r = requests.patch(url, data=json.dumps(data), headers=headers)
+    r.raise_for_status()
+    return r.json()
 
 
 def get_messageset_by_shortname(short_name):
@@ -131,7 +145,7 @@ def get_messageset_short_name(stage, recipient, msg_type, weeks, voice_days,
                               voice_times):
 
     if recipient == "household":
-        msg_type = "text"
+        msg_type = "audio"
 
     if stage == "prebirth":
         week_range = "10_42"

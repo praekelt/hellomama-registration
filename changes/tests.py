@@ -317,6 +317,7 @@ class TestChangeAPI(AuthenticatedAPITestCase):
         self.assertEqual(d.action, 'change_language')
         self.assertEqual(d.validated, False)
         self.assertEqual(d.data, {"test_key1": "test_value1"})
+        self.assertEqual(d.created_by, self.adminuser)
 
     def test_create_change_normaluser(self):
         # Setup
@@ -360,6 +361,38 @@ class TestChangeAPI(AuthenticatedAPITestCase):
         self.assertEqual(d.action, 'change_language')
         self.assertEqual(d.validated, False)  # Should ignore True post_data
         self.assertEqual(d.data, {"test_key1": "test_value1"})
+
+
+class TestChangeListAPI(AuthenticatedAPITestCase):
+
+    def test_list_changes(self):
+        # Setup
+        change1 = self.make_change_adminuser()
+        change2 = self.make_change_normaluser()
+        # Execute
+        response = self.adminclient.get(
+            '/api/v1/changes/',
+            content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 2)
+        result1, result2 = response.data["results"]
+        self.assertEqual(result1["id"], str(change1.id))
+        self.assertEqual(result2["id"], str(change2.id))
+
+    def test_list_changes_filtered(self):
+        # Setup
+        self.make_change_adminuser()
+        change2 = self.make_change_normaluser()
+        # Execute
+        response = self.adminclient.get(
+            '/api/v1/changes/?source=%s' % change2.source.id,
+            content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        result = response.data["results"][0]
+        self.assertEqual(result["id"], str(change2.id))
 
 
 class TestRegistrationCreation(AuthenticatedAPITestCase):
@@ -472,7 +505,7 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
         # Check
         self.assertEqual(result.get(), "Change messaging completed")
         d = SubscriptionRequest.objects.last()
-        self.assertEqual(d.contact, "846877e6-afaa-43de-acb1-09f61ad4de99")
+        self.assertEqual(d.identity, "846877e6-afaa-43de-acb1-09f61ad4de99")
         self.assertEqual(d.messageset, 4)
         self.assertEqual(d.next_sequence_number, 36)  # week 28 - 18*2
         self.assertEqual(d.lang, "eng_NG")
@@ -1480,7 +1513,7 @@ class TestChangeBaby(AuthenticatedAPITestCase):
         # Check
         self.assertEqual(result.get(), "Change baby completed")
         d = SubscriptionRequest.objects.last()
-        self.assertEqual(d.contact, "846877e6-afaa-43de-acb1-09f61ad4de99")
+        self.assertEqual(d.identity, "846877e6-afaa-43de-acb1-09f61ad4de99")
         self.assertEqual(d.messageset, 2)
         self.assertEqual(d.next_sequence_number, 1)
         self.assertEqual(d.lang, "hau_NG")
@@ -1572,7 +1605,7 @@ class TestChangeBaby(AuthenticatedAPITestCase):
             match_querystring=True
         )
         # mock household messageset lookup
-        query_string = '?short_name=postbirth.household.text.0_52'
+        query_string = '?short_name=postbirth.household.audio.0_52.fri.9_11'
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
@@ -1582,7 +1615,7 @@ class TestChangeBaby(AuthenticatedAPITestCase):
                 "previous": None,
                 "results": [{
                     "id": 17,
-                    "short_name": 'postbirth.household.text.0_52',
+                    "short_name": 'postbirth.household.audio.0_52.fri.9_11',
                     "default_schedule": 3
                 }]
             },
@@ -1610,16 +1643,17 @@ class TestChangeBaby(AuthenticatedAPITestCase):
         # Check
         self.assertEqual(result.get(), "Change baby completed")
         d_mom = SubscriptionRequest.objects.filter(
-            contact=change_data["mother_id"])[0]
-        self.assertEqual(d_mom.contact, "846877e6-afaa-43de-acb1-09f61ad4de99")
+            identity=change_data["mother_id"])[0]
+        self.assertEqual(d_mom.identity,
+                         "846877e6-afaa-43de-acb1-09f61ad4de99")
         self.assertEqual(d_mom.messageset, 2)
         self.assertEqual(d_mom.next_sequence_number, 1)
         self.assertEqual(d_mom.lang, "hau_NG")
         self.assertEqual(d_mom.schedule, 4)
 
         d_hh = SubscriptionRequest.objects.filter(
-            contact="629eaf3c-04e5-4404-8a27-3ab3b811326a")[0]
-        self.assertEqual(d_hh.contact, "629eaf3c-04e5-4404-8a27-3ab3b811326a")
+            identity="629eaf3c-04e5-4404-8a27-3ab3b811326a")[0]
+        self.assertEqual(d_hh.identity, "629eaf3c-04e5-4404-8a27-3ab3b811326a")
         self.assertEqual(d_hh.messageset, 17)
         self.assertEqual(d_hh.next_sequence_number, 1)
         self.assertEqual(d_hh.lang, "hau_NG")
@@ -1968,7 +2002,7 @@ class TestChangeLoss(AuthenticatedAPITestCase):
         # Check
         self.assertEqual(result.get(), "Change loss completed")
         d = SubscriptionRequest.objects.last()
-        self.assertEqual(d.contact, "846877e6-afaa-43de-acb1-09f61ad4de99")
+        self.assertEqual(d.identity, "846877e6-afaa-43de-acb1-09f61ad4de99")
         self.assertEqual(d.messageset, 19)
         self.assertEqual(d.next_sequence_number, 1)
         self.assertEqual(d.lang, "hau_NG")
@@ -2101,7 +2135,7 @@ class TestChangeLoss(AuthenticatedAPITestCase):
         # Check
         self.assertEqual(result.get(), "Change loss completed")
         d = SubscriptionRequest.objects.last()
-        self.assertEqual(d.contact, "846877e6-afaa-43de-acb1-09f61ad4de99")
+        self.assertEqual(d.identity, "846877e6-afaa-43de-acb1-09f61ad4de99")
         self.assertEqual(d.messageset, 19)
         self.assertEqual(d.next_sequence_number, 1)
         self.assertEqual(d.lang, "hau_NG")

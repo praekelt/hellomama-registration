@@ -461,6 +461,7 @@ class TestRegistrationAPI(AuthenticatedAPITestCase):
         self.assertEqual(d.stage, 'prebirth')
         self.assertEqual(d.validated, False)
         self.assertEqual(d.data, {"test_key1": "test_value1"})
+        self.assertEqual(d.created_by, self.adminuser)
 
     def test_create_registration_normaluser(self):
         # Setup
@@ -504,6 +505,149 @@ class TestRegistrationAPI(AuthenticatedAPITestCase):
         self.assertEqual(d.stage, 'prebirth')
         self.assertEqual(d.validated, False)  # Should ignore True post_data
         self.assertEqual(d.data, {"test_key1": "test_value1"})
+
+    def test_list_registrations(self):
+        # Setup
+        registration1 = self.make_registration_normaluser()
+        registration2 = self.make_registration_adminuser()
+        # Execute
+        response = self.normalclient.get(
+            '/api/v1/registrations/', content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 2)
+        result1, result2 = response.data["results"]
+        self.assertEqual(result1["id"], str(registration1.id))
+        self.assertEqual(result2["id"], str(registration2.id))
+
+    def make_different_registrations(self):
+        self.make_source_adminuser()
+        registration1_data = {
+            "stage": "prebirth",
+            "mother_id": "mother01-63e2-4acc-9b94-26663b9bc267",
+            "data": REG_DATA["hw_pre_mother"].copy(),
+            "source": self.make_source_adminuser(),
+            "validated": True
+        }
+        registration1 = Registration.objects.create(**registration1_data)
+        registration2_data = {
+            "stage": "postbirth",
+            "mother_id": "mother02-63e2-4acc-9b94-26663b9bc267",
+            "data": REG_DATA["hw_pre_friend"].copy(),
+            "source": self.make_source_normaluser(),
+            "validated": False
+        }
+        registration2 = Registration.objects.create(**registration2_data)
+
+        return (registration1, registration2)
+
+    def test_filter_registration_mother_id(self):
+        # Setup
+        registration1, registration2 = self.make_different_registrations()
+        # Execute
+        response = self.adminclient.get(
+            '/api/v1/registrations/?mother_id=%s' % registration1.mother_id,
+            content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        result = response.data["results"][0]
+        self.assertEqual(result["id"], str(registration1.id))
+
+    def test_filter_registration_stage(self):
+        # Setup
+        registration1, registration2 = self.make_different_registrations()
+        # Execute
+        response = self.adminclient.get(
+            '/api/v1/registrations/?stage=%s' % registration2.stage,
+            content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        result = response.data["results"][0]
+        self.assertEqual(result["id"], str(registration2.id))
+
+    def test_filter_registration_validated(self):
+        # Setup
+        registration1, registration2 = self.make_different_registrations()
+        # Execute
+        response = self.adminclient.get(
+            '/api/v1/registrations/?validated=%s' % registration1.validated,
+            content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        result = response.data["results"][0]
+        self.assertEqual(result["id"], str(registration1.id))
+
+    def test_filter_registration_source(self):
+        # Setup
+        registration1, registration2 = self.make_different_registrations()
+        # Execute
+        response = self.adminclient.get(
+            '/api/v1/registrations/?source=%s' % registration2.source.id,
+            content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        result = response.data["results"][0]
+        self.assertEqual(result["id"], str(registration2.id))
+
+    def test_filter_registration_created_after(self):
+        # Setup
+        registration1, registration2 = self.make_different_registrations()
+        # While the '+00:00' is valid according to ISO 8601, the version of
+        # django-filter we are using does not support it
+        date_string = registration2.created_at.isoformat().replace(
+            "+00:00", "Z")
+        # Execute
+        response = self.adminclient.get(
+            '/api/v1/registrations/?created_after=%s' % date_string,
+            content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        result = response.data["results"][0]
+        self.assertEqual(result["id"], str(registration2.id))
+
+    def test_filter_registration_created_before(self):
+        # Setup
+        registration1, registration2 = self.make_different_registrations()
+        # While the '+00:00' is valid according to ISO 8601, the version of
+        # django-filter we are using does not support it
+        date_string = registration1.created_at.isoformat().replace(
+            "+00:00", "Z")
+        # Execute
+        response = self.adminclient.get(
+            '/api/v1/registrations/?created_before=%s' % date_string,
+            content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        result = response.data["results"][0]
+        self.assertEqual(result["id"], str(registration1.id))
+
+    def test_filter_registration_no_matches(self):
+        # Setup
+        registration1, registration2 = self.make_different_registrations()
+        # Execute
+        response = self.adminclient.get(
+            '/api/v1/registrations/?mother_id=test_id',
+            content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 0)
+
+    def test_filter_registration_unknown_filter(self):
+        # Setup
+        registration1, registration2 = self.make_different_registrations()
+        # Execute
+        response = self.adminclient.get(
+            '/api/v1/registrations/?something=test_id',
+            content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 2)
 
 
 class TestFieldValidation(AuthenticatedAPITestCase):
@@ -735,7 +879,7 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
             match_querystring=True
         )
         # mock household messageset lookup
-        query_string = '?short_name=prebirth.household.text.10_42'
+        query_string = '?short_name=prebirth.household.audio.10_42.fri.9_11'
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
@@ -745,7 +889,7 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
                 "previous": None,
                 "results": [{
                     "id": 3,
-                    "short_name": 'prebirth.household.text.10_42',
+                    "short_name": 'prebirth.household.audio.10_42.fri.9_11',
                     "default_schedule": 3
                 }]
             },
@@ -789,7 +933,7 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
             match_querystring=True
         )
 
-        # mock household SMS send
+        # mock mother welcome SMS send
         responses.add(
             responses.POST,
             'http://localhost:8006/api/v1/outbound/',
@@ -964,7 +1108,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             match_querystring=True
         )
 
-        # mock household SMS send
+        # mock mother SMS send
         responses.add(
             responses.POST,
             'http://localhost:8006/api/v1/outbound/',
@@ -987,7 +1131,8 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         # Check
         self.assertEqual(result, "1 SubscriptionRequest created")
         d_mom = SubscriptionRequest.objects.last()
-        self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
+        self.assertEqual(d_mom.identity,
+                         "mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.messageset, 1)
         self.assertEqual(d_mom.next_sequence_number, 15)
         self.assertEqual(d_mom.lang, "eng_NG")
@@ -1040,7 +1185,8 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         # Check
         self.assertEqual(result, "1 SubscriptionRequest created")
         d_mom = SubscriptionRequest.objects.last()
-        self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
+        self.assertEqual(d_mom.identity,
+                         "mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.messageset, 2)
         self.assertEqual(d_mom.next_sequence_number, 10)
         self.assertEqual(d_mom.lang, "eng_NG")
@@ -1068,7 +1214,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             match_querystring=True
         )
         # mock household messageset lookup
-        query_string = '?short_name=prebirth.household.text.10_42'
+        query_string = '?short_name=prebirth.household.audio.10_42.fri.9_11'
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
@@ -1078,7 +1224,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
                 "previous": None,
                 "results": [{
                     "id": 3,
-                    "short_name": 'prebirth.household.text.10_42',
+                    "short_name": 'prebirth.household.audio.10_42.fri.9_11',
                     "default_schedule": 3
                 }]
             },
@@ -1123,7 +1269,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             match_querystring=True
         )
 
-        # mock household SMS send
+        # mock mother SMS send
         responses.add(
             responses.POST,
             'http://localhost:8006/api/v1/outbound/',
@@ -1146,16 +1292,17 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         self.assertEqual(result, "2 SubscriptionRequests created")
 
         d_mom = SubscriptionRequest.objects.get(
-            contact="mother00-9d89-4aa6-99ff-13c225365b5d")
-        self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
+            identity="mother00-9d89-4aa6-99ff-13c225365b5d")
+        self.assertEqual(d_mom.identity,
+                         "mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.messageset, 1)
         self.assertEqual(d_mom.next_sequence_number, 15)
         self.assertEqual(d_mom.lang, "eng_NG")
         self.assertEqual(d_mom.schedule, 1)
 
         d_friend = SubscriptionRequest.objects.get(
-            contact="friend00-73a2-4d89-b045-d52004c025fe")
-        self.assertEqual(d_friend.contact,
+            identity="friend00-73a2-4d89-b045-d52004c025fe")
+        self.assertEqual(d_friend.identity,
                          "friend00-73a2-4d89-b045-d52004c025fe")
         self.assertEqual(d_friend.messageset, 3)
         self.assertEqual(d_friend.next_sequence_number, 5)
@@ -1184,7 +1331,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             match_querystring=True
         )
         # mock household messageset lookup
-        query_string = '?short_name=prebirth.household.text.10_42'
+        query_string = '?short_name=prebirth.household.audio.10_42.fri.9_11'
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
@@ -1194,7 +1341,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
                 "previous": None,
                 "results": [{
                     "id": 3,
-                    "short_name": 'prebirth.household.text.10_42',
+                    "short_name": 'prebirth.household.audio.10_42.fri.9_11',
                     "default_schedule": 3
                 }]
             },
@@ -1237,8 +1384,9 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         self.assertEqual(result, "2 SubscriptionRequests created")
 
         d_mom = SubscriptionRequest.objects.get(
-            contact="mother00-9d89-4aa6-99ff-13c225365b5d")
-        self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
+            identity="mother00-9d89-4aa6-99ff-13c225365b5d")
+        self.assertEqual(d_mom.identity,
+                         "mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.messageset, 2)
         self.assertEqual(d_mom.next_sequence_number, 10)
         self.assertEqual(d_mom.lang, "eng_NG")
@@ -1247,8 +1395,8 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
                          "http://registration.dev.example.org/static/audio/registation/eng_NG/welcome_mother.mp3")  # noqa
 
         d_friend = SubscriptionRequest.objects.get(
-            contact="friend00-73a2-4d89-b045-d52004c025fe")
-        self.assertEqual(d_friend.contact,
+            identity="friend00-73a2-4d89-b045-d52004c025fe")
+        self.assertEqual(d_friend.identity,
                          "friend00-73a2-4d89-b045-d52004c025fe")
         self.assertEqual(d_friend.messageset, 3)
         self.assertEqual(d_friend.next_sequence_number, 5)
@@ -1279,7 +1427,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             match_querystring=True
         )
         # mock household messageset lookup
-        query_string = '?short_name=prebirth.household.text.10_42'
+        query_string = '?short_name=prebirth.household.audio.10_42.fri.9_11'
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
@@ -1289,7 +1437,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
                 "previous": None,
                 "results": [{
                     "id": 3,
-                    "short_name": 'prebirth.household.text.10_42',
+                    "short_name": 'prebirth.household.audio.10_42.fri.9_11',
                     "default_schedule": 3
                 }]
             },
@@ -1335,7 +1483,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             match_querystring=True
         )
 
-        # mock household SMS send
+        # mock mother SMS send
         responses.add(
             responses.POST,
             'http://localhost:8006/api/v1/outbound/',
@@ -1359,16 +1507,17 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         self.assertEqual(result, "2 SubscriptionRequests created")
 
         d_mom = SubscriptionRequest.objects.get(
-            contact="mother00-9d89-4aa6-99ff-13c225365b5d")
-        self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
+            identity="mother00-9d89-4aa6-99ff-13c225365b5d")
+        self.assertEqual(d_mom.identity,
+                         "mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.messageset, 1)
         self.assertEqual(d_mom.next_sequence_number, 15)
         self.assertEqual(d_mom.lang, "eng_NG")
         self.assertEqual(d_mom.schedule, 1)
 
         d_family = SubscriptionRequest.objects.get(
-            contact="family00-73a2-4d89-b045-d52004c025fe")
-        self.assertEqual(d_family.contact,
+            identity="family00-73a2-4d89-b045-d52004c025fe")
+        self.assertEqual(d_family.identity,
                          "family00-73a2-4d89-b045-d52004c025fe")
         self.assertEqual(d_family.messageset, 3)
         self.assertEqual(d_family.next_sequence_number, 5)
@@ -1397,7 +1546,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             match_querystring=True
         )
         # mock household messageset lookup
-        query_string = '?short_name=prebirth.household.text.10_42'
+        query_string = '?short_name=prebirth.household.audio.10_42.fri.9_11'
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
@@ -1407,7 +1556,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
                 "previous": None,
                 "results": [{
                     "id": 3,
-                    "short_name": 'prebirth.household.text.10_42',
+                    "short_name": 'prebirth.household.audio.10_42.fri.9_11',
                     "default_schedule": 3
                 }]
             },
@@ -1451,7 +1600,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             match_querystring=True
         )
 
-        # mock household SMS send
+        # mock mother SMS send
         responses.add(
             responses.POST,
             'http://localhost:8006/api/v1/outbound/',
@@ -1476,16 +1625,18 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         self.assertEqual(result, "2 SubscriptionRequests created")
 
         d_mom = SubscriptionRequest.objects.get(
-            contact="mother00-9d89-4aa6-99ff-13c225365b5d")
-        self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
+            identity="mother00-9d89-4aa6-99ff-13c225365b5d")
+        self.assertEqual(d_mom.identity,
+                         "mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.messageset, 1)
         self.assertEqual(d_mom.next_sequence_number, 60)
         self.assertEqual(d_mom.lang, "eng_NG")
         self.assertEqual(d_mom.schedule, 1)
 
         d_dad = SubscriptionRequest.objects.get(
-            contact="father00-73a2-4d89-b045-d52004c025fe")
-        self.assertEqual(d_dad.contact, "father00-73a2-4d89-b045-d52004c025fe")
+            identity="father00-73a2-4d89-b045-d52004c025fe")
+        self.assertEqual(d_dad.identity,
+                         "father00-73a2-4d89-b045-d52004c025fe")
         self.assertEqual(d_dad.messageset, 3)
         self.assertEqual(d_dad.next_sequence_number, 20)
         self.assertEqual(d_dad.lang, "eng_NG")
@@ -1513,7 +1664,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             match_querystring=True
         )
         # mock household messageset lookup
-        query_string = '?short_name=prebirth.household.text.10_42'
+        query_string = '?short_name=prebirth.household.audio.10_42.fri.9_11'
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
@@ -1523,7 +1674,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
                 "previous": None,
                 "results": [{
                     "id": 3,
-                    "short_name": 'prebirth.household.text.10_42',
+                    "short_name": 'prebirth.household.audio.10_42.fri.9_11',
                     "default_schedule": 3
                 }]
             },
@@ -1568,7 +1719,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             match_querystring=True
         )
 
-        # mock household SMS send
+        # mock mother SMS send
         responses.add(
             responses.POST,
             'http://localhost:8006/api/v1/outbound/',
@@ -1593,16 +1744,17 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         self.assertEqual(result, "2 SubscriptionRequests created")
 
         d_mom = SubscriptionRequest.objects.get(
-            contact="mother00-9d89-4aa6-99ff-13c225365b5d")
-        self.assertEqual(d_mom.contact, "mother00-9d89-4aa6-99ff-13c225365b5d")
+            identity="mother00-9d89-4aa6-99ff-13c225365b5d")
+        self.assertEqual(d_mom.identity,
+                         "mother00-9d89-4aa6-99ff-13c225365b5d")
         self.assertEqual(d_mom.messageset, 1)
         self.assertEqual(d_mom.next_sequence_number, 90)
         self.assertEqual(d_mom.lang, "eng_NG")
         self.assertEqual(d_mom.schedule, 1)
 
         d_family = SubscriptionRequest.objects.get(
-            contact="family00-73a2-4d89-b045-d52004c025fe")
-        self.assertEqual(d_family.contact,
+            identity="family00-73a2-4d89-b045-d52004c025fe")
+        self.assertEqual(d_family.identity,
                          "family00-73a2-4d89-b045-d52004c025fe")
         self.assertEqual(d_family.messageset, 3)
         self.assertEqual(d_family.next_sequence_number, 30)
@@ -1645,6 +1797,84 @@ class TestMetricsAPI(AuthenticatedAPITestCase):
         # Check
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["scheduled_metrics_initiated"], True)
+
+
+class TestUserCreation(AuthenticatedAPITestCase):
+
+    def test_create_user_and_token(self):
+        # Setup
+        user_request = {"email": "test@example.org"}
+        # Execute
+        request = self.adminclient.post('/api/v1/user/token/', user_request)
+        token = request.json().get('token', None)
+        # Check
+        self.assertIsNotNone(
+            token, "Could not receive authentication token on post.")
+        self.assertEqual(
+            request.status_code, 201,
+            "Status code on /api/v1/user/token/ was %s (should be 201)."
+            % request.status_code)
+
+    def test_create_user_and_token_fail_nonadmin(self):
+        # Setup
+        user_request = {"email": "test@example.org"}
+        # Execute
+        request = self.normalclient.post('/api/v1/user/token/', user_request)
+        error = request.json().get('detail', None)
+        # Check
+        self.assertIsNotNone(
+            error, "Could not receive error on post.")
+        self.assertEqual(
+            error, "You do not have permission to perform this action.",
+            "Error message was unexpected: %s."
+            % error)
+
+    def test_create_user_and_token_not_created(self):
+        # Setup
+        user_request = {"email": "test@example.org"}
+        # Execute
+        request = self.adminclient.post('/api/v1/user/token/', user_request)
+        token = request.json().get('token', None)
+        # And again, to get the same token
+        request2 = self.adminclient.post('/api/v1/user/token/', user_request)
+        token2 = request2.json().get('token', None)
+
+        # Check
+        self.assertEqual(
+            token, token2,
+            "Tokens are not equal, should be the same as not recreated.")
+
+    def test_create_user_new_token_nonadmin(self):
+        # Setup
+        user_request = {"email": "test@example.org"}
+        request = self.adminclient.post('/api/v1/user/token/', user_request)
+        token = request.json().get('token', None)
+        cleanclient = APIClient()
+        cleanclient.credentials(HTTP_AUTHORIZATION='Token %s' % token)
+        # Execute
+        request = cleanclient.post('/api/v1/user/token/', user_request)
+        error = request.json().get('detail', None)
+        # Check
+        # new user should not be admin
+        self.assertIsNotNone(
+            error, "Could not receive error on post.")
+        self.assertEqual(
+            error, "You do not have permission to perform this action.",
+            "Error message was unexpected: %s."
+            % error)
+
+
+class TestHealthcheckAPI(AuthenticatedAPITestCase):
+
+    def test_healthcheck_read(self):
+        # Setup
+        # Execute
+        response = self.normalclient.get('/api/health/',
+                                         content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["up"], True)
+        self.assertEqual(response.data["result"]["database"], "Accessible")
 
 
 class TestMetrics(AuthenticatedAPITestCase):
@@ -1816,7 +2046,7 @@ class TestSubscriptionRequestWebhook(AuthenticatedAPITestCase):
     #         "data": {
     #             "messageset": 1,
     #             "updated_at": "2016-02-17T07:59:42.831568+00:00",
-    #             "contact": "mother00-9d89-4aa6-99ff-13c225365b5d",
+    #             "identity": "mother00-9d89-4aa6-99ff-13c225365b5d",
     #             "lang": "eng_NG",
     #             "created_at": "2016-02-17T07:59:42.831533+00:00",
     #             "id": "5282ed58-348f-4a54-b1ff-f702e36ec3cc",
@@ -1841,7 +2071,7 @@ class TestSubscriptionRequestWebhook(AuthenticatedAPITestCase):
     #     # Check
     #     self.assertEqual(result, "1 SubscriptionRequest created")
     #     d_mom = SubscriptionRequest.objects.last()
-    #     self.assertEqual(d_mom.contact,
+    #     self.assertEqual(d_mom.identity,
     #                      "mother00-9d89-4aa6-99ff-13c225365b5d")
     #     self.assertEqual(d_mom.messageset, 1)
     #     self.assertEqual(d_mom.next_sequence_number, 1)

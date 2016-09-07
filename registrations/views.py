@@ -1,13 +1,15 @@
+import django_filters
 from django.contrib.auth.models import User, Group
 from .models import Source, Registration
 from rest_hooks.models import Hook
-from rest_framework import viewsets, mixins, generics
+from rest_framework import viewsets, mixins, generics, status, filters
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.authtoken.models import Token
 from .serializers import (UserSerializer, GroupSerializer,
                           SourceSerializer, RegistrationSerializer,
-                          HookSerializer)
+                          HookSerializer, CreateUserSerializer)
 from hellomama_registration.utils import get_available_metrics
 # Uncomment line below if scheduled metrics are added
 # from .tasks import scheduled_metrics
@@ -43,6 +45,29 @@ class GroupViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = (IsAuthenticated,)
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
+
+
+class UserView(APIView):
+    """ API endpoint that allows users creation and returns their token.
+    Only admin users can do this to avoid permissions escalation.
+    """
+    permission_classes = (IsAdminUser,)
+
+    def post(self, request):
+        '''Create a user and token, given an email. If user exists just
+        provide the token.'''
+        serializer = CreateUserSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        email = serializer.validated_data.get('email')
+        try:
+            user = User.objects.get(username=email)
+        except User.DoesNotExist:
+            user = User.objects.create_user(email, email=email)
+        token, created = Token.objects.get_or_create(user=user)
+
+        return Response(
+            status=status.HTTP_201_CREATED, data={'token': token.key})
 
 
 class SourceViewSet(viewsets.ModelViewSet):
@@ -89,10 +114,51 @@ class RegistrationPost(mixins.CreateModelMixin, generics.GenericAPIView):
         request.data["source"] = source.id
         return self.create(request, *args, **kwargs)
 
-    # TODO make this work in test harness, works in production
-    # def perform_create(self, serializer):
-    #     serializer.save(created_by=self.request.user,
-    #                     updated_by=self.request.user)
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user,
+                        updated_by=self.request.user)
 
-    # def perform_update(self, serializer):
-    #     serializer.save(updated_by=self.request.user)
+    def perform_update(self, serializer):
+        serializer.save(updated_by=self.request.user)
+
+
+class RegistrationFilter(filters.FilterSet):
+    """Filter for registrations created, using ISO 8601 formatted dates"""
+    created_before = django_filters.IsoDateTimeFilter(name="created_at",
+                                                      lookup_type="lte")
+    created_after = django_filters.IsoDateTimeFilter(name="created_at",
+                                                     lookup_type="gte")
+
+    class Meta:
+        model = Registration
+        ('stage', 'mother_id', 'validated', 'source', 'created_at')
+        fields = ['stage', 'mother_id', 'validated', 'source',
+                  'created_before', 'created_after']
+
+
+class RegistrationGetViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    API endpoint that allows Registrations to be viewed.
+    """
+    permission_classes = (IsAuthenticated,)
+    queryset = Registration.objects.all()
+    serializer_class = RegistrationSerializer
+    filter_class = RegistrationFilter
+
+
+class HealthcheckView(APIView):
+
+    """ Healthcheck Interaction
+        GET - returns service up - getting auth'd requires DB
+    """
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request, *args, **kwargs):
+        status = 200
+        resp = {
+            "up": True,
+            "result": {
+                "database": "Accessible"
+            }
+        }
+        return Response(resp, status=status)

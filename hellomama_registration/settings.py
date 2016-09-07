@@ -58,7 +58,8 @@ INSTALLED_APPS = (
     'rest_hooks',
     # us
     'registrations',
-    'changes'
+    'changes',
+    'uniqueids'
 
 )
 
@@ -181,11 +182,14 @@ CELERY_ROUTES = {
     'changes.tasks.implement_action': {
         'queue': 'priority',
     },
-    'registrations.tasks.deliver_hook_wrapper': {
+    'registrations.tasks.DeliverHook': {
         'queue': 'priority',
     },
     'registrations.tasks.fire_metric': {
         'queue': 'metrics',
+    },
+    'uniqueids.tasks.add_unique_id_to_identity': {
+        'queue': 'priority',
     },
 }
 

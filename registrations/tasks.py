@@ -208,7 +208,7 @@ class ValidateRegistration(Task):
             utils.get_messageset_schedule_sequence(mother_short_name, weeks)
 
         mother_sub = {
-            "contact": registration.mother_id,
+            "identity": registration.mother_id,
             "messageset": mother_msgset_id,
             "next_sequence_number": next_sequence_number,
             "lang": registration.data["language"],
@@ -217,7 +217,8 @@ class ValidateRegistration(Task):
         }
 
         # Add mother welcome message
-        if 'voice_days' in registration.data:
+        if 'voice_days' in registration.data and \
+                registration.data["voice_days"] != "":
             mother_sub["metadata"]["prepend_next_delivery"] = \
                 "%s/static/audio/registation/%s/welcome_mother.mp3" % (
                 settings.PUBLIC_HOST,
@@ -248,14 +249,14 @@ class ValidateRegistration(Task):
 
             household_short_name = utils.get_messageset_short_name(
                 registration.stage, 'household', registration.data["msg_type"],
-                registration.data["preg_week"], None, None
+                registration.data["preg_week"], "fri", "9_11"
             )
 
             household_msgset_id, household_msgset_schedule, seq_number =\
                 utils.get_messageset_schedule_sequence(
                     household_short_name, weeks)
             household_sub = {
-                "contact": registration.data["receiver_id"],
+                "identity": registration.data["receiver_id"],
                 "messageset": household_msgset_id,
                 "next_sequence_number": seq_number,
                 "lang": registration.data["language"],
@@ -263,19 +264,10 @@ class ValidateRegistration(Task):
                 "metadata": {}
             }
             # Add household welcome message
-            if 'voice_days' in registration.data:
-                household_sub["metadata"]["prepend_next_delivery"] = \
-                    "%s/static/audio/registation/%s/welcome_household.mp3" % (
-                    settings.PUBLIC_HOST,
-                    registration.data["language"])
-            else:
-                payload = {
-                    "to_addr": utils.get_identity_address(
-                        registration.data["receiver_id"]),
-                    "content": settings.HOUSEHOLD_WELCOME_TEXT_NG_ENG,
-                    "metadata": {}
-                }
-                utils.post_message(payload)
+            household_sub["metadata"]["prepend_next_delivery"] = \
+                "%s/static/audio/registation/%s/welcome_household.mp3" % (
+                settings.PUBLIC_HOST,
+                registration.data["language"])
             SubscriptionRequest.objects.create(**household_sub)
             return "2 SubscriptionRequests created"
 
