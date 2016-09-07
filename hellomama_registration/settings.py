@@ -14,7 +14,6 @@ import os
 import djcelery
 import dj_database_url
 import mimetypes
-from hellomama_registration.utils import MSG_TYPES
 
 # Support SVG on admin
 mimetypes.add_type("image/svg+xml", ".svg", True)
@@ -192,6 +191,8 @@ CELERY_ROUTES = {
         'queue': 'priority',
     },
 }
+
+MSG_TYPES = ["text", "audio"]
 
 METRICS_REALTIME = [
     'registrations.created.sum',

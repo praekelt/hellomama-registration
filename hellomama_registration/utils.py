@@ -4,9 +4,6 @@ import json
 from django.conf import settings
 
 
-MSG_TYPES = ["text", "audio"]
-
-
 def get_today():
     return datetime.datetime.today()
 
