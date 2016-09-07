@@ -36,9 +36,7 @@ def is_valid_msg_type(msg_type):
 
 
 def is_valid_msg_receiver(msg_receiver):
-    return msg_receiver in ["mother_father", "mother_only", "father_only",
-                            "mother_family", "mother_friend", "friend_only",
-                            "family_only"]
+    return msg_receiver in settings.RECEIVER_TYPES
 
 
 def is_valid_loss_reason(loss_reason):

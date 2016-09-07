@@ -1769,6 +1769,13 @@ class TestMetricsAPI(AuthenticatedAPITestCase):
                 'registrations.unique_operators.sum',
                 'registrations.msg_type.text.sum',
                 'registrations.msg_type.audio.sum',
+                'registrations.receiver_type.mother_father.sum',
+                'registrations.receiver_type.mother_only.sum',
+                'registrations.receiver_type.father_only.sum',
+                'registrations.receiver_type.mother_family.sum',
+                'registrations.receiver_type.mother_friend.sum',
+                'registrations.receiver_type.friend_only.sum',
+                'registrations.receiver_type.family_only.sum',
             ]
         )
 
