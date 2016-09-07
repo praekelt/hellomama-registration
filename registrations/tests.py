@@ -252,6 +252,14 @@ class AuthenticatedAPITestCase(APITestCase):
         self._replace_post_save_hooks()
         tasks.get_metric_client = self._replace_get_metric_client
 
+        # Add a user with an email username
+        self.emailusername = 'guy@example.com'
+        self.emailpassword = 'guypassword'
+        self.normaluser = User.objects.create_user(
+            self.emailusername,
+            'guy@example.com',
+            self.emailpassword)
+
         # Normal User setup
         self.normalusername = 'testnormaluser'
         self.normalpassword = 'testnormalpass'
@@ -1606,6 +1614,8 @@ class TestMetricsAPI(AuthenticatedAPITestCase):
 
     def test_metrics_read(self):
         # Setup
+        self.make_source_normaluser()
+        self.make_source_adminuser()
         # Execute
         response = self.adminclient.get(
             '/api/metrics/', content_type='application/json')
