@@ -21,9 +21,9 @@ from go_http.metrics import MetricsApiClient
 
 from hellomama_registration import utils
 from registrations import tasks
-from .models import (Source, Registration, SubscriptionRequest,
-                     registration_post_save, fire_created_metric,
-                     fire_unique_operator_metric)
+from .models import (
+    Source, Registration, SubscriptionRequest, registration_post_save,
+    fire_created_metric, fire_unique_operator_metric, fire_message_type_metric)
 from .tasks import (
     validate_registration,
     is_valid_date, is_valid_uuid, is_valid_lang, is_valid_msg_type,
@@ -175,6 +175,8 @@ class AuthenticatedAPITestCase(APITestCase):
         post_save.disconnect(receiver=fire_created_metric,
                              sender=Registration)
         post_save.disconnect(receiver=fire_unique_operator_metric,
+                             sender=Registration)
+        post_save.disconnect(receiver=fire_message_type_metric,
                              sender=Registration)
         post_save.disconnect(receiver=model_saved,
                              dispatch_uid='instance-saved-hook')
@@ -1762,6 +1764,8 @@ class TestMetricsAPI(AuthenticatedAPITestCase):
             response.data["metrics_available"], [
                 'registrations.created.sum',
                 'registrations.unique_operators.sum',
+                'registrations.msg_type.text.sum',
+                'registrations.msg_type.audio.sum',
             ]
         )
 
@@ -1971,6 +1975,24 @@ class TestMetrics(AuthenticatedAPITestCase):
         self.assertEqual(len(responses.calls), 2)
         # remove post_save hooks to prevent teardown errors
         post_save.disconnect(fire_unique_operator_metric, sender=Registration)
+
+    @responses.activate
+    def test_message_type_metric(self):
+        """
+        When creating a registration, a metric should be fired for the message
+        type that the registration is created for.
+        """
+        adapter = self._mount_session()
+        post_save.connect(fire_message_type_metric, sender=Registration)
+
+        self.make_registration_adminuser()
+
+        self._check_request(
+            adapter.request, 'POST',
+            data={"registrations.msg_type.text.sum": 1.0}
+        )
+
+        post_save.disconnect(fire_message_type_metric, sender=Registration)
 
 
 class TestSubscriptionRequestWebhook(AuthenticatedAPITestCase):
