@@ -23,7 +23,8 @@ from hellomama_registration import utils
 from registrations import tasks
 from .models import (
     Source, Registration, SubscriptionRequest, registration_post_save,
-    fire_created_metric, fire_unique_operator_metric, fire_message_type_metric)
+    fire_created_metric, fire_unique_operator_metric, fire_message_type_metric,
+    fire_receiver_type_metric)
 from .tasks import (
     validate_registration,
     is_valid_date, is_valid_uuid, is_valid_lang, is_valid_msg_type,
@@ -177,6 +178,8 @@ class AuthenticatedAPITestCase(APITestCase):
         post_save.disconnect(receiver=fire_unique_operator_metric,
                              sender=Registration)
         post_save.disconnect(receiver=fire_message_type_metric,
+                             sender=Registration)
+        post_save.disconnect(receiver=fire_receiver_type_metric,
                              sender=Registration)
         post_save.disconnect(receiver=model_saved,
                              dispatch_uid='instance-saved-hook')

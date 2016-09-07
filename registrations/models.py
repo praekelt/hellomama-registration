@@ -119,6 +119,19 @@ def fire_message_type_metric(sender, instance, created, **kwargs):
         })
 
 
+@receiver(post_save, sender=Registration)
+def fire_receiver_type_metric(sender, instance, created, **kwargs):
+    """Fires a metric for each receiver message type of each subscription."""
+    from .tasks import fire_metric, is_valid_msg_receiver
+    if (created and instance.data and instance.data['msg_receiver'] and
+            is_valid_msg_receiver(instance.data['msg_receiver'])):
+        fire_metric.apply_async(kwargs={
+            "metric_name": 'registrations.receiver_type.%s.sum' % (
+                instance.data['msg_receiver']),
+            "metric_value": 1.0,
+        })
+
+
 @python_2_unicode_compatible
 class SubscriptionRequest(models.Model):
     """ A data model that maps to the Stagebased Store
