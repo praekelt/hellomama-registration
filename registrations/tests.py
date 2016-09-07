@@ -1974,6 +1974,24 @@ class TestMetrics(AuthenticatedAPITestCase):
         # remove post_save hooks to prevent teardown errors
         post_save.disconnect(fire_unique_operator_metric, sender=Registration)
 
+    @responses.activate
+    def test_message_type_metric(self):
+        """
+        When creating a registration, a metric should be fired for the message
+        type that the registration is created for.
+        """
+        adapter = self._mount_session()
+        post_save.connect(fire_message_type_metric, sender=Registration)
+
+        self.make_registration_adminuser()
+
+        self._check_request(
+            adapter.request, 'POST',
+            data={"registrations.msg_type.text.sum": 1.0}
+        )
+
+        post_save.disconnect(fire_message_type_metric, sender=Registration)
+
 
 class TestSubscriptionRequestWebhook(AuthenticatedAPITestCase):
 
