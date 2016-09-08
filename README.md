@@ -17,4 +17,7 @@ HelloMama Registration accepts registrations for the Hello Mama project.
 `sum` Total number of unique health workers who have completed registrations
 
 ##### registrations.msg_type.{{type}}.sum
-`sum` Total number of registrations per message type
+`sum` Number of registrations per message type
+
+##### registrations.msg_type.{{type}}.last
+`last` Total number of registrations per message type
