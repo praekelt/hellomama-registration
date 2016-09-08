@@ -95,6 +95,17 @@ def fire_created_metric(sender, instance, created, **kwargs):
 
 
 @receiver(post_save, sender=Registration)
+def fire_source_metric(sender, instance, created, **kwargs):
+    from .tasks import fire_metric
+    if created:
+        fire_metric.apply_async(kwargs={
+            "metric_name": 'registrations.source.%s.sum' % (
+                instance.source.user.username),
+            "metric_value": 1.0
+        })
+
+
+@receiver(post_save, sender=Registration)
 def fire_unique_operator_metric(sender, instance, created, **kwargs):
     # if registration is made by a new unique user (operator), fire a metric
     from .tasks import fire_metric
