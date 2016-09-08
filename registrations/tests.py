@@ -38,10 +38,12 @@ class RecordingAdapter(TestAdapter):
 
     """ Record the request that was handled by the adapter.
     """
-    request = None
+    def __init__(self, *args, **kwargs):
+        self.requests = []
+        super(RecordingAdapter, self).__init__(*args, **kwargs)
 
     def send(self, request, *args, **kw):
-        self.request = request
+        self.requests.append(request)
         return super(RecordingAdapter, self).send(request, *args, **kw)
 
 
@@ -1902,8 +1904,9 @@ class TestMetrics(AuthenticatedAPITestCase):
             "session": self.session
         })
         # Check
+        [request] = adapter.requests
         self._check_request(
-            adapter.request, 'POST',
+            request, 'POST',
             data={"foo.last": 1.0}
         )
         self.assertEqual(result.get(),
@@ -1919,8 +1922,9 @@ class TestMetrics(AuthenticatedAPITestCase):
         self.make_registration_adminuser()
 
         # Check
+        [request] = adapter.requests
         self._check_request(
-            adapter.request, 'POST',
+            request, 'POST',
             data={"registrations.created.sum": 1.0}
         )
         # remove post_save hooks to prevent teardown errors
@@ -1936,8 +1940,9 @@ class TestMetrics(AuthenticatedAPITestCase):
         self.make_registration_adminuser()
 
         # Check
+        [request] = adapter.requests
         self._check_request(
-            adapter.request, 'POST',
+            request, 'POST',
             data={"registrations.unique_operators.sum": 1.0}
         )
 
