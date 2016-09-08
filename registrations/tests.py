@@ -12,6 +12,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from django.db.models.signals import post_save
 from django.conf import settings
+from django.core.cache import cache
 from rest_framework import status
 from rest_framework.test import APIClient
 from rest_framework.authtoken.models import Token
@@ -1984,17 +1985,58 @@ class TestMetrics(AuthenticatedAPITestCase):
     @responses.activate
     def test_message_type_metric(self):
         """
-        When creating a registration, a metric should be fired for the message
-        type that the registration is created for.
+        When creating a registration, two metrics should be fired for the
+        message type that the registration is created for, one of type sum, and
+        one of type last.
         """
         adapter = self._mount_session()
         post_save.connect(fire_message_type_metric, sender=Registration)
 
         self.make_registration_adminuser()
 
+        [request_sum, request_last] = adapter.requests
         self._check_request(
-            adapter.request, 'POST',
+            request_sum, 'POST',
             data={"registrations.msg_type.text.sum": 1.0}
+        )
+        self._check_request(
+            request_last, 'POST',
+            data={"registrations.msg_type.text.last": 1.0}
+        )
+
+        post_save.disconnect(fire_message_type_metric, sender=Registration)
+
+    @responses.activate
+    def test_message_type_metric_multiple(self):
+        """
+        When creating a registration, two metrics should be fired for the
+        message type that the registration is created for, one of type sum, and
+        one of type last. The sum metric should always be one, the last metric
+        should increment for each registration of that type.
+        """
+        adapter = self._mount_session()
+        post_save.connect(fire_message_type_metric, sender=Registration)
+
+        cache.clear()
+        self.make_registration_adminuser()
+        self.make_registration_adminuser()
+
+        [r_sum1, r_last1, r_sum2, r_last2] = adapter.requests
+        self._check_request(
+            r_sum1, 'POST',
+            data={"registrations.msg_type.text.sum": 1.0}
+        )
+        self._check_request(
+            r_last1, 'POST',
+            data={"registrations.msg_type.text.last": 1.0}
+        )
+        self._check_request(
+            r_sum2, 'POST',
+            data={"registrations.msg_type.text.sum": 1.0}
+        )
+        self._check_request(
+            r_last2, 'POST',
+            data={"registrations.msg_type.text.last": 2.0}
         )
 
         post_save.disconnect(fire_message_type_metric, sender=Registration)
