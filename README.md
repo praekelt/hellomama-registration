@@ -1,6 +1,10 @@
 # hellomama-registration
 HelloMama Registration accepts registrations for the Hello Mama project.
 
+This app uses the Django cache framework for efficient calculation of metrics,
+so if you are running multiple instances, make sure to setup a shared Django
+cache backend for them.
+
 ## Apps & Models:
   * registrations
     * Source
