@@ -1,7 +1,9 @@
 import datetime
 import requests
 import json
+import re
 from django.conf import settings
+from registrations.models import Source
 
 
 def get_today():
@@ -219,5 +221,13 @@ def get_available_metrics():
     available_metrics = []
     available_metrics.extend(settings.METRICS_REALTIME)
     available_metrics.extend(settings.METRICS_SCHEDULED)
+
+    sources = Source.objects.all()
+    for source in sources:
+        # only append usernames with characters that are all alphanumeric
+        # and/or underscores
+        if re.match(r'\w+$', source.user.username):
+            available_metrics.append(
+                "registrations.source.%s.sum" % source.user.username)
 
     return available_metrics

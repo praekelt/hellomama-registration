@@ -196,7 +196,7 @@ MSG_TYPES = ["text", "audio"]
 
 METRICS_REALTIME = [
     'registrations.created.sum',
-    'registrations.unique_operators.sum'
+    'registrations.unique_operators.sum',
 ]
 METRICS_REALTIME.extend(
     ['registrations.msg_type.%s.sum' % mt for mt in MSG_TYPES])
