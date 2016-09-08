@@ -12,10 +12,10 @@ from rest_framework.authtoken.models import Token
 from rest_hooks.models import model_saved
 
 from hellomama_registration import utils
-from registrations.models import (Source, Registration, SubscriptionRequest,
-                                  registration_post_save, fire_created_metric,
-                                  fire_source_metric,
-                                  fire_unique_operator_metric)
+from registrations.models import (
+    Source, Registration, SubscriptionRequest, registration_post_save,
+    fire_created_metric, fire_unique_operator_metric, fire_message_type_metric,
+    fire_source_metric)
 from .models import Change, change_post_save
 from .tasks import implement_action
 
@@ -73,6 +73,8 @@ class AuthenticatedAPITestCase(APITestCase):
         post_save.disconnect(receiver=fire_source_metric,
                              sender=Registration)
         post_save.disconnect(receiver=fire_unique_operator_metric,
+                             sender=Registration)
+        post_save.disconnect(receiver=fire_message_type_metric,
                              sender=Registration)
         post_save.disconnect(receiver=model_saved,
                              dispatch_uid='instance-saved-hook')

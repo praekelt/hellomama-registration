@@ -15,7 +15,6 @@ import djcelery
 import dj_database_url
 import mimetypes
 
-
 # Support SVG on admin
 mimetypes.add_type("image/svg+xml", ".svg", True)
 mimetypes.add_type("image/svg+xml", ".svgz", True)
@@ -193,10 +192,14 @@ CELERY_ROUTES = {
     },
 }
 
+MSG_TYPES = ["text", "audio"]
+
 METRICS_REALTIME = [
     'registrations.created.sum',
     'registrations.unique_operators.sum',
 ]
+METRICS_REALTIME.extend(
+    ['registrations.msg_type.%s.sum' % mt for mt in MSG_TYPES])
 METRICS_SCHEDULED = [
 ]
 METRICS_SCHEDULED_TASKS = [

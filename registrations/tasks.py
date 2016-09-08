@@ -32,7 +32,7 @@ def is_valid_lang(lang):
 
 
 def is_valid_msg_type(msg_type):
-    return msg_type in ["text", "audio"]
+    return msg_type in settings.MSG_TYPES
 
 
 def is_valid_msg_receiver(msg_receiver):
