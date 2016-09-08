@@ -1769,6 +1769,8 @@ class TestMetricsAPI(AuthenticatedAPITestCase):
                 'registrations.unique_operators.sum',
                 'registrations.msg_type.text.sum',
                 'registrations.msg_type.audio.sum',
+                'registrations.msg_type.text.last',
+                'registrations.msg_type.audio.last',
             ]
         )
 
