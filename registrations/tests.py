@@ -1,4 +1,4 @@
-﻿import json
+import json
 import uuid
 import datetime
 import responses
@@ -12,6 +12,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from django.db.models.signals import post_save
 from django.conf import settings
+from django.core.cache import cache
 from rest_framework import status
 from rest_framework.test import APIClient
 from rest_framework.authtoken.models import Token
@@ -24,7 +25,7 @@ from registrations import tasks
 from .models import (
     Source, Registration, SubscriptionRequest, registration_post_save,
     fire_created_metric, fire_unique_operator_metric, fire_message_type_metric,
-    fire_receiver_type_metric)
+    fire_source_metric, fire_receiver_type_metric)
 from .tasks import (
     validate_registration,
     is_valid_date, is_valid_uuid, is_valid_lang, is_valid_msg_type,
@@ -39,10 +40,12 @@ class RecordingAdapter(TestAdapter):
 
     """ Record the request that was handled by the adapter.
     """
-    request = None
+    def __init__(self, *args, **kwargs):
+        self.requests = []
+        super(RecordingAdapter, self).__init__(*args, **kwargs)
 
     def send(self, request, *args, **kw):
-        self.request = request
+        self.requests.append(request)
         return super(RecordingAdapter, self).send(request, *args, **kw)
 
 
@@ -175,6 +178,8 @@ class AuthenticatedAPITestCase(APITestCase):
                              sender=Registration)
         post_save.disconnect(receiver=fire_created_metric,
                              sender=Registration)
+        post_save.disconnect(receiver=fire_source_metric,
+                             sender=Registration)
         post_save.disconnect(receiver=fire_unique_operator_metric,
                              sender=Registration)
         post_save.disconnect(receiver=fire_message_type_metric,
@@ -197,6 +202,8 @@ class AuthenticatedAPITestCase(APITestCase):
                           sender=Registration)
         post_save.connect(receiver=fire_created_metric,
                           sender=Registration)
+        post_save.connect(receiver=fire_source_metric,
+                          sender=Registration)
         post_save.connect(receiver=fire_unique_operator_metric,
                           sender=Registration)
         post_save.connect(receiver=model_saved,
@@ -216,7 +223,7 @@ class AuthenticatedAPITestCase(APITestCase):
 
     def make_source_adminuser(self):
         data = {
-            "name": "test_source_adminuser",
+            "name": "test_ussd_source_adminuser",
             "authority": "hw_full",
             "user": User.objects.get(username='testadminuser')
         }
@@ -224,7 +231,7 @@ class AuthenticatedAPITestCase(APITestCase):
 
     def make_source_normaluser(self):
         data = {
-            "name": "test_source_normaluser",
+            "name": "test_voice_source_normaluser",
             "authority": "patient",
             "user": User.objects.get(username='testnormaluser')
         }
@@ -251,6 +258,14 @@ class AuthenticatedAPITestCase(APITestCase):
         super(AuthenticatedAPITestCase, self).setUp()
         self._replace_post_save_hooks()
         tasks.get_metric_client = self._replace_get_metric_client
+
+        # Add a user with an email username
+        self.emailusername = 'guy@example.com'
+        self.emailpassword = 'guypassword'
+        self.normaluser = User.objects.create_user(
+            self.emailusername,
+            'guy@example.com',
+            self.emailpassword)
 
         # Normal User setup
         self.normalusername = 'testnormaluser'
@@ -362,7 +377,7 @@ class TestSourceAPI(AuthenticatedAPITestCase):
         # Check
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["authority"], "hw_full")
-        self.assertEqual(response.data["name"], "test_source_adminuser")
+        self.assertEqual(response.data["name"], 'test_ussd_source_adminuser')
 
     def test_get_source_normaluser(self):
         # Setup
@@ -449,7 +464,7 @@ class TestRegistrationAPI(AuthenticatedAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         d = Registration.objects.last()
-        self.assertEqual(d.source.name, 'test_source_adminuser')
+        self.assertEqual(d.source.name, 'test_ussd_source_adminuser')
         self.assertEqual(d.stage, 'prebirth')
         self.assertEqual(d.validated, False)
         self.assertEqual(d.data, {"test_key1": "test_value1"})
@@ -471,7 +486,7 @@ class TestRegistrationAPI(AuthenticatedAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         d = Registration.objects.last()
-        self.assertEqual(d.source.name, 'test_source_normaluser')
+        self.assertEqual(d.source.name, 'test_voice_source_normaluser')
         self.assertEqual(d.stage, 'postbirth')
         self.assertEqual(d.validated, False)
         self.assertEqual(d.data, {"test_key1": "test_value1"})
@@ -493,7 +508,7 @@ class TestRegistrationAPI(AuthenticatedAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         d = Registration.objects.last()
-        self.assertEqual(d.source.name, 'test_source_adminuser')
+        self.assertEqual(d.source.name, 'test_ussd_source_adminuser')
         self.assertEqual(d.stage, 'prebirth')
         self.assertEqual(d.validated, False)  # Should ignore True post_data
         self.assertEqual(d.data, {"test_key1": "test_value1"})
@@ -1758,6 +1773,8 @@ class TestMetricsAPI(AuthenticatedAPITestCase):
 
     def test_metrics_read(self):
         # Setup
+        self.make_source_normaluser()
+        self.make_source_adminuser()
         # Execute
         response = self.adminclient.get(
             '/api/metrics/', content_type='application/json')
@@ -1769,6 +1786,8 @@ class TestMetricsAPI(AuthenticatedAPITestCase):
                 'registrations.unique_operators.sum',
                 'registrations.msg_type.text.sum',
                 'registrations.msg_type.audio.sum',
+                'registrations.msg_type.text.last',
+                'registrations.msg_type.audio.last',
                 'registrations.receiver_type.mother_father.sum',
                 'registrations.receiver_type.mother_only.sum',
                 'registrations.receiver_type.father_only.sum',
@@ -1776,6 +1795,8 @@ class TestMetricsAPI(AuthenticatedAPITestCase):
                 'registrations.receiver_type.mother_friend.sum',
                 'registrations.receiver_type.friend_only.sum',
                 'registrations.receiver_type.family_only.sum',
+                'registrations.source.testnormaluser.sum',
+                'registrations.source.testadminuser.sum',
             ]
         )
 
@@ -1912,14 +1933,15 @@ class TestMetrics(AuthenticatedAPITestCase):
             "session": self.session
         })
         # Check
+        [request] = adapter.requests
         self._check_request(
-            adapter.request, 'POST',
+            request, 'POST',
             data={"foo.last": 1.0}
         )
         self.assertEqual(result.get(),
                          "Fired metric <foo.last> with value <1.0>")
 
-    def test_created_metrics(self):
+    def test_created_metric(self):
         # Setup
         adapter = self._mount_session()
         # reconnect metric post_save hook
@@ -1929,12 +1951,31 @@ class TestMetrics(AuthenticatedAPITestCase):
         self.make_registration_adminuser()
 
         # Check
+        [request] = adapter.requests
         self._check_request(
-            adapter.request, 'POST',
+            request, 'POST',
             data={"registrations.created.sum": 1.0}
         )
         # remove post_save hooks to prevent teardown errors
         post_save.disconnect(fire_created_metric, sender=Registration)
+
+    def test_source_metric(self):
+        # Setup
+        adapter = self._mount_session()
+        # reconnect metric post_save hook
+        post_save.connect(fire_source_metric, sender=Registration)
+
+        # Execute
+        self.make_registration_adminuser()
+
+        # Check
+        [request] = adapter.requests
+        self._check_request(
+            request, 'POST',
+            data={"registrations.source.testadminuser.sum": 1.0}
+        )
+        # remove post_save hooks to prevent teardown errors
+        post_save.disconnect(fire_source_metric, sender=Registration)
 
     def test_unique_operator_metric_single(self):
         # Setup
@@ -1946,8 +1987,9 @@ class TestMetrics(AuthenticatedAPITestCase):
         self.make_registration_adminuser()
 
         # Check
+        [request] = adapter.requests
         self._check_request(
-            adapter.request, 'POST',
+            request, 'POST',
             data={"registrations.unique_operators.sum": 1.0}
         )
 
@@ -1988,17 +2030,23 @@ class TestMetrics(AuthenticatedAPITestCase):
 
     def test_message_type_metric(self):
         """
-        When creating a registration, a metric should be fired for the message
-        type that the registration is created for.
+        When creating a registration, two metrics should be fired for the
+        message type that the registration is created for, one of type sum, and
+        one of type last.
         """
         adapter = self._mount_session()
         post_save.connect(fire_message_type_metric, sender=Registration)
 
         self.make_registration_adminuser()
 
+        [request_sum, request_last] = adapter.requests
         self._check_request(
-            adapter.request, 'POST',
+            request_sum, 'POST',
             data={"registrations.msg_type.text.sum": 1.0}
+        )
+        self._check_request(
+            request_last, 'POST',
+            data={"registrations.msg_type.text.last": 1.0}
         )
 
         post_save.disconnect(fire_message_type_metric, sender=Registration)
@@ -2013,12 +2061,48 @@ class TestMetrics(AuthenticatedAPITestCase):
 
         self.make_registration_adminuser()
 
+        [request] = adapter.requests
         self._check_request(
-            adapter.request, 'POST',
+            request, 'POST',
             data={"registrations.receiver_type.mother_only.sum": 1.0}
         )
 
         post_save.disconnect(fire_receiver_type_metric, sender=Registration)
+
+    @responses.activate
+    def test_message_type_metric_multiple(self):
+        """
+        When creating a registration, two metrics should be fired for the
+        message type that the registration is created for, one of type sum, and
+        one of type last. The sum metric should always be one, the last metric
+        should increment for each registration of that type.
+        """
+        adapter = self._mount_session()
+        post_save.connect(fire_message_type_metric, sender=Registration)
+
+        cache.clear()
+        self.make_registration_adminuser()
+        self.make_registration_adminuser()
+
+        [r_sum1, r_last1, r_sum2, r_last2] = adapter.requests
+        self._check_request(
+            r_sum1, 'POST',
+            data={"registrations.msg_type.text.sum": 1.0}
+        )
+        self._check_request(
+            r_last1, 'POST',
+            data={"registrations.msg_type.text.last": 1.0}
+        )
+        self._check_request(
+            r_sum2, 'POST',
+            data={"registrations.msg_type.text.sum": 1.0}
+        )
+        self._check_request(
+            r_last2, 'POST',
+            data={"registrations.msg_type.text.last": 2.0}
+        )
+
+        post_save.disconnect(fire_message_type_metric, sender=Registration)
 
 
 class TestSubscriptionRequestWebhook(AuthenticatedAPITestCase):

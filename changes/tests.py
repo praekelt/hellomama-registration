@@ -15,7 +15,7 @@ from hellomama_registration import utils
 from registrations.models import (
     Source, Registration, SubscriptionRequest, registration_post_save,
     fire_created_metric, fire_unique_operator_metric, fire_message_type_metric,
-    fire_receiver_type_metric)
+    fire_receiver_type_metric, fire_source_metric)
 from .models import Change, change_post_save
 from .tasks import implement_action
 
@@ -70,6 +70,8 @@ class AuthenticatedAPITestCase(APITestCase):
                              sender=Registration)
         post_save.disconnect(receiver=fire_created_metric,
                              sender=Registration)
+        post_save.disconnect(receiver=fire_source_metric,
+                             sender=Registration)
         post_save.disconnect(receiver=fire_unique_operator_metric,
                              sender=Registration)
         post_save.disconnect(receiver=fire_message_type_metric,
@@ -89,6 +91,8 @@ class AuthenticatedAPITestCase(APITestCase):
                           sender=Registration)
         post_save.connect(receiver=fire_created_metric,
                           sender=Registration)
+        post_save.connect(receiver=fire_source_metric,
+                          sender=Registration)
         post_save.connect(receiver=fire_unique_operator_metric,
                           sender=Registration)
         post_save.connect(receiver=model_saved,
@@ -96,7 +100,7 @@ class AuthenticatedAPITestCase(APITestCase):
 
     def make_source_adminuser(self):
         data = {
-            "name": "test_source_adminuser",
+            "name": "test_ussd_source_adminuser",
             "authority": "hw_full",
             "user": User.objects.get(username='testadminuser')
         }
@@ -104,7 +108,7 @@ class AuthenticatedAPITestCase(APITestCase):
 
     def make_source_normaluser(self):
         data = {
-            "name": "test_source_normaluser",
+            "name": "test_voice_source_normaluser",
             "authority": "patient",
             "user": User.objects.get(username='testnormaluser')
         }
@@ -313,7 +317,7 @@ class TestChangeAPI(AuthenticatedAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         d = Change.objects.last()
-        self.assertEqual(d.source.name, 'test_source_adminuser')
+        self.assertEqual(d.source.name, 'test_ussd_source_adminuser')
         self.assertEqual(d.action, 'change_language')
         self.assertEqual(d.validated, False)
         self.assertEqual(d.data, {"test_key1": "test_value1"})
@@ -335,7 +339,7 @@ class TestChangeAPI(AuthenticatedAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         d = Change.objects.last()
-        self.assertEqual(d.source.name, 'test_source_normaluser')
+        self.assertEqual(d.source.name, 'test_voice_source_normaluser')
         self.assertEqual(d.action, 'change_language')
         self.assertEqual(d.validated, False)
         self.assertEqual(d.data, {"test_key1": "test_value1"})
@@ -357,7 +361,7 @@ class TestChangeAPI(AuthenticatedAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         d = Change.objects.last()
-        self.assertEqual(d.source.name, 'test_source_adminuser')
+        self.assertEqual(d.source.name, 'test_ussd_source_adminuser')
         self.assertEqual(d.action, 'change_language')
         self.assertEqual(d.validated, False)  # Should ignore True post_data
         self.assertEqual(d.data, {"test_key1": "test_value1"})

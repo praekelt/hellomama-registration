@@ -199,10 +199,12 @@ RECEIVER_TYPES = [
 
 METRICS_REALTIME = [
     'registrations.created.sum',
-    'registrations.unique_operators.sum'
+    'registrations.unique_operators.sum',
 ]
 METRICS_REALTIME.extend(
     ['registrations.msg_type.%s.sum' % mt for mt in MSG_TYPES])
+METRICS_REALTIME.extend(
+    ['registrations.msg_type.%s.last' % mt for mt in MSG_TYPES])
 METRICS_REALTIME.extend(
     ['registrations.receiver_type.%s.sum' % rt for rt in RECEIVER_TYPES])
 METRICS_SCHEDULED = [

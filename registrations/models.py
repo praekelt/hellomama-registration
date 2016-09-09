@@ -2,6 +2,7 @@ import uuid
 
 from django.contrib.postgres.fields import JSONField
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -94,6 +95,17 @@ def fire_created_metric(sender, instance, created, **kwargs):
 
 
 @receiver(post_save, sender=Registration)
+def fire_source_metric(sender, instance, created, **kwargs):
+    from .tasks import fire_metric
+    if created:
+        fire_metric.apply_async(kwargs={
+            "metric_name": 'registrations.source.%s.sum' % (
+                instance.source.user.username),
+            "metric_value": 1.0
+        })
+
+
+@receiver(post_save, sender=Registration)
 def fire_unique_operator_metric(sender, instance, created, **kwargs):
     # if registration is made by a new unique user (operator), fire a metric
     from .tasks import fire_metric
@@ -108,14 +120,33 @@ def fire_unique_operator_metric(sender, instance, created, **kwargs):
 
 @receiver(post_save, sender=Registration)
 def fire_message_type_metric(sender, instance, created, **kwargs):
-    """Fires a metric for each message type of each subscription."""
+    """
+    Fires a metric for each message type of each registration.
+
+    Fires both a `sum` metric with 1.0 for each registration, as well as a
+    `last` metric with the total amount of registrations for that type.
+    """
     from .tasks import fire_metric, is_valid_msg_type
-    if (created and instance.data and instance.data['msg_type'] and
+    if (created and instance.data and instance.data.get('msg_type') and
             is_valid_msg_type(instance.data['msg_type'])):
+        msg_type = instance.data['msg_type']
         fire_metric.apply_async(kwargs={
-            "metric_name": 'registrations.msg_type.%s.sum' % (
-                instance.data['msg_type']),
+            "metric_name": 'registrations.msg_type.%s.sum' % msg_type,
             "metric_value": 1.0,
+        })
+
+        total_key = 'registrations.msg_type.%s.last' % msg_type
+        total = cache.get(total_key)
+        if total is None:
+            total = Registration.objects.filter(
+                data__msg_type=msg_type).count()
+            cache.set(total_key, total)
+        else:
+            cache.incr(total_key)
+            total += 1
+        fire_metric.apply_async(kwargs={
+            'metric_name': total_key,
+            'metric_value': total,
         })
 
 
