@@ -200,6 +200,9 @@ CACHES = {
 }
 
 MSG_TYPES = ["text", "audio"]
+RECEIVER_TYPES = [
+    "mother_father", "mother_only", "father_only", "mother_family",
+    "mother_friend", "friend_only", "family_only"]
 
 METRICS_REALTIME = [
     'registrations.created.sum',
@@ -209,6 +212,10 @@ METRICS_REALTIME.extend(
     ['registrations.msg_type.%s.sum' % mt for mt in MSG_TYPES])
 METRICS_REALTIME.extend(
     ['registrations.msg_type.%s.last' % mt for mt in MSG_TYPES])
+METRICS_REALTIME.extend(
+    ['registrations.receiver_type.%s.sum' % rt for rt in RECEIVER_TYPES])
+METRICS_REALTIME.extend(
+    ['registrations.receiver_type.%s.last' % rt for rt in RECEIVER_TYPES])
 METRICS_SCHEDULED = [
 ]
 METRICS_SCHEDULED_TASKS = [

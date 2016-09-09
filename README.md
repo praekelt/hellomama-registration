@@ -31,3 +31,9 @@ cache backend for them.
 
 ##### registrations.msg_type.{{type}}.last
 `last` Total number of registrations per message type
+
+##### registrations.receiver_type.{{type}}.sum
+`sum` Number of registrations per receiver type
+
+##### registrations.receiver_type.{{type}}.last
+`last` Total number of registrations per receiver type

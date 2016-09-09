@@ -118,6 +118,21 @@ def fire_unique_operator_metric(sender, instance, created, **kwargs):
         })
 
 
+def get_or_incr_cache(key, func):
+    """
+    Used to either get a value from the cache, or if the value doesn't exist
+    in the cache, run the function to get a value to use to populate the cache
+    """
+    value = cache.get(key)
+    if value is None:
+        value = func()
+        cache.set(key, value)
+    else:
+        cache.incr(key)
+        value += 1
+    return value
+
+
 @receiver(post_save, sender=Registration)
 def fire_message_type_metric(sender, instance, created, **kwargs):
     """
@@ -136,14 +151,31 @@ def fire_message_type_metric(sender, instance, created, **kwargs):
         })
 
         total_key = 'registrations.msg_type.%s.last' % msg_type
-        total = cache.get(total_key)
-        if total is None:
-            total = Registration.objects.filter(
-                data__msg_type=msg_type).count()
-            cache.set(total_key, total)
-        else:
-            cache.incr(total_key)
-            total += 1
+        total = get_or_incr_cache(
+            total_key,
+            Registration.objects.filter(data__msg_type=msg_type).count)
+        fire_metric.apply_async(kwargs={
+            'metric_name': total_key,
+            'metric_value': total,
+        })
+
+
+@receiver(post_save, sender=Registration)
+def fire_receiver_type_metric(sender, instance, created, **kwargs):
+    """Fires a metric for each receiver message type of each subscription."""
+    from .tasks import fire_metric, is_valid_msg_receiver
+    if (created and instance.data and instance.data['msg_receiver'] and
+            is_valid_msg_receiver(instance.data['msg_receiver'])):
+        msg_receiver = instance.data['msg_receiver']
+        fire_metric.apply_async(kwargs={
+            "metric_name": 'registrations.receiver_type.%s.sum' % msg_receiver,
+            "metric_value": 1.0,
+        })
+
+        total_key = 'registrations.receiver_type.%s.last' % msg_receiver
+        total = get_or_incr_cache(
+            total_key,
+            Registration.objects.filter(data__msg_receiver=msg_receiver).count)
         fire_metric.apply_async(kwargs={
             'metric_name': total_key,
             'metric_value': total,
