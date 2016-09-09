@@ -2053,18 +2053,56 @@ class TestMetrics(AuthenticatedAPITestCase):
 
     def test_receiver_type_metric(self):
         """
-        When creating a registration, a metric should be fired for the receiver
-        type that the registration is created for.
+        When creating a registration, two metrics should be fired for the
+        receiver type that the registration is created for. One of type sum
+        with a value of 1, and one of type last with the current total.
         """
         adapter = self._mount_session()
         post_save.connect(fire_receiver_type_metric, sender=Registration)
 
         self.make_registration_adminuser()
 
-        [request] = adapter.requests
+        [request_sum, request_total] = adapter.requests
         self._check_request(
-            request, 'POST',
+            request_sum, 'POST',
             data={"registrations.receiver_type.mother_only.sum": 1.0}
+        )
+        self._check_request(
+            request_total, 'POST',
+            data={"registrations.receiver_type.mother_only.last": 1.0}
+        )
+
+        post_save.disconnect(fire_receiver_type_metric, sender=Registration)
+
+    def test_receiver_type_metric_multiple(self):
+        """
+        When creating a registration, two metrics should be fired for the
+        receiver type that the registration is created for. One of type sum
+        with a value of 1, and one of type last with the current total.
+        """
+        adapter = self._mount_session()
+        post_save.connect(fire_receiver_type_metric, sender=Registration)
+
+        cache.clear()
+        self.make_registration_adminuser()
+        self.make_registration_adminuser()
+
+        [r_sum1, r_total1, r_sum2, r_total2] = adapter.requests
+        self._check_request(
+            r_sum1, 'POST',
+            data={"registrations.receiver_type.mother_only.sum": 1.0}
+        )
+        self._check_request(
+            r_total1, 'POST',
+            data={"registrations.receiver_type.mother_only.last": 1.0}
+        )
+        self._check_request(
+            r_sum2, 'POST',
+            data={"registrations.receiver_type.mother_only.sum": 1.0}
+        )
+        self._check_request(
+            r_total2, 'POST',
+            data={"registrations.receiver_type.mother_only.last": 2.0}
         )
 
         post_save.disconnect(fire_receiver_type_metric, sender=Registration)
