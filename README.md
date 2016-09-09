@@ -34,3 +34,6 @@ cache backend for them.
 
 ##### registrations.receiver_type.{{type}}.sum
 `sum` Number of registrations per receiver type
+
+##### registrations.receiver_type.{{type}}.last
+`last` Total number of registrations per receiver type
