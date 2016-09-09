@@ -192,6 +192,13 @@ CELERY_ROUTES = {
     },
 }
 
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'TIMEOUT': None,
+    },
+}
+
 MSG_TYPES = ["text", "audio"]
 
 METRICS_REALTIME = [
