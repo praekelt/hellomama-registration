@@ -1795,6 +1795,13 @@ class TestMetricsAPI(AuthenticatedAPITestCase):
                 'registrations.receiver_type.mother_friend.sum',
                 'registrations.receiver_type.friend_only.sum',
                 'registrations.receiver_type.family_only.sum',
+                'registrations.receiver_type.mother_father.last',
+                'registrations.receiver_type.mother_only.last',
+                'registrations.receiver_type.father_only.last',
+                'registrations.receiver_type.mother_family.last',
+                'registrations.receiver_type.mother_friend.last',
+                'registrations.receiver_type.friend_only.last',
+                'registrations.receiver_type.family_only.last',
                 'registrations.source.testnormaluser.sum',
                 'registrations.source.testadminuser.sum',
             ]

@@ -207,6 +207,8 @@ METRICS_REALTIME.extend(
     ['registrations.msg_type.%s.last' % mt for mt in MSG_TYPES])
 METRICS_REALTIME.extend(
     ['registrations.receiver_type.%s.sum' % rt for rt in RECEIVER_TYPES])
+METRICS_REALTIME.extend(
+    ['registrations.receiver_type.%s.last' % rt for rt in RECEIVER_TYPES])
 METRICS_SCHEDULED = [
 ]
 METRICS_SCHEDULED_TASKS = [
