@@ -25,7 +25,7 @@ from registrations import tasks
 from .models import (
     Source, Registration, SubscriptionRequest, registration_post_save,
     fire_created_metric, fire_unique_operator_metric, fire_message_type_metric,
-    fire_source_metric, fire_receiver_type_metric)
+    fire_source_metric, fire_receiver_type_metric, fire_language_metric)
 from .tasks import (
     validate_registration,
     is_valid_date, is_valid_uuid, is_valid_lang, is_valid_msg_type,
@@ -186,6 +186,8 @@ class AuthenticatedAPITestCase(APITestCase):
                              sender=Registration)
         post_save.disconnect(receiver=fire_receiver_type_metric,
                              sender=Registration)
+        post_save.disconnect(receiver=fire_language_metric,
+                             sender=Registration)
         post_save.disconnect(receiver=model_saved,
                              dispatch_uid='instance-saved-hook')
         assert not has_listeners(), (
@@ -205,6 +207,8 @@ class AuthenticatedAPITestCase(APITestCase):
         post_save.connect(receiver=fire_source_metric,
                           sender=Registration)
         post_save.connect(receiver=fire_unique_operator_metric,
+                          sender=Registration)
+        post_save.connect(receiver=fire_language_metric,
                           sender=Registration)
         post_save.connect(receiver=model_saved,
                           dispatch_uid='instance-saved-hook')
@@ -1802,6 +1806,16 @@ class TestMetricsAPI(AuthenticatedAPITestCase):
                 'registrations.receiver_type.mother_friend.last',
                 'registrations.receiver_type.friend_only.last',
                 'registrations.receiver_type.family_only.last',
+                'registrations.language.eng_NG.sum',
+                'registrations.language.hau_NG.sum',
+                'registrations.language.ibo_NG.sum',
+                'registrations.language.yor_NG.sum',
+                'registrations.language.pcm_NG.sum',
+                'registrations.language.eng_NG.last',
+                'registrations.language.hau_NG.last',
+                'registrations.language.ibo_NG.last',
+                'registrations.language.yor_NG.last',
+                'registrations.language.pcm_NG.last',
                 'registrations.source.testnormaluser.sum',
                 'registrations.source.testadminuser.sum',
             ]
@@ -2148,6 +2162,39 @@ class TestMetrics(AuthenticatedAPITestCase):
         )
 
         post_save.disconnect(fire_message_type_metric, sender=Registration)
+
+    def test_language_metric(self):
+        """
+        When creating a registration, two metrics should be fired for the
+        receiver type that the registration is created for. One of type sum
+        with a value of 1, and one of type last with the current total.
+        """
+        adapter = self._mount_session()
+        post_save.connect(fire_language_metric, sender=Registration)
+
+        cache.clear()
+        self.make_registration_adminuser()
+        self.make_registration_adminuser()
+
+        [r_sum1, r_total1, r_sum2, r_total2] = adapter.requests
+        self._check_request(
+            r_sum1, 'POST',
+            data={"registrations.language.eng_NG.sum": 1.0}
+        )
+        self._check_request(
+            r_total1, 'POST',
+            data={"registrations.language.eng_NG.last": 1.0}
+        )
+        self._check_request(
+            r_sum2, 'POST',
+            data={"registrations.language.eng_NG.sum": 1.0}
+        )
+        self._check_request(
+            r_total2, 'POST',
+            data={"registrations.language.eng_NG.last": 2.0}
+        )
+
+        post_save.disconnect(fire_language_metric, sender=Registration)
 
 
 class TestSubscriptionRequestWebhook(AuthenticatedAPITestCase):

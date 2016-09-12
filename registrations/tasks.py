@@ -28,7 +28,7 @@ def is_valid_uuid(id):
 
 
 def is_valid_lang(lang):
-    return lang in ["eng_NG", "hau_NG", "ibo_NG", "yor_NG", "pcm_NG"]
+    return lang in settings.LANGUAGES
 
 
 def is_valid_msg_type(msg_type):

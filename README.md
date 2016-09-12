@@ -37,3 +37,9 @@ cache backend for them.
 
 ##### registrations.receiver_type.{{type}}.last
 `last` Total number of registrations per receiver type
+
+##### registrations.language.{{language}}.sum
+`sum` Number of registrations per language
+
+##### registrations.language.{{language}}.last
+`last` Total number of registrations per language

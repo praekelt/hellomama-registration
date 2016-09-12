@@ -15,7 +15,7 @@ from hellomama_registration import utils
 from registrations.models import (
     Source, Registration, SubscriptionRequest, registration_post_save,
     fire_created_metric, fire_unique_operator_metric, fire_message_type_metric,
-    fire_receiver_type_metric, fire_source_metric)
+    fire_receiver_type_metric, fire_source_metric, fire_language_metric)
 from .models import Change, change_post_save
 from .tasks import implement_action
 
@@ -78,6 +78,8 @@ class AuthenticatedAPITestCase(APITestCase):
                              sender=Registration)
         post_save.disconnect(receiver=fire_receiver_type_metric,
                              sender=Registration)
+        post_save.disconnect(receiver=fire_language_metric,
+                             sender=Registration)
         post_save.disconnect(receiver=model_saved,
                              dispatch_uid='instance-saved-hook')
         assert not has_listeners(), (
@@ -94,6 +96,8 @@ class AuthenticatedAPITestCase(APITestCase):
         post_save.connect(receiver=fire_source_metric,
                           sender=Registration)
         post_save.connect(receiver=fire_unique_operator_metric,
+                          sender=Registration)
+        post_save.connect(receiver=fire_language_metric,
                           sender=Registration)
         post_save.connect(receiver=model_saved,
                           dispatch_uid='instance-saved-hook')
