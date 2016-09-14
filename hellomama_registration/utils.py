@@ -231,3 +231,14 @@ def get_available_metrics():
                 "registrations.source.%s.sum" % source.user.username)
 
     return available_metrics
+
+
+def is_valid_state(state):
+    return state in settings.STATES
+
+
+def normalise_string(string):
+    """ Strips trailing whitespace from string, lowercases it and replaces
+        spaces with underscores
+    """
+    return ((string.strip()).lower()).replace(" ", "_")

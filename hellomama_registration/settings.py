@@ -204,6 +204,7 @@ RECEIVER_TYPES = [
     "mother_father", "mother_only", "father_only", "mother_family",
     "mother_friend", "friend_only", "family_only"]
 LANGUAGES = ["eng_NG", "hau_NG", "ibo_NG", "yor_NG", "pcm_NG"]
+STATES = ["ebonyi", "cross_river", "abuja"]
 
 METRICS_REALTIME = [
     'registrations.created.sum',
