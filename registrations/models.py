@@ -93,6 +93,15 @@ def fire_created_metric(sender, instance, created, **kwargs):
             "metric_value": 1.0
         })
 
+        total_key = 'registrations.created.last'
+        total = get_or_incr_cache(
+            total_key,
+            Registration.objects.count)
+        fire_metric.apply_async(kwargs={
+            'metric_name': total_key,
+            'metric_value': total,
+        })
+
 
 @receiver(post_save, sender=Registration)
 def fire_source_metric(sender, instance, created, **kwargs):

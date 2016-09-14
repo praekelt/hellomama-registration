@@ -1972,10 +1972,14 @@ class TestMetrics(AuthenticatedAPITestCase):
         self.make_registration_adminuser()
 
         # Check
-        [request] = adapter.requests
+        [request1, request2] = adapter.requests
         self._check_request(
-            request, 'POST',
+            request1, 'POST',
             data={"registrations.created.sum": 1.0}
+        )
+        self._check_request(
+            request2, 'POST',
+            data={"registrations.created.last": 1}
         )
         # remove post_save hooks to prevent teardown errors
         post_save.disconnect(fire_created_metric, sender=Registration)
