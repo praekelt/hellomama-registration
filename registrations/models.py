@@ -207,6 +207,28 @@ def fire_language_metric(sender, instance, created, **kwargs):
         })
 
 
+@receiver(post_save, sender=Registration)
+def fire_state_metric(sender, instance, created, **kwargs):
+    """
+    Fires metrics for each state for each subscription, a sum metric for
+    the registrations over time, and a last metric for the total count.
+    """
+    from .tasks import fire_metric
+    from hellomama_registration.utils import (get_identity, is_valid_state,
+                                              normalise_string)
+    if (created and instance.data and instance.data['operator_id']):
+        identity = get_identity(instance.data['operator_id'])
+        if (identity['details'] and identity['details']['state'] and
+                is_valid_state(normalise_string(
+                    identity['details']['state']))):
+            state = identity['details']['state']
+            normalised_state = normalise_string(state)
+            fire_metric.apply_async(kwargs={
+                'metric_name': "registrations.state.%s.sum" % normalised_state,
+                'metric_value': 1.0,
+            })
+
+
 @python_2_unicode_compatible
 class SubscriptionRequest(models.Model):
     """ A data model that maps to the Stagebased Store
