@@ -207,6 +207,7 @@ LANGUAGES = ["eng_NG", "hau_NG", "ibo_NG", "yor_NG", "pcm_NG"]
 
 METRICS_REALTIME = [
     'registrations.created.sum',
+    'registrations.created.last',
     'registrations.unique_operators.sum',
 ]
 METRICS_REALTIME.extend(
