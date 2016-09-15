@@ -60,6 +60,18 @@ def get_identity_address(identity):
         return None
 
 
+def search_identities(params):
+    """ Returns the identities matching the given parameters
+    """
+    url = "%s/%s/search/" % (settings.IDENTITY_STORE_URL, "identities")
+    headers = {
+        'Authorization': 'Token %s' % settings.IDENTITY_STORE_TOKEN,
+        'Content-Type': 'application/json'
+    }
+    r = requests.get(url, params=params, headers=headers).json()
+    return r["results"]
+
+
 def patch_identity(identity, data):
     """ Patches the given identity with the data provided
     """
