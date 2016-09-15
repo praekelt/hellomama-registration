@@ -30,7 +30,7 @@ from .models import (
 from .tasks import (
     validate_registration,
     is_valid_date, is_valid_uuid, is_valid_lang, is_valid_msg_type,
-    is_valid_msg_receiver, is_valid_loss_reason)
+    is_valid_msg_receiver, is_valid_loss_reason, is_valid_state)
 
 
 def override_get_today():
@@ -696,6 +696,15 @@ class TestFieldValidation(AuthenticatedAPITestCase):
         # Check
         self.assertEqual(is_valid_lang(valid_lang), True)
         self.assertEqual(is_valid_lang(invalid_lang), False)
+
+    def test_is_valid_state(self):
+        # Setup
+        valid_state = "cross_river"
+        invalid_state = "new_jersey"
+        # Execute
+        # Check
+        self.assertEqual(is_valid_state(valid_state), True)
+        self.assertEqual(is_valid_state(invalid_state), False)
 
     def test_is_valid_msg_type(self):
         # Setup
