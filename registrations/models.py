@@ -218,7 +218,7 @@ def fire_state_metric(sender, instance, created, **kwargs):
                                               normalise_string)
     if (created and instance.data and instance.data['operator_id']):
         identity = get_identity(instance.data['operator_id'])
-        if (identity['details'] and identity['details']['state'] and
+        if (identity.get('details') and identity['details'].get('state') and
                 is_valid_state(normalise_string(
                     identity['details']['state']))):
             state = identity['details']['state']
