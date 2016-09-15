@@ -207,6 +207,17 @@ def fire_language_metric(sender, instance, created, **kwargs):
         })
 
 
+def registrations_for_state(state):
+    from hellomama_registration.utils import search_identities
+    identities = search_identities(params={"details__state": state})
+    ids = ()
+    for data in identities:
+        ids = ids + (data["id"],)
+
+    return Registration.objects.filter(
+        data__operator_id__in=ids)
+
+
 @receiver(post_save, sender=Registration)
 def fire_state_metric(sender, instance, created, **kwargs):
     """
@@ -214,8 +225,7 @@ def fire_state_metric(sender, instance, created, **kwargs):
     the registrations over time, and a last metric for the total count.
     """
     from .tasks import fire_metric, is_valid_state
-    from hellomama_registration.utils import (get_identity, search_identities,
-                                              normalise_string)
+    from hellomama_registration.utils import get_identity, normalise_string
     if (created and instance.data and instance.data['operator_id']):
         identity = get_identity(instance.data['operator_id'])
         if (identity.get('details') and identity['details'].get('state') and
@@ -229,15 +239,10 @@ def fire_state_metric(sender, instance, created, **kwargs):
             })
 
             total_key = "registrations.state.%s.last" % normalised_state
-            identities = search_identities(params={"details__state": state})
-            ids = ()
-            for data in identities:
-                ids = ids + (data["id"],)
 
             total = get_or_incr_cache(
                 total_key,
-                Registration.objects.filter(
-                    data__operator_id__in=ids).count)
+                registrations_for_state(state).count)
             fire_metric.apply_async(kwargs={
                 'metric_name': total_key,
                 'metric_value': total,
