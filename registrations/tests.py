@@ -1787,6 +1787,7 @@ class TestMetricsAPI(AuthenticatedAPITestCase):
         self.assertEqual(
             response.data["metrics_available"], [
                 'registrations.created.sum',
+                'registrations.created.last',
                 'registrations.unique_operators.sum',
                 'registrations.msg_type.text.sum',
                 'registrations.msg_type.audio.sum',
@@ -1970,12 +1971,25 @@ class TestMetrics(AuthenticatedAPITestCase):
 
         # Execute
         self.make_registration_adminuser()
+        self.make_registration_adminuser()
 
         # Check
-        [request] = adapter.requests
+        [request1, request2, request3, request4] = adapter.requests
         self._check_request(
-            request, 'POST',
+            request1, 'POST',
             data={"registrations.created.sum": 1.0}
+        )
+        self._check_request(
+            request2, 'POST',
+            data={"registrations.created.last": 1}
+        )
+        self._check_request(
+            request3, 'POST',
+            data={"registrations.created.sum": 1.0}
+        )
+        self._check_request(
+            request4, 'POST',
+            data={"registrations.created.last": 2}
         )
         # remove post_save hooks to prevent teardown errors
         post_save.disconnect(fire_created_metric, sender=Registration)

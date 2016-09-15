@@ -17,6 +17,9 @@ cache backend for them.
 ##### registrations.created.sum
 `sum` Total number of registrations created
 
+##### registrations.created.last
+`last` Total number of registrations created
+
 ##### registrations.source.ussd.sum
 `sum` Total number of registrations created via USSD
 
