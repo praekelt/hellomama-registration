@@ -249,4 +249,5 @@ def normalise_string(string):
     """ Strips trailing whitespace from string, lowercases it and replaces
         spaces with underscores
     """
-    return ((string.strip()).lower()).replace(" ", "_")
+    string = (string.strip()).lower()
+    return re.sub(r'\W+', '_', string)
