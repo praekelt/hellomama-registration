@@ -222,6 +222,10 @@ METRICS_REALTIME.extend(
     ['registrations.language.%s.sum' % l for l in LANGUAGES])
 METRICS_REALTIME.extend(
     ['registrations.language.%s.last' % l for l in LANGUAGES])
+METRICS_REALTIME.extend(
+    ['registrations.state.%s.sum' % s for s in STATES])
+METRICS_REALTIME.extend(
+    ['registrations.state.%s.last' % s for s in STATES])
 METRICS_SCHEDULED = [
 ]
 METRICS_SCHEDULED_TASKS = [
