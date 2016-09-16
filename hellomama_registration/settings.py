@@ -205,6 +205,7 @@ RECEIVER_TYPES = [
     "mother_friend", "friend_only", "family_only"]
 LANGUAGES = ["eng_NG", "hau_NG", "ibo_NG", "yor_NG", "pcm_NG"]
 STATES = ["ebonyi", "cross_river", "abuja"]
+ROLES = ["oic", "cv", "midwife", "chew", "mama"]
 
 METRICS_REALTIME = [
     'registrations.created.sum',
@@ -227,6 +228,10 @@ METRICS_REALTIME.extend(
     ['registrations.state.%s.sum' % s for s in STATES])
 METRICS_REALTIME.extend(
     ['registrations.state.%s.last' % s for s in STATES])
+METRICS_REALTIME.extend(
+    ['registrations.role.%s.sum' % r for r in ROLES])
+METRICS_REALTIME.extend(
+    ['registrations.role.%s.last' % r for r in ROLES])
 METRICS_SCHEDULED = [
 ]
 METRICS_SCHEDULED_TASKS = [
