@@ -216,9 +216,9 @@ def fire_language_metric(sender, instance, created, **kwargs):
         })
 
 
-def registrations_for_state(state):
+def registrations_for_identity_field(params):
     from hellomama_registration.utils import search_identities
-    identities = search_identities(params={"details__state": state})
+    identities = search_identities(params=params)
     ids = ()
     for data in identities:
         ids = ids + (data["id"],)
@@ -251,7 +251,40 @@ def fire_state_metric(sender, instance, created, **kwargs):
 
             total = get_or_incr_cache(
                 total_key,
-                registrations_for_state(state).count)
+                registrations_for_identity_field(
+                    {"details__state": state}).count)
+            fire_metric.apply_async(kwargs={
+                'metric_name': total_key,
+                'metric_value': total,
+            })
+
+
+# @receiver(post_save, sender=Registration)
+def fire_role_metric(sender, instance, created, **kwargs):
+    """
+    Fires metrics for each role for each subscription, a sum metric for
+    the registrations over time, and a last metric for the total count.
+    """
+    from .tasks import fire_metric, is_valid_role
+    from hellomama_registration.utils import get_identity, normalise_string
+    if (created and instance.data and instance.data['operator_id']):
+        identity = get_identity(instance.data['operator_id'])
+        if (identity.get('details') and identity['details'].get('role') and
+                is_valid_role(normalise_string(
+                    identity['details']['role']))):
+            role = identity['details']['role']
+            normalised_role = normalise_string(role)
+            fire_metric.apply_async(kwargs={
+                'metric_name': "registrations.role.%s.sum" % normalised_role,
+                'metric_value': 1.0,
+            })
+
+            total_key = "registrations.role.%s.last" % normalised_role
+
+            total = get_or_incr_cache(
+                total_key,
+                registrations_for_identity_field(
+                    {"details__role": role}).count)
             fire_metric.apply_async(kwargs={
                 'metric_name': total_key,
                 'metric_value': total,

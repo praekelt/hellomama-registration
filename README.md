@@ -52,3 +52,9 @@ cache backend for them.
 
 ##### registrations.state.{{state}}.last
 `last` Total number of registrations per state
+
+##### registrations.role.{{role}}.sum
+`sum` Number of registrations per role
+
+##### registrations.role.{{role}}.last
+`last` Total number of registrations per role
