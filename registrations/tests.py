@@ -2258,7 +2258,7 @@ class TestMetrics(AuthenticatedAPITestCase):
         resp = {
             "id": "test_id",
             "version": 1,
-            "details": {"state": "Abuja"},
+            "details": {"state": "Abuja", "role": "Midwife"},
             "communicate_through": None,
             "operator": None,
             "created_at": "2016-09-14T17:18:41.629909Z",
@@ -2277,7 +2277,7 @@ class TestMetrics(AuthenticatedAPITestCase):
             "results": [{
                 "id": "nurse000-6a07-4377-a4f6-c0485ccba234",
                 "version": 1,
-                "details": {"state": "Abuja"},
+                "details": {"state": "Abuja", "role": "Midwife"},
                 "communicate_through": None,
                 "operator": None,
                 "created_at": "2016-09-14T17:18:41.629909Z",
@@ -2334,6 +2334,53 @@ class TestMetrics(AuthenticatedAPITestCase):
         )
 
         post_save.disconnect(fire_state_metric, sender=Registration)
+
+    @responses.activate
+    def test_role_metric(self):
+        """
+        When creating a registration, two metrics should be fired for the
+        role that the user is registered as. One of type sum with a value of
+        1, and one of type last with the current total.
+        """
+        adapter = self._mount_session()
+        post_save.connect(fire_role_metric, sender=Registration)
+
+        operator_id = REG_DATA['hw_pre_mother']['operator_id']
+
+        url = 'http://localhost:8001/api/v1/identities/' + operator_id + "/"
+        responses.add_callback(
+            responses.GET, url, callback=self.identity_callback,
+            content_type="application/json")
+
+        url = 'http://localhost:8001/api/v1/identities/search/?' \
+              'details__role=Midwife'
+        responses.add_callback(
+            responses.GET, url, callback=self.identity_search_callback,
+            match_querystring=True, content_type="application/json")
+
+        cache.clear()
+        self.make_registration_adminuser()
+        self.make_registration_adminuser()
+
+        [r_sum1, r_total1, r_sum2, r_total2] = adapter.requests
+        self._check_request(
+            r_sum1, 'POST',
+            data={"registrations.role.midwife.sum": 1.0}
+        )
+        self._check_request(
+            r_total1, 'POST',
+            data={"registrations.role.midwife.last": 1.0}
+        )
+        self._check_request(
+            r_sum2, 'POST',
+            data={"registrations.role.midwife.sum": 1.0}
+        )
+        self._check_request(
+            r_total2, 'POST',
+            data={"registrations.role.midwife.last": 2.0}
+        )
+
+        post_save.disconnect(fire_role_metric, sender=Registration)
 
 
 class TestSubscriptionRequestWebhook(AuthenticatedAPITestCase):
