@@ -43,6 +43,10 @@ def is_valid_loss_reason(loss_reason):
     return loss_reason in ['miscarriage', 'stillborn', 'baby_died']
 
 
+def is_valid_state(state):
+    return state in settings.STATES
+
+
 class ValidateRegistration(Task):
     """ Task to validate a registration model entry's registration
     data.

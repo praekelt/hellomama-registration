@@ -25,11 +25,12 @@ from registrations import tasks
 from .models import (
     Source, Registration, SubscriptionRequest, registration_post_save,
     fire_created_metric, fire_unique_operator_metric, fire_message_type_metric,
-    fire_source_metric, fire_receiver_type_metric, fire_language_metric)
+    fire_source_metric, fire_receiver_type_metric, fire_language_metric,
+    fire_state_metric)
 from .tasks import (
     validate_registration,
     is_valid_date, is_valid_uuid, is_valid_lang, is_valid_msg_type,
-    is_valid_msg_receiver, is_valid_loss_reason)
+    is_valid_msg_receiver, is_valid_loss_reason, is_valid_state)
 
 
 def override_get_today():
@@ -188,6 +189,8 @@ class AuthenticatedAPITestCase(APITestCase):
                              sender=Registration)
         post_save.disconnect(receiver=fire_language_metric,
                              sender=Registration)
+        post_save.disconnect(receiver=fire_state_metric,
+                             sender=Registration)
         post_save.disconnect(receiver=model_saved,
                              dispatch_uid='instance-saved-hook')
         assert not has_listeners(), (
@@ -209,6 +212,8 @@ class AuthenticatedAPITestCase(APITestCase):
         post_save.connect(receiver=fire_unique_operator_metric,
                           sender=Registration)
         post_save.connect(receiver=fire_language_metric,
+                          sender=Registration)
+        post_save.connect(receiver=fire_state_metric,
                           sender=Registration)
         post_save.connect(receiver=model_saved,
                           dispatch_uid='instance-saved-hook')
@@ -691,6 +696,15 @@ class TestFieldValidation(AuthenticatedAPITestCase):
         # Check
         self.assertEqual(is_valid_lang(valid_lang), True)
         self.assertEqual(is_valid_lang(invalid_lang), False)
+
+    def test_is_valid_state(self):
+        # Setup
+        valid_state = "cross_river"
+        invalid_state = "new_jersey"
+        # Execute
+        # Check
+        self.assertEqual(is_valid_state(valid_state), True)
+        self.assertEqual(is_valid_state(invalid_state), False)
 
     def test_is_valid_msg_type(self):
         # Setup
@@ -1817,6 +1831,12 @@ class TestMetricsAPI(AuthenticatedAPITestCase):
                 'registrations.language.ibo_NG.last',
                 'registrations.language.yor_NG.last',
                 'registrations.language.pcm_NG.last',
+                'registrations.state.ebonyi.sum',
+                'registrations.state.cross_river.sum',
+                'registrations.state.abuja.sum',
+                'registrations.state.ebonyi.last',
+                'registrations.state.cross_river.last',
+                'registrations.state.abuja.last',
                 'registrations.source.testnormaluser.sum',
                 'registrations.source.testadminuser.sum',
             ]
@@ -2209,6 +2229,88 @@ class TestMetrics(AuthenticatedAPITestCase):
         )
 
         post_save.disconnect(fire_language_metric, sender=Registration)
+
+    def identity_callback(self, request):
+        headers = {'Content-Type': "application/json"}
+        resp = {
+            "id": "test_id",
+            "version": 1,
+            "details": {"state": "Abuja"},
+            "communicate_through": None,
+            "operator": None,
+            "created_at": "2016-09-14T17:18:41.629909Z",
+            "created_by": 1,
+            "updated_at": "2016-09-14T17:18:41.629942Z",
+            "updated_by": 1
+        }
+        return (200, headers, json.dumps(resp))
+
+    def identity_search_callback(self, request):
+        headers = {'Content-Type': "application/json"}
+        resp = {
+            "count": 1,
+            "next": None,
+            "previous": None,
+            "results": [{
+                "id": "nurse000-6a07-4377-a4f6-c0485ccba234",
+                "version": 1,
+                "details": {"state": "Abuja"},
+                "communicate_through": None,
+                "operator": None,
+                "created_at": "2016-09-14T17:18:41.629909Z",
+                "created_by": 1,
+                "updated_at": "2016-09-14T17:18:41.629942Z",
+                "updated_by": 1
+            }, ]
+        }
+        return (200, headers, json.dumps(resp))
+
+    @responses.activate
+    def test_state_metric(self):
+        """
+        When creating a registration, two metrics should be fired for the
+        state that the user is registered in. One of type sum with a value of
+        1, and one of type last with the current total.
+        """
+        adapter = self._mount_session()
+        post_save.connect(fire_state_metric, sender=Registration)
+
+        operator_id = REG_DATA['hw_pre_mother']['operator_id']
+
+        url = 'http://localhost:8001/api/v1/identities/' + operator_id + "/"
+        responses.add_callback(
+            responses.GET, url, callback=self.identity_callback,
+            content_type="application/json")
+
+        url = 'http://localhost:8001/api/v1/identities/search/?' \
+              'details__state=Abuja'
+        responses.add_callback(
+            responses.GET, url, callback=self.identity_search_callback,
+            match_querystring=True, content_type="application/json")
+
+        cache.clear()
+        self.make_registration_adminuser()
+        self.make_registration_adminuser()
+
+        [r_sum1, r_total1, r_sum2, r_total2] = adapter.requests
+        self._check_request(
+            r_sum1, 'POST',
+            data={"registrations.state.abuja.sum": 1.0}
+        )
+        self._check_request(
+            r_total1, 'POST',
+            data={"registrations.state.abuja.last": 1.0}
+        )
+        self._check_request(
+            r_sum2, 'POST',
+            data={"registrations.state.abuja.sum": 1.0}
+        )
+        self._check_request(
+            r_total2, 'POST',
+            data={"registrations.state.abuja.last": 2.0}
+        )
+
+        post_save.disconnect(fire_state_metric, sender=Registration)
 
 
 class TestSubscriptionRequestWebhook(AuthenticatedAPITestCase):

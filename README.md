@@ -46,3 +46,9 @@ cache backend for them.
 
 ##### registrations.language.{{language}}.last
 `last` Total number of registrations per language
+
+##### registrations.state.{{state}}.sum
+`sum` Number of registrations per state
+
+##### registrations.state.{{state}}.last
+`last` Total number of registrations per state

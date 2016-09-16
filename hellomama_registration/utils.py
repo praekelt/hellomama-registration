@@ -60,6 +60,18 @@ def get_identity_address(identity):
         return None
 
 
+def search_identities(params):
+    """ Returns the identities matching the given parameters
+    """
+    url = "%s/%s/search/" % (settings.IDENTITY_STORE_URL, "identities")
+    headers = {
+        'Authorization': 'Token %s' % settings.IDENTITY_STORE_TOKEN,
+        'Content-Type': 'application/json'
+    }
+    r = requests.get(url, params=params, headers=headers).json()
+    return r["results"]
+
+
 def patch_identity(identity, data):
     """ Patches the given identity with the data provided
     """
@@ -231,3 +243,11 @@ def get_available_metrics():
                 "registrations.source.%s.sum" % source.user.username)
 
     return available_metrics
+
+
+def normalise_string(string):
+    """ Strips trailing whitespace from string, lowercases it and replaces
+        spaces with underscores
+    """
+    string = (string.strip()).lower()
+    return re.sub(r'\W+', '_', string)
