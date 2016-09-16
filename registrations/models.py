@@ -216,9 +216,9 @@ def fire_language_metric(sender, instance, created, **kwargs):
         })
 
 
-def registrations_for_state(state):
+def registrations_for_identity_field(params):
     from hellomama_registration.utils import search_identities
-    identities = search_identities(params={"details__state": state})
+    identities = search_identities(params=params)
     ids = ()
     for data in identities:
         ids = ids + (data["id"],)
@@ -251,7 +251,8 @@ def fire_state_metric(sender, instance, created, **kwargs):
 
             total = get_or_incr_cache(
                 total_key,
-                registrations_for_state(state).count)
+                registrations_for_identity_field(
+                    {"details__state": state}).count)
             fire_metric.apply_async(kwargs={
                 'metric_name': total_key,
                 'metric_value': total,
