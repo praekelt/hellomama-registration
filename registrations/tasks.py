@@ -47,6 +47,10 @@ def is_valid_state(state):
     return state in settings.STATES
 
 
+def is_valid_role(role):
+    return role in settings.ROLES
+
+
 class ValidateRegistration(Task):
     """ Task to validate a registration model entry's registration
     data.
