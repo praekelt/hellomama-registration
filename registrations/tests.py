@@ -9,10 +9,11 @@ except ImportError:
     from urlparse import urlparse
 
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.db.models.signals import post_save
 from django.conf import settings
 from django.core.cache import cache
+from django.core.management import call_command
 from rest_framework import status
 from rest_framework.test import APIClient
 from rest_framework.authtoken.models import Token
@@ -22,6 +23,7 @@ from go_http.metrics import MetricsApiClient
 
 from hellomama_registration import utils
 from registrations import tasks
+from registrations.management.commands import fire_subscription_hook
 from .models import (
     Source, Registration, SubscriptionRequest, registration_post_save,
     fire_created_metric, fire_unique_operator_metric, fire_message_type_metric,
@@ -2455,3 +2457,162 @@ class TestSubscriptionRequestWebhook(AuthenticatedAPITestCase):
     #     self.assertEqual(d_mom.schedule, 1)
     #     self.assertEqual(responses.calls[0].request.url,
     #                      "http://example.com/registration/")
+
+
+class DummyDeliverer(object):
+
+    def __init__(self):
+        self.calls = []
+
+    def __call__(self, *args, **kwargs):
+        self.calls.append((args, kwargs))
+
+
+dummy_deliverer = DummyDeliverer()
+
+
+@override_settings(
+    HOOK_DELIVERER='registrations.tests.dummy_deliverer')
+class FireSubscriptionHookTest(TestCase):
+
+    def setUp(self):
+        def has_listeners():
+            return post_save.has_listeners(Registration)
+        assert has_listeners(), (
+            "Registration model has no post_save listeners. Make sure"
+            " helpers cleaned up properly in earlier tests.")
+        post_save.disconnect(receiver=registration_post_save,
+                             sender=Registration)
+        post_save.disconnect(receiver=fire_created_metric,
+                             sender=Registration)
+        post_save.disconnect(receiver=fire_source_metric,
+                             sender=Registration)
+        post_save.disconnect(receiver=fire_unique_operator_metric,
+                             sender=Registration)
+        post_save.disconnect(receiver=fire_message_type_metric,
+                             sender=Registration)
+        post_save.disconnect(receiver=fire_receiver_type_metric,
+                             sender=Registration)
+        post_save.disconnect(receiver=fire_language_metric,
+                             sender=Registration)
+        post_save.disconnect(receiver=fire_state_metric,
+                             sender=Registration)
+        post_save.disconnect(receiver=fire_role_metric,
+                             sender=Registration)
+        post_save.disconnect(receiver=model_saved,
+                             dispatch_uid='instance-saved-hook')
+        assert not has_listeners(), (
+            "Registration model still has post_save listeners. Make sure"
+            " helpers cleaned up properly in earlier tests.")
+        self.user = User.objects.create_user('un', 'email@example.com', 'pw')
+
+        # Mock message set api responses
+        query_string = '?short_name=prebirth.mother.text.10_42'
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/%s' % query_string,
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 1,
+                    "short_name": 'prebirth.mother.text.10_42',
+                    "default_schedule": 1
+                }]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+
+        # mock mother schedule lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/schedule/1/',
+            json={"id": 1, "day_of_week": "1,3,5"},
+            status=200, content_type='application/json',
+        )
+
+        # mock mother MSISDN lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8001/api/v1/identities/mother00-9d89-4aa6-99ff-13c225365b5d/addresses/msisdn?default=True',  # noqa
+            json={
+                "count": 1, "next": None, "previous": None,
+                "results": [{"address": "+234123"}]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+
+        # mock mother welcome SMS send
+        responses.add(
+            responses.POST,
+            'http://localhost:8006/api/v1/outbound/',
+            json={"id": 1},
+            status=200, content_type='application/json',
+        )
+
+    def tearDown(self):
+        def has_listeners():
+            return post_save.has_listeners(Registration)
+        assert not has_listeners(), (
+            "Registration model still has post_save listeners. Make sure"
+            " helpers removed them properly in earlier tests.")
+        post_save.connect(receiver=registration_post_save,
+                          sender=Registration)
+        post_save.connect(receiver=fire_created_metric,
+                          sender=Registration)
+        post_save.connect(receiver=fire_source_metric,
+                          sender=Registration)
+        post_save.connect(receiver=fire_unique_operator_metric,
+                          sender=Registration)
+        post_save.connect(receiver=fire_language_metric,
+                          sender=Registration)
+        post_save.connect(receiver=fire_state_metric,
+                          sender=Registration)
+        post_save.connect(receiver=fire_role_metric,
+                          sender=Registration)
+        post_save.connect(receiver=model_saved,
+                          dispatch_uid='instance-saved-hook')
+
+    def mk_hook(self, event, target='https://www.example.com', user=None):
+        user = user or self.user
+        return Hook.objects.create(user=user, event=event, target=target)
+
+    def mk_subscription_request(self, user=None, **kwargs):
+        data = {
+            "name": "test_ussd_source_adminuser",
+            "authority": "hw_full",
+            "user": user or self.user
+        }
+        source = Source.objects.create(**data)
+
+        # prepare registration data
+        registration_data = {
+            "stage": "prebirth",
+            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
+            "data": REG_DATA["hw_pre_mother"].copy(),
+            "source": source,
+        }
+        registration_data.update(kwargs)
+        registration_data["data"]["baby_age"] = 28
+        registration = Registration.objects.create(**registration_data)
+        validate_registration.create_subscriptionrequests(registration)
+        return SubscriptionRequest.objects.order_by('created_at').last()
+
+    def test_get_hook_deliverer(self):
+        self.assertEqual(
+            fire_subscription_hook.get_hook_deliverer(),
+            dummy_deliverer)
+
+    @responses.activate
+    def test_command_argument_parsing(self):
+        hook = self.mk_hook('subscriptionrequest.added')
+        sub = self.mk_subscription_request()
+        call_command('fire_subscription_hook', hook.event, sub.pk.hex)
+        [webhook_call] = dummy_deliverer.calls
+        args, kwargs = webhook_call
+        self.assertEqual(args[0], hook.target)
+        self.assertEqual(args[1]['hook']['id'], hook.pk)
+        self.assertEqual(kwargs['hook'], hook)
