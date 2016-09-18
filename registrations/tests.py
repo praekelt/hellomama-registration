@@ -2461,6 +2461,9 @@ class TestSubscriptionRequestWebhook(AuthenticatedAPITestCase):
 class DummyDeliverer(object):
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.calls = []
 
     def __call__(self, *args, **kwargs):
@@ -2576,6 +2579,7 @@ class FireSubscriptionHookTest(TestCase):
                           sender=Registration)
         post_save.connect(receiver=model_saved,
                           dispatch_uid='instance-saved-hook')
+        dummy_deliverer.reset()
 
     def mk_hook(self, event, target='https://www.example.com', user=None):
         user = user or self.user1
@@ -2616,3 +2620,30 @@ class FireSubscriptionHookTest(TestCase):
         self.assertEqual(args[0], hook1.target)
         self.assertEqual(args[1]['hook']['id'], hook1.pk)
         self.assertEqual(kwargs['hook'], hook1)
+
+    @responses.activate
+    def test_command_argument_parsing_with_user(self):
+        hook1 = self.mk_hook('subscriptionrequest.added', user=self.user1)
+        hook2 = self.mk_hook('subscriptionrequest.added', user=self.user2)
+
+        sub1 = self.mk_subscription_request(user=self.user1)
+        call_command('fire_subscription_hook',
+                     '--username', self.user2.username,
+                     hook1.event, sub1.pk.hex)
+        [webhook_call] = dummy_deliverer.calls
+        args, kwargs = webhook_call
+        self.assertEqual(args[0], hook2.target)
+        self.assertEqual(args[1]['hook']['id'], hook2.pk)
+        self.assertEqual(kwargs['hook'], hook2)
+
+    @responses.activate
+    def test_command_argument_parsing_without_user(self):
+        hook1 = self.mk_hook('subscriptionrequest.added', user=self.user1)
+        hook2 = self.mk_hook('subscriptionrequest.added', user=self.user2)
+
+        sub1 = self.mk_subscription_request(user=self.user1)
+        call_command('fire_subscription_hook', hook1.event, sub1.pk.hex)
+        [webhook_call1, webhook_call2] = dummy_deliverer.calls
+        self.assertEqual(
+            set([webhook_call1[1]['hook'], webhook_call2[1]['hook']]),
+            set([hook1, hook2]))

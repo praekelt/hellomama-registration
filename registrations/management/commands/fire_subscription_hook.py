@@ -1,6 +1,6 @@
-from importlib import import_module
 from django.core.management.base import BaseCommand, CommandError
 from django.conf import settings
+from django.contrib.auth.models import User
 
 from rest_hooks.signals import raw_hook_event
 from registrations.models import SubscriptionRequest
@@ -16,6 +16,10 @@ def find_subscription_requests(uuid):
     return SubscriptionRequest.objects.get(pk=uuid)
 
 
+def find_user(username):
+    return User.objects.get(username=username)
+
+
 class Command(BaseCommand):
     help = ("Manually fires a Subscription Request webhook to the SBM "
             "service to create a Subscription")
@@ -26,14 +30,22 @@ class Command(BaseCommand):
         parser.add_argument('uuids', nargs='+',
                             type=find_subscription_requests,
                             help='The UUIDs of the SubscriptionRequests')
+        parser.add_argument('--username', dest='user',
+                            action='store', default=None,
+                            type=find_user,
+                            help='Filter on a specific username if required')
 
     def handle(self, *args, **kwargs):
         event_str, hooks = kwargs['event']
         subscription_requests = kwargs['uuids']
+        user = kwargs['user']
 
         if not hooks.exists():
             raise CommandError(
                 'Cannot find any hooks for event %s.' % (event_str,))
+        if user:
+            hooks = hooks.filter(user=user)
+            print 'filtering on user', user
 
         for req in subscription_requests:
             for hook in hooks:
