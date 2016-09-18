@@ -2620,6 +2620,7 @@ class FireSubscriptionHookTest(TestCase):
         self.assertEqual(args[0], hook1.target)
         self.assertEqual(args[1]['hook']['id'], hook1.pk)
         self.assertEqual(kwargs['hook'], hook1)
+        self.assertEqual(kwargs['instance'], sub1)
 
     @responses.activate
     def test_command_argument_parsing_with_user(self):
@@ -2635,6 +2636,7 @@ class FireSubscriptionHookTest(TestCase):
         self.assertEqual(args[0], hook2.target)
         self.assertEqual(args[1]['hook']['id'], hook2.pk)
         self.assertEqual(kwargs['hook'], hook2)
+        self.assertEqual(kwargs['instance'], sub1)
 
     @responses.activate
     def test_command_argument_parsing_without_user(self):

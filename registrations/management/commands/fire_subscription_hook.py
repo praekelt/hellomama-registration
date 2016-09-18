@@ -51,4 +51,5 @@ class Command(BaseCommand):
                     sender=req,
                     event_name=hook.event,
                     payload=req.serialize_hook(hook),
+                    instance=req,
                     user=hook.user)
