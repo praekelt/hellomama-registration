@@ -50,6 +50,6 @@ class Command(BaseCommand):
                 raw_hook_event.send(
                     sender=req,
                     event_name=hook.event,
-                    payload=req.serialize_hook(hook),
+                    payload=req.serialize_hook(hook)['data'],
                     instance=req,
                     user=hook.user)
