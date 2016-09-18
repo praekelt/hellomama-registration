@@ -2504,7 +2504,9 @@ class FireSubscriptionHookTest(TestCase):
         assert not has_listeners(), (
             "Registration model still has post_save listeners. Make sure"
             " helpers cleaned up properly in earlier tests.")
-        self.user = User.objects.create_user('un', 'email@example.com', 'pw')
+
+        self.user1 = User.objects.create_user('un1', 'email@example.com', 'pw')
+        self.user2 = User.objects.create_user('un2', 'email@example.com', 'pw')
 
         # Mock message set api responses
         query_string = '?short_name=prebirth.mother.text.10_42'
@@ -2577,14 +2579,14 @@ class FireSubscriptionHookTest(TestCase):
                           dispatch_uid='instance-saved-hook')
 
     def mk_hook(self, event, target='https://www.example.com', user=None):
-        user = user or self.user
+        user = user or self.user1
         return Hook.objects.create(user=user, event=event, target=target)
 
     def mk_subscription_request(self, user=None, **kwargs):
         data = {
             "name": "test_ussd_source_adminuser",
             "authority": "hw_full",
-            "user": user or self.user
+            "user": user or self.user1
         }
         source = Source.objects.create(**data)
 
@@ -2608,11 +2610,15 @@ class FireSubscriptionHookTest(TestCase):
 
     @responses.activate
     def test_command_argument_parsing(self):
-        hook = self.mk_hook('subscriptionrequest.added')
-        sub = self.mk_subscription_request()
-        call_command('fire_subscription_hook', hook.event, sub.pk.hex)
+        hook1 = self.mk_hook('subscriptionrequest.added')
+        sub1 = self.mk_subscription_request(user=self.user1)
+        # Create an extra hook & sub to make sure we're only firing for 1
+        # not for the whole set
+        self.mk_hook('subscriptionrequest.removed')
+        self.mk_subscription_request(user=self.user2)
+        call_command('fire_subscription_hook', hook1.event, sub1.pk.hex)
         [webhook_call] = dummy_deliverer.calls
         args, kwargs = webhook_call
-        self.assertEqual(args[0], hook.target)
-        self.assertEqual(args[1]['hook']['id'], hook.pk)
-        self.assertEqual(kwargs['hook'], hook)
+        self.assertEqual(args[0], hook1.target)
+        self.assertEqual(args[1]['hook']['id'], hook1.pk)
+        self.assertEqual(kwargs['hook'], hook1)
