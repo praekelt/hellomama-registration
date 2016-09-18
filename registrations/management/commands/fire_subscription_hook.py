@@ -44,7 +44,6 @@ class Command(BaseCommand):
                 'Cannot find any hooks for event %s.' % (event_str,))
         if user:
             hooks = hooks.filter(user=user)
-            print 'filtering on user', user
 
         for req in subscription_requests:
             for hook in hooks:
