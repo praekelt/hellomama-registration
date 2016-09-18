@@ -23,7 +23,6 @@ from go_http.metrics import MetricsApiClient
 
 from hellomama_registration import utils
 from registrations import tasks
-from registrations.management.commands import fire_subscription_hook
 from .models import (
     Source, Registration, SubscriptionRequest, registration_post_save,
     fire_created_metric, fire_unique_operator_metric, fire_message_type_metric,
@@ -2602,11 +2601,6 @@ class FireSubscriptionHookTest(TestCase):
         registration = Registration.objects.create(**registration_data)
         validate_registration.create_subscriptionrequests(registration)
         return SubscriptionRequest.objects.order_by('created_at').last()
-
-    def test_get_hook_deliverer(self):
-        self.assertEqual(
-            fire_subscription_hook.get_hook_deliverer(),
-            dummy_deliverer)
 
     @responses.activate
     def test_command_argument_parsing(self):

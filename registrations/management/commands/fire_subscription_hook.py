@@ -16,12 +16,6 @@ def find_subscription_requests(uuid):
     return SubscriptionRequest.objects.get(pk=uuid)
 
 
-def get_hook_deliverer():
-    module_name, func_name = settings.HOOK_DELIVERER.rsplit('.', 1)
-    mod = import_module(module_name)
-    return getattr(mod, func_name)
-
-
 class Command(BaseCommand):
     help = ("Manually fires a Subscription Request webhook to the SBM "
             "service to create a Subscription")
