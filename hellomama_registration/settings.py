@@ -209,29 +209,29 @@ ROLES = ["oic", "cv", "midwife", "chew", "mama"]
 
 METRICS_REALTIME = [
     'registrations.created.sum',
-    'registrations.created.last',
+    'registrations.created.total.last',
     'registrations.unique_operators.sum',
 ]
 METRICS_REALTIME.extend(
     ['registrations.msg_type.%s.sum' % mt for mt in MSG_TYPES])
 METRICS_REALTIME.extend(
-    ['registrations.msg_type.%s.last' % mt for mt in MSG_TYPES])
+    ['registrations.msg_type.%s.total.last' % mt for mt in MSG_TYPES])
 METRICS_REALTIME.extend(
     ['registrations.receiver_type.%s.sum' % rt for rt in RECEIVER_TYPES])
 METRICS_REALTIME.extend(
-    ['registrations.receiver_type.%s.last' % rt for rt in RECEIVER_TYPES])
+    ['registrations.receiver_type.%s.total.last' % rt for rt in RECEIVER_TYPES])
 METRICS_REALTIME.extend(
     ['registrations.language.%s.sum' % l for l in LANGUAGES])
 METRICS_REALTIME.extend(
-    ['registrations.language.%s.last' % l for l in LANGUAGES])
+    ['registrations.language.%s.total.last' % l for l in LANGUAGES])
 METRICS_REALTIME.extend(
     ['registrations.state.%s.sum' % s for s in STATES])
 METRICS_REALTIME.extend(
-    ['registrations.state.%s.last' % s for s in STATES])
+    ['registrations.state.%s.total.last' % s for s in STATES])
 METRICS_REALTIME.extend(
     ['registrations.role.%s.sum' % r for r in ROLES])
 METRICS_REALTIME.extend(
-    ['registrations.role.%s.last' % r for r in ROLES])
+    ['registrations.role.%s.total.last' % r for r in ROLES])
 METRICS_SCHEDULED = [
 ]
 METRICS_SCHEDULED_TASKS = [
