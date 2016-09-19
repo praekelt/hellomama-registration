@@ -1815,12 +1815,12 @@ class TestMetricsAPI(AuthenticatedAPITestCase):
         self.assertEqual(
             response.data["metrics_available"], [
                 'registrations.created.sum',
-                'registrations.created.last',
+                'registrations.created.total.last',
                 'registrations.unique_operators.sum',
                 'registrations.msg_type.text.sum',
                 'registrations.msg_type.audio.sum',
-                'registrations.msg_type.text.last',
-                'registrations.msg_type.audio.last',
+                'registrations.msg_type.text.total.last',
+                'registrations.msg_type.audio.total.last',
                 'registrations.receiver_type.mother_father.sum',
                 'registrations.receiver_type.mother_only.sum',
                 'registrations.receiver_type.father_only.sum',
@@ -1828,39 +1828,39 @@ class TestMetricsAPI(AuthenticatedAPITestCase):
                 'registrations.receiver_type.mother_friend.sum',
                 'registrations.receiver_type.friend_only.sum',
                 'registrations.receiver_type.family_only.sum',
-                'registrations.receiver_type.mother_father.last',
-                'registrations.receiver_type.mother_only.last',
-                'registrations.receiver_type.father_only.last',
-                'registrations.receiver_type.mother_family.last',
-                'registrations.receiver_type.mother_friend.last',
-                'registrations.receiver_type.friend_only.last',
-                'registrations.receiver_type.family_only.last',
+                'registrations.receiver_type.mother_father.total.last',
+                'registrations.receiver_type.mother_only.total.last',
+                'registrations.receiver_type.father_only.total.last',
+                'registrations.receiver_type.mother_family.total.last',
+                'registrations.receiver_type.mother_friend.total.last',
+                'registrations.receiver_type.friend_only.total.last',
+                'registrations.receiver_type.family_only.total.last',
                 'registrations.language.eng_NG.sum',
                 'registrations.language.hau_NG.sum',
                 'registrations.language.ibo_NG.sum',
                 'registrations.language.yor_NG.sum',
                 'registrations.language.pcm_NG.sum',
-                'registrations.language.eng_NG.last',
-                'registrations.language.hau_NG.last',
-                'registrations.language.ibo_NG.last',
-                'registrations.language.yor_NG.last',
-                'registrations.language.pcm_NG.last',
+                'registrations.language.eng_NG.total.last',
+                'registrations.language.hau_NG.total.last',
+                'registrations.language.ibo_NG.total.last',
+                'registrations.language.yor_NG.total.last',
+                'registrations.language.pcm_NG.total.last',
                 'registrations.state.ebonyi.sum',
                 'registrations.state.cross_river.sum',
                 'registrations.state.abuja.sum',
-                'registrations.state.ebonyi.last',
-                'registrations.state.cross_river.last',
-                'registrations.state.abuja.last',
+                'registrations.state.ebonyi.total.last',
+                'registrations.state.cross_river.total.last',
+                'registrations.state.abuja.total.last',
                 'registrations.role.oic.sum',
                 'registrations.role.cv.sum',
                 'registrations.role.midwife.sum',
                 'registrations.role.chew.sum',
                 'registrations.role.mama.sum',
-                'registrations.role.oic.last',
-                'registrations.role.cv.last',
-                'registrations.role.midwife.last',
-                'registrations.role.chew.last',
-                'registrations.role.mama.last',
+                'registrations.role.oic.total.last',
+                'registrations.role.cv.total.last',
+                'registrations.role.midwife.total.last',
+                'registrations.role.chew.total.last',
+                'registrations.role.mama.total.last',
                 'registrations.source.testnormaluser.sum',
                 'registrations.source.testadminuser.sum',
             ]
@@ -2025,7 +2025,7 @@ class TestMetrics(AuthenticatedAPITestCase):
         )
         self._check_request(
             request2, 'POST',
-            data={"registrations.created.last": 1}
+            data={"registrations.created.total.last": 1}
         )
         self._check_request(
             request3, 'POST',
@@ -2033,7 +2033,7 @@ class TestMetrics(AuthenticatedAPITestCase):
         )
         self._check_request(
             request4, 'POST',
-            data={"registrations.created.last": 2}
+            data={"registrations.created.total.last": 2}
         )
         # remove post_save hooks to prevent teardown errors
         post_save.disconnect(fire_created_metric, sender=Registration)
@@ -2125,7 +2125,7 @@ class TestMetrics(AuthenticatedAPITestCase):
         )
         self._check_request(
             request_last, 'POST',
-            data={"registrations.msg_type.text.last": 1.0}
+            data={"registrations.msg_type.text.total.last": 1.0}
         )
 
         post_save.disconnect(fire_message_type_metric, sender=Registration)
@@ -2148,7 +2148,7 @@ class TestMetrics(AuthenticatedAPITestCase):
         )
         self._check_request(
             request_total, 'POST',
-            data={"registrations.receiver_type.mother_only.last": 1.0}
+            data={"registrations.receiver_type.mother_only.total.last": 1.0}
         )
 
         post_save.disconnect(fire_receiver_type_metric, sender=Registration)
@@ -2173,7 +2173,7 @@ class TestMetrics(AuthenticatedAPITestCase):
         )
         self._check_request(
             r_total1, 'POST',
-            data={"registrations.receiver_type.mother_only.last": 1.0}
+            data={"registrations.receiver_type.mother_only.total.last": 1.0}
         )
         self._check_request(
             r_sum2, 'POST',
@@ -2181,7 +2181,7 @@ class TestMetrics(AuthenticatedAPITestCase):
         )
         self._check_request(
             r_total2, 'POST',
-            data={"registrations.receiver_type.mother_only.last": 2.0}
+            data={"registrations.receiver_type.mother_only.total.last": 2.0}
         )
 
         post_save.disconnect(fire_receiver_type_metric, sender=Registration)
@@ -2208,7 +2208,7 @@ class TestMetrics(AuthenticatedAPITestCase):
         )
         self._check_request(
             r_last1, 'POST',
-            data={"registrations.msg_type.text.last": 1.0}
+            data={"registrations.msg_type.text.total.last": 1.0}
         )
         self._check_request(
             r_sum2, 'POST',
@@ -2216,7 +2216,7 @@ class TestMetrics(AuthenticatedAPITestCase):
         )
         self._check_request(
             r_last2, 'POST',
-            data={"registrations.msg_type.text.last": 2.0}
+            data={"registrations.msg_type.text.total.last": 2.0}
         )
 
         post_save.disconnect(fire_message_type_metric, sender=Registration)
@@ -2241,7 +2241,7 @@ class TestMetrics(AuthenticatedAPITestCase):
         )
         self._check_request(
             r_total1, 'POST',
-            data={"registrations.language.eng_NG.last": 1.0}
+            data={"registrations.language.eng_NG.total.last": 1.0}
         )
         self._check_request(
             r_sum2, 'POST',
@@ -2249,7 +2249,7 @@ class TestMetrics(AuthenticatedAPITestCase):
         )
         self._check_request(
             r_total2, 'POST',
-            data={"registrations.language.eng_NG.last": 2.0}
+            data={"registrations.language.eng_NG.total.last": 2.0}
         )
 
         post_save.disconnect(fire_language_metric, sender=Registration)
@@ -2323,7 +2323,7 @@ class TestMetrics(AuthenticatedAPITestCase):
         )
         self._check_request(
             r_total1, 'POST',
-            data={"registrations.state.abuja.last": 1.0}
+            data={"registrations.state.abuja.total.last": 1.0}
         )
         self._check_request(
             r_sum2, 'POST',
@@ -2331,7 +2331,7 @@ class TestMetrics(AuthenticatedAPITestCase):
         )
         self._check_request(
             r_total2, 'POST',
-            data={"registrations.state.abuja.last": 2.0}
+            data={"registrations.state.abuja.total.last": 2.0}
         )
 
         post_save.disconnect(fire_state_metric, sender=Registration)
@@ -2370,7 +2370,7 @@ class TestMetrics(AuthenticatedAPITestCase):
         )
         self._check_request(
             r_total1, 'POST',
-            data={"registrations.role.midwife.last": 1.0}
+            data={"registrations.role.midwife.total.last": 1.0}
         )
         self._check_request(
             r_sum2, 'POST',
@@ -2378,7 +2378,7 @@ class TestMetrics(AuthenticatedAPITestCase):
         )
         self._check_request(
             r_total2, 'POST',
-            data={"registrations.role.midwife.last": 2.0}
+            data={"registrations.role.midwife.total.last": 2.0}
         )
 
         post_save.disconnect(fire_role_metric, sender=Registration)
