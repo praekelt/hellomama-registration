@@ -2458,24 +2458,7 @@ class TestSubscriptionRequestWebhook(AuthenticatedAPITestCase):
     #                      "http://example.com/registration/")
 
 
-class DummyDeliverer(object):
-
-    def __init__(self):
-        self.reset()
-
-    def reset(self):
-        self.calls = []
-
-    def __call__(self, *args, **kwargs):
-        self.calls.append((args, kwargs))
-
-
-dummy_deliverer = DummyDeliverer()
-
-
-@override_settings(
-    HOOK_DELIVERER='registrations.tests.dummy_deliverer')
-class FireSubscriptionHookTest(TestCase):
+class ManagementTaskTestCase(TestCase):
 
     def setUp(self):
         def has_listeners():
@@ -2506,9 +2489,6 @@ class FireSubscriptionHookTest(TestCase):
         assert not has_listeners(), (
             "Registration model still has post_save listeners. Make sure"
             " helpers cleaned up properly in earlier tests.")
-
-        self.user1 = User.objects.create_user('un1', 'email@example.com', 'pw')
-        self.user2 = User.objects.create_user('un2', 'email@example.com', 'pw')
 
         # Mock message set api responses
         query_string = '?short_name=prebirth.mother.text.10_42'
@@ -2579,7 +2559,6 @@ class FireSubscriptionHookTest(TestCase):
                           sender=Registration)
         post_save.connect(receiver=model_saved,
                           dispatch_uid='instance-saved-hook')
-        dummy_deliverer.reset()
 
     def mk_hook(self, event, target='https://www.example.com', user=None):
         user = user or self.user1
@@ -2605,6 +2584,37 @@ class FireSubscriptionHookTest(TestCase):
         registration = Registration.objects.create(**registration_data)
         validate_registration.create_subscriptionrequests(registration)
         return SubscriptionRequest.objects.order_by('created_at').last()
+
+
+class DummyDeliverer(object):
+    """
+    A dummy deliverer for webhooks, traps any calls it gets and stores
+    them in an internal `.calls` list for introspection.
+    """
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.calls = []
+
+    def __call__(self, *args, **kwargs):
+        self.calls.append((args, kwargs))
+
+dummy_deliverer = DummyDeliverer()
+
+
+@override_settings(
+    HOOK_DELIVERER='registrations.tests.dummy_deliverer')
+class FireSubscriptionHookTest(ManagementTaskTestCase):
+
+    def setUp(self):
+        super(FireSubscriptionHookTest, self).setUp()
+        self.user1 = User.objects.create_user('un1', 'email@example.com', 'pw')
+        self.user2 = User.objects.create_user('un2', 'email@example.com', 'pw')
+
+    def tearDown(self):
+        super(FireSubscriptionHookTest, self).tearDown()
+        dummy_deliverer.reset()
 
     @responses.activate
     def test_command_argument_parsing(self):
