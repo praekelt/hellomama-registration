@@ -1,7 +1,10 @@
 import json
 import uuid
 from datetime import timedelta, datetime
-from StringIO import StringIO
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 import responses
 
 try:
