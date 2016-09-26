@@ -75,6 +75,13 @@ class Command(BaseCommand):
                 client, registration, receiver_id, message_set, today,
                 apply_fix)
 
+    def sub_request_difference(self, request, expected):
+        expected_copy = [(key, expected[key])
+                         for key in sorted(expected.keys())]
+        actual = [(key, getattr(request, key))
+                  for key in sorted(expected.keys())]
+        return (expected_copy, actual, expected_copy != actual)
+
     def verify_subscription_request(
             self, sbm_client, registration, receiver_id, message_set,
             today, apply_fix=False):
@@ -127,26 +134,27 @@ class Command(BaseCommand):
                 'No SubscriptionRequests exist for %s with messageset %s.' % (
                     registration, message_set))
 
+        data = {
+            'next_sequence_number': next_sequence_number,
+            'messageset': messageset_id,
+            'schedule': schedule_id,
+        }
+
         for request in sub_requests:
-            if (request.next_sequence_number != next_sequence_number):
+            expected, actual, is_different = self.sub_request_difference(
+                request, data)
+            expected_str = ', '.join(['%s: %s' % kv for kv in expected])
+            actual_str = ', '.join(['%s: %s' % kv for kv in actual])
+            if is_different:
                 self.log(
-                    '%s next_sequence_number is %s, should be %s' % (
-                        request.id.hex,
-                        request.next_sequence_number, next_sequence_number))
+                    '%s has "%s", should be "%s"' % (
+                        request.id.hex, actual_str, expected_str))
                 if apply_fix:
-
-                    update = {
-                        'next_sequence_number': next_sequence_number,
-                        'messageset': messageset_id,
-                        'schedule': schedule_id,
-                    }
-
-                    if sub_requests.filter(pk=request.pk).update(**update):
+                    if sub_requests.filter(pk=request.pk).update(**data):
                         self.log(
-                            'Updated %s, set %s' % (
+                            'Updated %s, set "%s"' % (
                                 request.id.hex,
-                                ', '.join(['%s: %s' % kv
-                                           for kv in sorted(update.items())]),
+                                expected_str,
                             ))
 
     def log(self, log):

@@ -2739,10 +2739,9 @@ class VerifyScheduleSequenceTest(ManagementTaskTestCase):
 
         self.assertEqual(
             stdout.getvalue().strip(),
-            '\n'.join([
-                '%s next_sequence_number is 1, should be 45' % (
-                    sub1.id.hex,),
-            ]))
+            ('%s has "messageset: 1, next_sequence_number: 1, schedule: 1", '
+             'should be "messageset: 1, next_sequence_number: 45, schedule: 1"'
+             ) % (sub1.pk.hex,))
 
     @responses.activate
     def test_verify_subreq_next_sequence_number_on_specific_day(self):
@@ -2764,10 +2763,9 @@ class VerifyScheduleSequenceTest(ManagementTaskTestCase):
 
         self.assertEqual(
             stdout.getvalue().strip(),
-            '\n'.join([
-                '%s next_sequence_number is 1, should be 24' % (
-                    sub1.id.hex,),
-            ]))
+            ('%s has "messageset: 1, next_sequence_number: 1, schedule: 1", '
+             'should be "messageset: 1, next_sequence_number: 24, schedule: 1"'
+             ) % (sub1.pk.hex,))
 
         # Make sure we're not changing anything, `--fix=False` at this point
         self.assertEqual(
@@ -2834,13 +2832,13 @@ class VerifyScheduleSequenceTest(ManagementTaskTestCase):
 
         self.assertEqual(
             stdout.getvalue().strip(),
-            '\n'.join([
-                '%s next_sequence_number is 1, should be 45' % (
-                    sub1.id.hex,),
-                ('Updated %s, set '
-                 'messageset: 1, next_sequence_number: 45, schedule: 1') % (
-                    sub1.id.hex,),
-            ]))
+            '\n'.join([('%s has "messageset: 1, next_sequence_number: 1, '
+                        'schedule: 1", should be "messageset: 1, '
+                        'next_sequence_number: 45, schedule: 1"') % (
+                            sub1.pk.hex,),
+                       ('Updated %s, set "messageset: 1, next_sequence_number:'
+                        ' 45, schedule: 1"') % (sub1.id.hex,),
+                       ]))
 
         self.assertEqual(
             SubscriptionRequest.objects.get(pk=sub1.pk).next_sequence_number,
