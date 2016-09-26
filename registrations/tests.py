@@ -2772,7 +2772,7 @@ class VerifyScheduleSequenceTest(ManagementTaskTestCase):
     @responses.activate
     def test_verify_subscription_request_different_message_set(self):
 
-        query_string = '?short_name=prebirth.household.audio.10_42.None.None'
+        query_string = '?short_name=prebirth.household.audio.10_42.fri.9_11'
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
@@ -2793,8 +2793,13 @@ class VerifyScheduleSequenceTest(ManagementTaskTestCase):
         src1 = self.mk_source(self.user1)
         reg1 = self.mk_registration_at_week(src1, week=25)
         sub1 = self.mk_subscription_request(reg1)
-        # Force the subscription request to a different message set
+        # Force the subscription request to a different message set and
+        # update the Registration with the voice days & times used to construct
+        # the message set name
         sub1.messageset = 2
+        reg1.data['voice_days'] = 'fri'
+        reg1.data['voice_times'] = '9_11'
+        reg1.save()
 
         self.load_zero_subscriptions(reg1.mother_id)
 
