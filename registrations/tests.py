@@ -1,6 +1,5 @@
 import json
 import uuid
-import datetime
 from datetime import timedelta, datetime
 from StringIO import StringIO
 import responses
