@@ -2573,17 +2573,6 @@ class ManagementTaskTestCase(TestCase):
         }
         return Source.objects.create(**data)
 
-    def mk_registration(self, source, **data):
-        # prepare registration data
-        registration_data = {
-            "stage": "prebirth",
-            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
-            "data": REG_DATA["hw_pre_mother"].copy(),
-            "source": source,
-        }
-        registration_data["data"].update(data)
-        return Registration.objects.create(**registration_data)
-
     def mk_registration_at_week(self, source, week):
         # prepare registration data
         registration_data = {
@@ -2599,10 +2588,11 @@ class ManagementTaskTestCase(TestCase):
         })
         return Registration.objects.create(**registration_data)
 
-    def mk_subscription_request(self, registration, **kwargs):
+    def mk_subscription_request(self, registration):
+        print 'registration', repr(registration.data)
         validate_registration.create_subscriptionrequests(registration)
-        return SubscriptionRequest.objects.filter(
-            identity=registration.mother_id).order_by('created_at').last()
+        return registration.get_subscription_requests().order_by(
+            'created_at').last()
 
 
 class DummyDeliverer(object):
@@ -2639,14 +2629,14 @@ class FireSubscriptionHookTest(ManagementTaskTestCase):
     def test_command_argument_parsing(self):
         hook1 = self.mk_hook('subscriptionrequest.added')
         src1 = self.mk_source(self.user1)
-        reg1 = self.mk_registration(src1)
+        reg1 = self.mk_registration_at_week(src1, week=25)
         sub1 = self.mk_subscription_request(reg1)
         # Create an extra hook & sub to make sure we're only firing for 1
         # not for the whole set
         self.mk_hook('subscriptionrequest.removed')
 
         src2 = self.mk_source(self.user2)
-        reg2 = self.mk_registration(src2)
+        reg2 = self.mk_registration_at_week(src2, week=25)
         self.mk_subscription_request(reg2)
 
         call_command('fire_subscription_hook', hook1.event, sub1.pk.hex)
@@ -2663,7 +2653,7 @@ class FireSubscriptionHookTest(ManagementTaskTestCase):
         hook2 = self.mk_hook('subscriptionrequest.added', user=self.user2)
 
         src1 = self.mk_source(self.user1)
-        reg1 = self.mk_registration(src1)
+        reg1 = self.mk_registration_at_week(src1, week=25)
         sub1 = self.mk_subscription_request(reg1)
         call_command('fire_subscription_hook',
                      '--username', self.user2.username,
@@ -2681,7 +2671,7 @@ class FireSubscriptionHookTest(ManagementTaskTestCase):
         hook2 = self.mk_hook('subscriptionrequest.added', user=self.user2)
 
         src1 = self.mk_source(self.user1)
-        reg1 = self.mk_registration(src1)
+        reg1 = self.mk_registration_at_week(src1, week=25)
         sub1 = self.mk_subscription_request(reg1)
         call_command('fire_subscription_hook', hook1.event, sub1.pk.hex)
         [webhook_call1, webhook_call2] = dummy_deliverer.calls
