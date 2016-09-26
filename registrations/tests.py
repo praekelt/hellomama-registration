@@ -2769,6 +2769,11 @@ class VerifyScheduleSequenceTest(ManagementTaskTestCase):
                     sub1.id.hex,),
             ]))
 
+        # Make sure we're not changing anything, `--fix=False` at this point
+        self.assertEqual(
+            SubscriptionRequest.objects.get(pk=sub1.pk).next_sequence_number,
+            1)
+
     @responses.activate
     def test_verify_subscription_request_different_message_set(self):
 
