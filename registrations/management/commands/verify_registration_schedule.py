@@ -111,10 +111,10 @@ class Command(BaseCommand):
 
                     sub_requests.filter(pk=request.pk).update(**update)
                     self.log(
-                        'Updated %s next_sequence_number, set %s' % (
+                        'Updated %s, set %s' % (
                             request.id.hex,
                             ', '.join(['%s: %s' % kv
-                                       for kv in update.items()]),
+                                       for kv in sorted(update.items())]),
                         ))
 
     def err(self, err):

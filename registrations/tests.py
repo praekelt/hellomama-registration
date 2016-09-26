@@ -2832,8 +2832,8 @@ class VerifyScheduleSequenceTest(ManagementTaskTestCase):
             '\n'.join([
                 '%s next_sequence_number is 1, should be 45' % (
                     sub1.id.hex,),
-                ('Updated %s next_sequence_number, set '
-                 'next_sequence_number: 45, messageset: 1, schedule: 1') % (
+                ('Updated %s, set '
+                 'messageset: 1, next_sequence_number: 45, schedule: 1') % (
                     sub1.id.hex,),
             ]))
 
