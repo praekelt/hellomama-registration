@@ -42,8 +42,8 @@ class Command(BaseCommand):
         parser.add_argument(
             '--sbm-url', dest='sbm_url', type=validate_and_return_url,
             default=environ.get('STAGE_BASED_MESSAGING_URL'),
-            help=('The Stage Based Messaged Service to verify '
-                  'subscriptions at.'))
+            help=('The Stage Based Messaging Service to verify '
+                  'subscriptions for.'))
         parser.add_argument(
             '--sbm-token', dest='sbm_token', type=UUID,
             default=environ.get('STAGE_BASED_MESSAGING_TOKEN'),
