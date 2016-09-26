@@ -102,12 +102,20 @@ class Command(BaseCommand):
                         request.id.hex,
                         request.next_sequence_number, next_sequence_number))
                 if apply_fix:
-                    request.next_sequence_number = next_sequence_number
-                    request.save()
+
+                    update = {
+                        'next_sequence_number': next_sequence_number,
+                        'messageset': messageset_id,
+                        'schedule': schedule_id,
+                    }
+
+                    sub_requests.filter(pk=request.pk).update(**update)
                     self.log(
-                        'Updated %s next_sequence_number, setting to %s' % (
+                        'Updated %s next_sequence_number, set %s' % (
                             request.id.hex,
-                            next_sequence_number,))
+                            ', '.join(['%s: %s' % kv
+                                       for kv in update.items()]),
+                        ))
 
     def err(self, err):
         self.stderr.write('%s\n' % (err,))
