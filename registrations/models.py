@@ -88,16 +88,16 @@ class Registration(models.Model):
         raise RegistrationException(
             'Neither preg_week or baby_age are specified for %s.' % (self,))
 
-    def get_receiver_id(self):
+    def get_receiver_ids(self):
         """
-        Sometimes a registration can result in multiple people being
-        registered: a household (or related family members) can be registered
-        for messaging. When this happens their identity is stored in the
-        receiver_id field in self.data
+        A registration can result in multiple people being registered.
+        The mother, a household (or related family members) can be registered
+        for messaging.
 
-        :returns: uuid string
+        :returns: set of uuid strings
         """
-        return self.data.get('receiver_id')
+        return set(
+            filter(None, [self.mother_id, self.data.get('receiver_id')]))
 
     def get_subscription_requests(self):
         """
@@ -107,12 +107,8 @@ class Registration(models.Model):
 
         :returns: Django Queryset
         """
-        related_identities = [self.mother_id]
-        if self.get_receiver_id():
-            related_identities.append(self.get_receiver_id())
-
         return SubscriptionRequest.objects.filter(
-            identity__in=related_identities)
+            identity__in=self.get_receiver_ids())
 
     def estimate_current_preg_weeks(self, today=None):
         # NOTE: circular import :/

@@ -69,8 +69,40 @@ class Command(BaseCommand):
                 'environment variable or --sbm-token is set.')
 
         client = StageBasedMessagingApiClient(sbm_token, sbm_url)
-        subscriptions = client.get_subscriptions({
-            'identity': registration.mother_id,
+
+        for receiver_id in registration.get_receiver_ids():
+            self.verify_subscription_request(
+                client, registration, receiver_id, message_set, today,
+                apply_fix)
+
+    def verify_subscription_request(
+            self, sbm_client, registration, receiver_id, message_set,
+            today, apply_fix=False):
+        """
+        Verify a subscription request for a receiver.
+
+        This checks if a subscription exists at the SBM Service. If it does
+        it will fail early because this tool does not yet fix remote
+        subscriptions, it only deals with SubscriptionRequests that have not
+        turned into a Subscription.
+
+        :param sbm_client StageBasedMessagingApiClient:
+            The client to the stage based messaging service API.
+        :param registration Registration:
+            The registration we're verifying
+        :param receiver_id str:
+            The UUID of the receiver we're wanting to verify the registration
+            for
+        :param message_set str:
+            The message set we're verifying
+        :param today datetime:
+            The date we're using to calculate the sequence numbers
+        :param apply_fix bool:
+            Whether or not to apply the fix or just log it.
+        """
+
+        subscriptions = sbm_client.get_subscriptions({
+            'identity': receiver_id,
         })
 
         if subscriptions['count']:
@@ -109,16 +141,13 @@ class Command(BaseCommand):
                         'schedule': schedule_id,
                     }
 
-                    sub_requests.filter(pk=request.pk).update(**update)
-                    self.log(
-                        'Updated %s, set %s' % (
-                            request.id.hex,
-                            ', '.join(['%s: %s' % kv
-                                       for kv in sorted(update.items())]),
-                        ))
-
-    def err(self, err):
-        self.stderr.write('%s\n' % (err,))
+                    if sub_requests.filter(pk=request.pk).update(**update):
+                        self.log(
+                            'Updated %s, set %s' % (
+                                request.id.hex,
+                                ', '.join(['%s: %s' % kv
+                                           for kv in sorted(update.items())]),
+                            ))
 
     def log(self, log):
         self.stdout.write('%s\n' % (log,))
