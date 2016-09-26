@@ -2589,7 +2589,6 @@ class ManagementTaskTestCase(TestCase):
         return Registration.objects.create(**registration_data)
 
     def mk_subscription_request(self, registration):
-        print 'registration', repr(registration.data)
         validate_registration.create_subscriptionrequests(registration)
         return registration.get_subscription_requests().order_by(
             'created_at').last()
