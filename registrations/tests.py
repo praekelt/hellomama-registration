@@ -18,6 +18,7 @@ from django.db.models.signals import post_save
 from django.conf import settings
 from django.core.cache import cache
 from django.core.management import call_command
+from django.core.management.base import CommandError
 from rest_framework import status
 from rest_framework.test import APIClient
 from rest_framework.authtoken.models import Token
@@ -2767,6 +2768,42 @@ class VerifyScheduleSequenceTest(ManagementTaskTestCase):
                 '%s next_sequence_number is 1, should be 24' % (
                     sub1.id.hex,),
             ]))
+
+    @responses.activate
+    def test_verify_subscription_request_different_message_set(self):
+
+        query_string = '?short_name=prebirth.household.audio.10_42.None.None'
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/%s' % query_string,
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 2,
+                    "short_name": 'prebirth.household.text.10_42',
+                    "default_schedule": 1
+                }]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+
+        src1 = self.mk_source(self.user1)
+        reg1 = self.mk_registration_at_week(src1, week=25)
+        sub1 = self.mk_subscription_request(reg1)
+        # Force the subscription request to a different message set
+        sub1.messageset = 2
+
+        self.load_zero_subscriptions(reg1.mother_id)
+
+        self.assertRaisesRegexp(
+            CommandError,
+            ('No SubscriptionRequests exist for %s with messageset '
+             'household.') % (reg1,),
+            self.do_call_command, 'verify_registration_schedule',
+            reg1.id.hex, 'household')
 
     @responses.activate
     def test_verify_subscription_fix_next_sequence_number(self):

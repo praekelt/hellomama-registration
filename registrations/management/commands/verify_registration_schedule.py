@@ -77,11 +77,6 @@ class Command(BaseCommand):
             raise CommandError(
                 'Subscriptions exist for %s.' % (registration,))
 
-        subscription_requests = registration.get_subscription_requests()
-        if not subscription_requests.exists():
-            raise CommandError(
-                'No SubscriptionRequests exist for %s.' % (registration,))
-
         weeks_estimate = registration.estimate_current_preg_weeks(today=today)
         voice_days, voice_times = registration.get_voice_days_and_times()
         mother_short_name = utils.get_messageset_short_name(
@@ -93,7 +88,14 @@ class Command(BaseCommand):
             mother_short_name, weeks_estimate)
         messageset_id, schedule_id, next_sequence_number = message_set_info
 
-        for request in subscription_requests:
+        sub_requests = registration.get_subscription_requests().filter(
+            messageset=messageset_id)
+        if not sub_requests.exists():
+            raise CommandError(
+                'No SubscriptionRequests exist for %s with messageset %s.' % (
+                    registration, message_set))
+
+        for request in sub_requests:
             if (request.next_sequence_number != next_sequence_number):
                 self.log(
                     '%s next_sequence_number is %s, should be %s' % (
