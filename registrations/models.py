@@ -81,15 +81,38 @@ class Registration(models.Model):
     def get_voice_days_and_times(self):
         return self.data.get('voice_days'), self.data.get('voice_times')
 
-    def get_preg_week(self):
+    def get_weeks_pregnant_or_age(self):
         week = self.data.get("preg_week") or self.data.get("baby_age")
         if week is not None:
             return week
         raise RegistrationException(
             'Neither preg_week or baby_age are specified for %s.' % (self,))
 
+    def get_receiver_id(self):
+        """
+        Sometimes a registration can result in multiple people being
+        registered: a household (or related family members) can be registered
+        for messaging. When this happens their identity is stored in the
+        receiver_id field in self.data
+
+        :returns: uuid string
+        """
+        return self.data.get('receiver_id')
+
     def get_subscription_requests(self):
-        return SubscriptionRequest.objects.filter(identity=self.mother_id)
+        """
+        Returns all possible subscriptions created for this registration,
+        these may be for the mother or for related family members (stored
+        in the receiver_id)
+
+        :returns: Django Queryset
+        """
+        related_identities = [self.mother_id]
+        if self.get_receiver_id():
+            related_identities.append(self.get_receiver_id())
+
+        return SubscriptionRequest.objects.filter(
+            identity__in=related_identities)
 
     def estimate_current_preg_weeks(self, today=None):
         # NOTE: circular import :/

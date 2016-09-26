@@ -195,7 +195,7 @@ class ValidateRegistration(Task):
         """
 
         voice_days, voice_times = registration.get_voice_days_and_times()
-        weeks = registration.get_preg_week()
+        weeks = registration.get_weeks_pregnant_or_age()
 
         mother_short_name = utils.get_messageset_short_name(
             registration.stage, 'mother', registration.data["msg_type"],
