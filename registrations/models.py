@@ -91,11 +91,6 @@ class Registration(models.Model):
     def get_subscription_requests(self):
         return SubscriptionRequest.objects.filter(identity=self.mother_id)
 
-    def get_last_period_date(self):
-        date = self.data.get('last_period_date')
-        if date:
-            return datetime.strptime(date, '%Y%m%d')
-
     def estimate_current_preg_weeks(self, today=None):
         # NOTE: circular import :/
         from hellomama_registration import utils
