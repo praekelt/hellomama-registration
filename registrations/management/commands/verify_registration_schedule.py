@@ -58,6 +58,12 @@ class Command(BaseCommand):
         apply_fix = kwargs['fix']
         today = kwargs['today']
 
+        if registration.stage != 'prebirth':
+            raise CommandError(
+                'This command has not been confirmed to work with any stage '
+                'other than prebirth, this registration is: %s' % (
+                    registration.stage))
+
         if not sbm_url:
             raise CommandError(
                 'Please make sure either the STAGE_BASED_MESSAGING_URL '

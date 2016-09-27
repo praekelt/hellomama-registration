@@ -2813,6 +2813,21 @@ class VerifyScheduleSequenceTest(ManagementTaskTestCase):
             reg1.id.hex, 'household')
 
     @responses.activate
+    def test_crash_on_postbirth(self):
+
+        src1 = self.mk_source(self.user1)
+        reg1 = self.mk_registration_at_week(src1, week=25)
+        reg1.stage = 'postbirth'
+        reg1.save()
+
+        self.assertRaisesRegexp(
+            CommandError,
+            ('This command has not been confirmed to work with any stage '
+             'other than prebirth, this registration is: %s') % (reg1.stage,),
+            self.do_call_command, 'verify_registration_schedule',
+            reg1.id.hex, 'household')
+
+    @responses.activate
     def test_verify_subscription_fix_next_sequence_number(self):
         src1 = self.mk_source(self.user1)
 
