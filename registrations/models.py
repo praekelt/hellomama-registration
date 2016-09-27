@@ -137,7 +137,7 @@ def fire_created_metric(sender, instance, created, **kwargs):
             "metric_value": 1.0
         })
 
-        total_key = 'registrations.created.last'
+        total_key = 'registrations.created.total.last'
         total = get_or_incr_cache(
             total_key,
             Registration.objects.count)
@@ -203,7 +203,7 @@ def fire_message_type_metric(sender, instance, created, **kwargs):
             "metric_value": 1.0,
         })
 
-        total_key = 'registrations.msg_type.%s.last' % msg_type
+        total_key = 'registrations.msg_type.%s.total.last' % msg_type
         total = get_or_incr_cache(
             total_key,
             Registration.objects.filter(data__msg_type=msg_type).count)
@@ -225,7 +225,7 @@ def fire_receiver_type_metric(sender, instance, created, **kwargs):
             "metric_value": 1.0,
         })
 
-        total_key = 'registrations.receiver_type.%s.last' % msg_receiver
+        total_key = 'registrations.receiver_type.%s.total.last' % msg_receiver
         total = get_or_incr_cache(
             total_key,
             Registration.objects.filter(data__msg_receiver=msg_receiver).count)
@@ -250,7 +250,7 @@ def fire_language_metric(sender, instance, created, **kwargs):
             'metric_value': 1.0,
         })
 
-        total_key = "registrations.language.%s.last" % lang
+        total_key = "registrations.language.%s.total.last" % lang
         total = get_or_incr_cache(
             total_key,
             Registration.objects.filter(data__language=lang).count)
@@ -291,7 +291,7 @@ def fire_state_metric(sender, instance, created, **kwargs):
                 'metric_value': 1.0,
             })
 
-            total_key = "registrations.state.%s.last" % normalised_state
+            total_key = "registrations.state.%s.total.last" % normalised_state
 
             total = get_or_incr_cache(
                 total_key,
@@ -323,7 +323,7 @@ def fire_role_metric(sender, instance, created, **kwargs):
                 'metric_value': 1.0,
             })
 
-            total_key = "registrations.role.%s.last" % normalised_role
+            total_key = "registrations.role.%s.total.last" % normalised_role
 
             total = get_or_incr_cache(
                 total_key,
