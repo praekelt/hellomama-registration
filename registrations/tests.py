@@ -2731,7 +2731,7 @@ class FireSubscriptionHookTest(ManagementTaskTestCase):
 
         self.assertEqual(
             stdout.getvalue().strip(),
-            'Subscriptions already exist for %s (identity: %s).' % (
+            'Subscriptions already exist for %s (identity: %s). Skipping.' % (
                 sub1, sub1.identity))
         self.assertEqual(dummy_deliverer.calls, [])
 

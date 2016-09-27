@@ -85,8 +85,8 @@ class Command(BaseCommand):
 
         for req in subscription_requests:
             if check_subscription and self.count_subscriptions(client, req):
-                self.log('Subscriptions already exist for %s (identity: %s).' % (
-                    req, req.identity))
+                self.log(('Subscriptions already exist for %s (identity: %s).'
+                          ' Skipping.') % (req, req.identity))
                 continue
 
             for hook in hooks:
