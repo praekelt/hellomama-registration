@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 
 from django.contrib.postgres.fields import JSONField
 from django.contrib.auth.models import User
@@ -30,6 +31,10 @@ class Source(models.Model):
 
     def __str__(self):
         return "%s" % self.name
+
+
+class RegistrationException(Exception):
+    pass
 
 
 @python_2_unicode_compatible
@@ -72,6 +77,45 @@ class Registration(models.Model):
 
     def __str__(self):
         return str(self.id)
+
+    def get_voice_days_and_times(self):
+        return self.data.get('voice_days'), self.data.get('voice_times')
+
+    def get_weeks_pregnant_or_age(self):
+        week = self.data.get("preg_week") or self.data.get("baby_age")
+        if week is not None:
+            return week
+        raise RegistrationException(
+            'Neither preg_week or baby_age are specified for %s.' % (self,))
+
+    def get_receiver_ids(self):
+        """
+        A registration can result in multiple people being registered.
+        The mother, a household (or related family members) can be registered
+        for messaging.
+
+        :returns: set of uuid strings
+        """
+        return set(
+            filter(None, [self.mother_id, self.data.get('receiver_id')]))
+
+    def get_subscription_requests(self):
+        """
+        Returns all possible subscriptions created for this registration,
+        these may be for the mother or for related family members (stored
+        in the receiver_id)
+
+        :returns: Django Queryset
+        """
+        return SubscriptionRequest.objects.filter(
+            identity__in=self.get_receiver_ids())
+
+    def estimate_current_preg_weeks(self, today=None):
+        # NOTE: circular import :/
+        from hellomama_registration import utils
+        today = today or datetime.now()
+        return utils.calc_pregnancy_week_lmp(
+            today, self.data['last_period_date'])
 
 
 @receiver(post_save, sender=Registration)

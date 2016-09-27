@@ -193,17 +193,9 @@ class ValidateRegistration(Task):
         """ Create SubscriptionRequest(s) based on the
         validated registration.
         """
-        if 'voice_days' in registration.data:
-            voice_days = registration.data["voice_days"]
-            voice_times = registration.data["voice_times"]
-        else:
-            voice_days = None
-            voice_times = None
 
-        if 'preg_week' in registration.data:
-            weeks = registration.data["preg_week"]
-        else:
-            weeks = registration.data["baby_age"]
+        voice_days, voice_times = registration.get_voice_days_and_times()
+        weeks = registration.get_weeks_pregnant_or_age()
 
         mother_short_name = utils.get_messageset_short_name(
             registration.stage, 'mother', registration.data["msg_type"],

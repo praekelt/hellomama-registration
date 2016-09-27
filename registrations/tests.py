@@ -1,6 +1,10 @@
 import json
 import uuid
-import datetime
+from datetime import timedelta, datetime
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 import responses
 
 try:
@@ -14,6 +18,7 @@ from django.db.models.signals import post_save
 from django.conf import settings
 from django.core.cache import cache
 from django.core.management import call_command
+from django.core.management.base import CommandError
 from rest_framework import status
 from rest_framework.test import APIClient
 from rest_framework.authtoken.models import Token
@@ -35,7 +40,7 @@ from .tasks import (
 
 
 def override_get_today():
-    return datetime.datetime.strptime("20150817", "%Y%m%d")
+    return datetime.strptime("20150817", "%Y%m%d")
 
 
 class RecordingAdapter(TestAdapter):
@@ -2458,24 +2463,7 @@ class TestSubscriptionRequestWebhook(AuthenticatedAPITestCase):
     #                      "http://example.com/registration/")
 
 
-class DummyDeliverer(object):
-
-    def __init__(self):
-        self.reset()
-
-    def reset(self):
-        self.calls = []
-
-    def __call__(self, *args, **kwargs):
-        self.calls.append((args, kwargs))
-
-
-dummy_deliverer = DummyDeliverer()
-
-
-@override_settings(
-    HOOK_DELIVERER='registrations.tests.dummy_deliverer')
-class FireSubscriptionHookTest(TestCase):
+class ManagementTaskTestCase(TestCase):
 
     def setUp(self):
         def has_listeners():
@@ -2506,9 +2494,6 @@ class FireSubscriptionHookTest(TestCase):
         assert not has_listeners(), (
             "Registration model still has post_save listeners. Make sure"
             " helpers cleaned up properly in earlier tests.")
-
-        self.user1 = User.objects.create_user('un1', 'email@example.com', 'pw')
-        self.user2 = User.objects.create_user('un2', 'email@example.com', 'pw')
 
         # Mock message set api responses
         query_string = '?short_name=prebirth.mother.text.10_42'
@@ -2579,20 +2564,20 @@ class FireSubscriptionHookTest(TestCase):
                           sender=Registration)
         post_save.connect(receiver=model_saved,
                           dispatch_uid='instance-saved-hook')
-        dummy_deliverer.reset()
 
     def mk_hook(self, event, target='https://www.example.com', user=None):
         user = user or self.user1
         return Hook.objects.create(user=user, event=event, target=target)
 
-    def mk_subscription_request(self, user=None, **kwargs):
+    def mk_source(self, user=None):
         data = {
             "name": "test_ussd_source_adminuser",
             "authority": "hw_full",
             "user": user or self.user1
         }
-        source = Source.objects.create(**data)
+        return Source.objects.create(**data)
 
+    def mk_registration_at_week(self, source, week):
         # prepare registration data
         registration_data = {
             "stage": "prebirth",
@@ -2600,20 +2585,63 @@ class FireSubscriptionHookTest(TestCase):
             "data": REG_DATA["hw_pre_mother"].copy(),
             "source": source,
         }
-        registration_data.update(kwargs)
-        registration_data["data"]["baby_age"] = 28
-        registration = Registration.objects.create(**registration_data)
+        registration_data["data"].update({
+            "preg_week": week,
+            "last_period_date": (
+                datetime.now() - timedelta(days=(7 * week))).strftime('%Y%m%d')
+        })
+        return Registration.objects.create(**registration_data)
+
+    def mk_subscription_request(self, registration):
         validate_registration.create_subscriptionrequests(registration)
-        return SubscriptionRequest.objects.order_by('created_at').last()
+        return registration.get_subscription_requests().order_by(
+            'created_at').last()
+
+
+class DummyDeliverer(object):
+    """
+    A dummy deliverer for webhooks, traps any calls it gets and stores
+    them in an internal `.calls` list for introspection.
+    """
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.calls = []
+
+    def __call__(self, *args, **kwargs):
+        self.calls.append((args, kwargs))
+
+dummy_deliverer = DummyDeliverer()
+
+
+@override_settings(
+    HOOK_DELIVERER='registrations.tests.dummy_deliverer')
+class FireSubscriptionHookTest(ManagementTaskTestCase):
+
+    def setUp(self):
+        super(FireSubscriptionHookTest, self).setUp()
+        self.user1 = User.objects.create_user('un1', 'email@example.com', 'pw')
+        self.user2 = User.objects.create_user('un2', 'email@example.com', 'pw')
+
+    def tearDown(self):
+        super(FireSubscriptionHookTest, self).tearDown()
+        dummy_deliverer.reset()
 
     @responses.activate
     def test_command_argument_parsing(self):
         hook1 = self.mk_hook('subscriptionrequest.added')
-        sub1 = self.mk_subscription_request(user=self.user1)
+        src1 = self.mk_source(self.user1)
+        reg1 = self.mk_registration_at_week(src1, week=25)
+        sub1 = self.mk_subscription_request(reg1)
         # Create an extra hook & sub to make sure we're only firing for 1
         # not for the whole set
         self.mk_hook('subscriptionrequest.removed')
-        self.mk_subscription_request(user=self.user2)
+
+        src2 = self.mk_source(self.user2)
+        reg2 = self.mk_registration_at_week(src2, week=25)
+        self.mk_subscription_request(reg2)
+
         call_command('fire_subscription_hook', hook1.event, sub1.pk.hex)
         [webhook_call] = dummy_deliverer.calls
         args, kwargs = webhook_call
@@ -2627,7 +2655,9 @@ class FireSubscriptionHookTest(TestCase):
         hook1 = self.mk_hook('subscriptionrequest.added', user=self.user1)
         hook2 = self.mk_hook('subscriptionrequest.added', user=self.user2)
 
-        sub1 = self.mk_subscription_request(user=self.user1)
+        src1 = self.mk_source(self.user1)
+        reg1 = self.mk_registration_at_week(src1, week=25)
+        sub1 = self.mk_subscription_request(reg1)
         call_command('fire_subscription_hook',
                      '--username', self.user2.username,
                      hook1.event, sub1.pk.hex)
@@ -2643,9 +2673,187 @@ class FireSubscriptionHookTest(TestCase):
         hook1 = self.mk_hook('subscriptionrequest.added', user=self.user1)
         hook2 = self.mk_hook('subscriptionrequest.added', user=self.user2)
 
-        sub1 = self.mk_subscription_request(user=self.user1)
+        src1 = self.mk_source(self.user1)
+        reg1 = self.mk_registration_at_week(src1, week=25)
+        sub1 = self.mk_subscription_request(reg1)
         call_command('fire_subscription_hook', hook1.event, sub1.pk.hex)
         [webhook_call1, webhook_call2] = dummy_deliverer.calls
         self.assertEqual(
             set([webhook_call1[1]['hook'], webhook_call2[1]['hook']]),
             set([hook1, hook2]))
+
+
+class VerifyScheduleSequenceTest(ManagementTaskTestCase):
+
+    def setUp(self):
+        super(VerifyScheduleSequenceTest, self).setUp()
+        self.user1 = User.objects.create_user('un1', 'email@example.com', 'pw')
+        self.user2 = User.objects.create_user('un2', 'email@example.com', 'pw')
+
+    def tearDown(self):
+        super(VerifyScheduleSequenceTest, self).tearDown()
+        dummy_deliverer.reset()
+
+    def load_zero_subscriptions(self, identity):
+        responses.add(
+            responses.GET,
+            'http://example.com/subscriptions/?identity=%s' % (identity,),
+            json={
+                "count": 0,
+                "next": None,
+                "previous": None,
+                "results": []
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+
+    def do_call_command(self, *args, **kwargs):
+        stdout = StringIO()
+        stderr = StringIO()
+
+        sbm_url = kwargs.setdefault('sbm_url', 'http://example.com')
+        sbm_token = kwargs.setdefault('sbm_token', 'a' * 32)
+
+        args = list(args)
+        args.extend(['--sbm-url', sbm_url, '--sbm-token', sbm_token])
+        call_command(*args,
+                     stdout=stdout, stderr=stderr)
+        return stdout, stderr
+
+    @responses.activate
+    def test_verify_subscription_request_next_sequence_number(self):
+        src1 = self.mk_source(self.user1)
+
+        reg1 = self.mk_registration_at_week(src1, week=25)
+        sub1 = self.mk_subscription_request(reg1)
+
+        # This is obviously wrong, should be 25
+        sub1.next_sequence_number = 1
+        sub1.save()
+
+        self.load_zero_subscriptions(reg1.mother_id)
+
+        stdout, stderr = self.do_call_command(
+            'verify_registration_schedule', reg1.id.hex, 'mother')
+
+        self.assertEqual(
+            stdout.getvalue().strip(),
+            ('%s has "messageset: 1, next_sequence_number: 1, schedule: 1", '
+             'should be "messageset: 1, next_sequence_number: 45, schedule: 1"'
+             ) % (sub1.pk.hex,))
+
+    @responses.activate
+    def test_verify_subreq_next_sequence_number_on_specific_day(self):
+        src1 = self.mk_source(self.user1)
+
+        reg1 = self.mk_registration_at_week(src1, week=25)
+        sub1 = self.mk_subscription_request(reg1)
+
+        # This is obviously wrong, should be 25
+        sub1.next_sequence_number = 1
+        sub1.save()
+
+        self.load_zero_subscriptions(reg1.mother_id)
+
+        stdout, stderr = self.do_call_command(
+            'verify_registration_schedule', reg1.id.hex, 'mother',
+            '--today', '20160926')
+
+        self.assertEqual(
+            stdout.getvalue().strip(),
+            ('%s has "messageset: 1, next_sequence_number: 1, schedule: 1", '
+             'should be "messageset: 1, next_sequence_number: 42, schedule: 1"'
+             ) % (sub1.pk.hex,))
+
+        # Make sure we're not changing anything, `--fix=False` at this point
+        self.assertEqual(
+            SubscriptionRequest.objects.get(pk=sub1.pk).next_sequence_number,
+            1)
+
+    @responses.activate
+    def test_verify_subscription_request_different_message_set(self):
+
+        query_string = '?short_name=prebirth.household.audio.10_42.fri.9_11'
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/%s' % query_string,
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 2,
+                    "short_name": 'prebirth.household.text.10_42',
+                    "default_schedule": 1
+                }]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+
+        src1 = self.mk_source(self.user1)
+        reg1 = self.mk_registration_at_week(src1, week=25)
+        sub1 = self.mk_subscription_request(reg1)
+        # Force the subscription request to a different message set and
+        # update the Registration with the voice days & times used to construct
+        # the message set name
+        sub1.messageset = 2
+        reg1.data['voice_days'] = 'fri'
+        reg1.data['voice_times'] = '9_11'
+        reg1.save()
+
+        self.load_zero_subscriptions(reg1.mother_id)
+
+        self.assertRaisesRegexp(
+            CommandError,
+            ('No SubscriptionRequests exist for %s with messageset '
+             'household.') % (reg1,),
+            self.do_call_command, 'verify_registration_schedule',
+            reg1.id.hex, 'household')
+
+    @responses.activate
+    def test_crash_on_postbirth(self):
+
+        src1 = self.mk_source(self.user1)
+        reg1 = self.mk_registration_at_week(src1, week=25)
+        reg1.stage = 'postbirth'
+        reg1.save()
+
+        self.assertRaisesRegexp(
+            CommandError,
+            ('This command has not been confirmed to work with any stage '
+             'other than prebirth, this registration is: %s') % (reg1.stage,),
+            self.do_call_command, 'verify_registration_schedule',
+            reg1.id.hex, 'household')
+
+    @responses.activate
+    def test_verify_subscription_fix_next_sequence_number(self):
+        src1 = self.mk_source(self.user1)
+
+        reg1 = self.mk_registration_at_week(src1, week=25)
+        sub1 = self.mk_subscription_request(reg1)
+
+        # This is obviously wrong, should be 25
+        sub1.next_sequence_number = 1
+        sub1.save()
+
+        self.load_zero_subscriptions(reg1.mother_id)
+
+        stdout, stderr = self.do_call_command(
+            'verify_registration_schedule', reg1.id.hex, 'mother',
+            '--fix')
+
+        self.assertEqual(
+            stdout.getvalue().strip(),
+            '\n'.join([('%s has "messageset: 1, next_sequence_number: 1, '
+                        'schedule: 1", should be "messageset: 1, '
+                        'next_sequence_number: 45, schedule: 1"') % (
+                            sub1.pk.hex,),
+                       ('Updated %s, set "messageset: 1, next_sequence_number:'
+                        ' 45, schedule: 1"') % (sub1.id.hex,),
+                       ]))
+
+        self.assertEqual(
+            SubscriptionRequest.objects.get(pk=sub1.pk).next_sequence_number,
+            45)
