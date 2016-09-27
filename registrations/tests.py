@@ -2756,15 +2756,14 @@ class VerifyScheduleSequenceTest(ManagementTaskTestCase):
 
         self.load_zero_subscriptions(reg1.mother_id)
 
-        today = datetime.now() - timedelta(days=(5 * 7))
         stdout, stderr = self.do_call_command(
             'verify_registration_schedule', reg1.id.hex, 'mother',
-            '--today', today.strftime('%Y%m%m'))
+            '--today', '20160926')
 
         self.assertEqual(
             stdout.getvalue().strip(),
             ('%s has "messageset: 1, next_sequence_number: 1, schedule: 1", '
-             'should be "messageset: 1, next_sequence_number: 24, schedule: 1"'
+             'should be "messageset: 1, next_sequence_number: 42, schedule: 1"'
              ) % (sub1.pk.hex,))
 
         # Make sure we're not changing anything, `--fix=False` at this point

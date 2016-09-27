@@ -118,13 +118,13 @@ class Command(BaseCommand):
 
         weeks_estimate = registration.estimate_current_preg_weeks(today=today)
         voice_days, voice_times = registration.get_voice_days_and_times()
-        mother_short_name = utils.get_messageset_short_name(
+        messageset_short_name = utils.get_messageset_short_name(
             registration.stage, message_set, registration.data["msg_type"],
             weeks_estimate, voice_days, voice_times
         )
 
         message_set_info = utils.get_messageset_schedule_sequence(
-            mother_short_name, weeks_estimate)
+            messageset_short_name, weeks_estimate)
         messageset_id, schedule_id, next_sequence_number = message_set_info
 
         sub_requests = registration.get_subscription_requests().filter(
