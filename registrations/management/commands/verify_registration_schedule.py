@@ -3,16 +3,11 @@ from datetime import datetime
 
 from uuid import UUID
 from django.core.management.base import BaseCommand, CommandError
-from django.core.validators import URLValidator
 from seed_services_client import StageBasedMessagingApiClient
 
 from registrations.models import Registration
 from hellomama_registration import utils
-
-
-def validate_and_return_url(url):
-    URLValidator()(url)
-    return url
+from ._utils import validate_and_return_url
 
 
 class Command(BaseCommand):
