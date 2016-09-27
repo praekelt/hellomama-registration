@@ -2597,6 +2597,33 @@ class ManagementTaskTestCase(TestCase):
         return registration.get_subscription_requests().order_by(
             'created_at').last()
 
+    def do_call_command(self, *args, **kwargs):
+        stdout = StringIO()
+        stderr = StringIO()
+
+        sbm_url = kwargs.setdefault('sbm_url', 'http://example.com')
+        sbm_token = kwargs.setdefault('sbm_token', 'a' * 32)
+
+        args = list(args)
+        args.extend(['--sbm-url', sbm_url, '--sbm-token', sbm_token])
+        call_command(*args,
+                     stdout=stdout, stderr=stderr)
+        return stdout, stderr
+
+    def load_subscriptions(self, identity, count=0, results=None):
+        responses.add(
+            responses.GET,
+            'http://example.com/subscriptions/?identity=%s' % (identity,),
+            json={
+                "count": count,
+                "next": None,
+                "previous": None,
+                "results": results or [],
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+
 
 class DummyDeliverer(object):
     """
@@ -2634,6 +2661,8 @@ class FireSubscriptionHookTest(ManagementTaskTestCase):
         src1 = self.mk_source(self.user1)
         reg1 = self.mk_registration_at_week(src1, week=25)
         sub1 = self.mk_subscription_request(reg1)
+        self.load_subscriptions(reg1.mother_id, count=0)
+
         # Create an extra hook & sub to make sure we're only firing for 1
         # not for the whole set
         self.mk_hook('subscriptionrequest.removed')
@@ -2642,7 +2671,8 @@ class FireSubscriptionHookTest(ManagementTaskTestCase):
         reg2 = self.mk_registration_at_week(src2, week=25)
         self.mk_subscription_request(reg2)
 
-        call_command('fire_subscription_hook', hook1.event, sub1.pk.hex)
+        self.do_call_command(
+            'fire_subscription_hook', hook1.event, sub1.pk.hex)
         [webhook_call] = dummy_deliverer.calls
         args, kwargs = webhook_call
         self.assertEqual(args[0], hook1.target)
@@ -2657,10 +2687,13 @@ class FireSubscriptionHookTest(ManagementTaskTestCase):
 
         src1 = self.mk_source(self.user1)
         reg1 = self.mk_registration_at_week(src1, week=25)
+        self.load_subscriptions(reg1.mother_id, count=0)
+
         sub1 = self.mk_subscription_request(reg1)
-        call_command('fire_subscription_hook',
-                     '--username', self.user2.username,
-                     hook1.event, sub1.pk.hex)
+        self.do_call_command(
+            'fire_subscription_hook',
+            '--username', self.user2.username,
+            hook1.event, sub1.pk.hex)
         [webhook_call] = dummy_deliverer.calls
         args, kwargs = webhook_call
         self.assertEqual(args[0], hook2.target)
@@ -2675,12 +2708,32 @@ class FireSubscriptionHookTest(ManagementTaskTestCase):
 
         src1 = self.mk_source(self.user1)
         reg1 = self.mk_registration_at_week(src1, week=25)
+        self.load_subscriptions(reg1.mother_id, count=0)
+
         sub1 = self.mk_subscription_request(reg1)
-        call_command('fire_subscription_hook', hook1.event, sub1.pk.hex)
+        self.do_call_command(
+            'fire_subscription_hook', hook1.event, sub1.pk.hex)
         [webhook_call1, webhook_call2] = dummy_deliverer.calls
         self.assertEqual(
             set([webhook_call1[1]['hook'], webhook_call2[1]['hook']]),
             set([hook1, hook2]))
+
+    @responses.activate
+    def test_subscription_exists(self):
+        hook1 = self.mk_hook('subscriptionrequest.added', user=self.user1)
+        src1 = self.mk_source(self.user1)
+        reg1 = self.mk_registration_at_week(src1, week=25)
+        sub1 = self.mk_subscription_request(reg1)
+        self.load_subscriptions(reg1.mother_id, count=1, results=["garbage"])
+
+        stdout, stderr = self.do_call_command(
+            'fire_subscription_hook', hook1.event, sub1.pk.hex)
+
+        self.assertEqual(
+            stdout.getvalue().strip(),
+            'Subscriptions already exist for %s (identity: %s). Skipping.' % (
+                sub1, sub1.identity))
+        self.assertEqual(dummy_deliverer.calls, [])
 
 
 class VerifyScheduleSequenceTest(ManagementTaskTestCase):
@@ -2694,33 +2747,6 @@ class VerifyScheduleSequenceTest(ManagementTaskTestCase):
         super(VerifyScheduleSequenceTest, self).tearDown()
         dummy_deliverer.reset()
 
-    def load_zero_subscriptions(self, identity):
-        responses.add(
-            responses.GET,
-            'http://example.com/subscriptions/?identity=%s' % (identity,),
-            json={
-                "count": 0,
-                "next": None,
-                "previous": None,
-                "results": []
-            },
-            status=200, content_type='application/json',
-            match_querystring=True
-        )
-
-    def do_call_command(self, *args, **kwargs):
-        stdout = StringIO()
-        stderr = StringIO()
-
-        sbm_url = kwargs.setdefault('sbm_url', 'http://example.com')
-        sbm_token = kwargs.setdefault('sbm_token', 'a' * 32)
-
-        args = list(args)
-        args.extend(['--sbm-url', sbm_url, '--sbm-token', sbm_token])
-        call_command(*args,
-                     stdout=stdout, stderr=stderr)
-        return stdout, stderr
-
     @responses.activate
     def test_verify_subscription_request_next_sequence_number(self):
         src1 = self.mk_source(self.user1)
@@ -2732,7 +2758,7 @@ class VerifyScheduleSequenceTest(ManagementTaskTestCase):
         sub1.next_sequence_number = 1
         sub1.save()
 
-        self.load_zero_subscriptions(reg1.mother_id)
+        self.load_subscriptions(reg1.mother_id, count=0)
 
         stdout, stderr = self.do_call_command(
             'verify_registration_schedule', reg1.id.hex, 'mother')
@@ -2754,7 +2780,7 @@ class VerifyScheduleSequenceTest(ManagementTaskTestCase):
         sub1.next_sequence_number = 1
         sub1.save()
 
-        self.load_zero_subscriptions(reg1.mother_id)
+        self.load_subscriptions(reg1.mother_id, count=0)
 
         stdout, stderr = self.do_call_command(
             'verify_registration_schedule', reg1.id.hex, 'mother',
@@ -2803,7 +2829,7 @@ class VerifyScheduleSequenceTest(ManagementTaskTestCase):
         reg1.data['voice_times'] = '9_11'
         reg1.save()
 
-        self.load_zero_subscriptions(reg1.mother_id)
+        self.load_subscriptions(reg1.mother_id, count=0)
 
         self.assertRaisesRegexp(
             CommandError,
@@ -2838,7 +2864,7 @@ class VerifyScheduleSequenceTest(ManagementTaskTestCase):
         sub1.next_sequence_number = 1
         sub1.save()
 
-        self.load_zero_subscriptions(reg1.mother_id)
+        self.load_subscriptions(reg1.mother_id, count=0)
 
         stdout, stderr = self.do_call_command(
             'verify_registration_schedule', reg1.id.hex, 'mother',
