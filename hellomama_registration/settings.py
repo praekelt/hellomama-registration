@@ -55,6 +55,8 @@ INSTALLED_APPS = (
     'rest_framework.authtoken',
     'django_filters',
     'rest_hooks',
+    # documentation
+    'rest_framework_docs',
     # us
     'registrations',
     'changes',
@@ -84,7 +86,7 @@ DATABASES = {
     'default': dj_database_url.config(
         default=os.environ.get(
             'REGISTRATIONS_DATABASE',
-            'postgres://postgres:@localhost/hellomama_registration')),
+            'postgres://localhost/hellomama_registration')),
 }
 
 
