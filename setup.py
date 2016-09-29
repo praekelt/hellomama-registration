@@ -27,6 +27,7 @@ setup(
         'go-http==0.3.0',
         'django-filter==0.12.0',
         'seed-services-client==0.8.0',
+        'drfdocs==0.0.11',
     ],
     classifiers=[
         'Development Status :: 4 - Beta',

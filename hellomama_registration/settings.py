@@ -30,7 +30,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 SECRET_KEY = os.environ.get('SECRET_KEY', 'REPLACEME')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', False)
+DEBUG = os.environ.get('DEBUG', 'false').lower() == 'true'
 
 TEMPLATE_DEBUG = DEBUG
 
@@ -55,6 +55,8 @@ INSTALLED_APPS = (
     'rest_framework.authtoken',
     'django_filters',
     'rest_hooks',
+    # documentation
+    'rest_framework_docs',
     # us
     'registrations',
     'changes',
@@ -84,7 +86,7 @@ DATABASES = {
     'default': dj_database_url.config(
         default=os.environ.get(
             'REGISTRATIONS_DATABASE',
-            'postgres://postgres:@localhost/hellomama_registration')),
+            'postgres://localhost/hellomama_registration')),
 }
 
 
