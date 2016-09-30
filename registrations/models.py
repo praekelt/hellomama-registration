@@ -303,7 +303,7 @@ def fire_state_metric(sender, instance, created, **kwargs):
             })
 
 
-# @receiver(post_save, sender=Registration)
+@receiver(post_save, sender=Registration)
 def fire_role_metric(sender, instance, created, **kwargs):
     """
     Fires metrics for each role for each subscription, a sum metric for
