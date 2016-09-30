@@ -12,7 +12,7 @@ from django.utils.encoding import python_2_unicode_compatible
 
 @python_2_unicode_compatible
 class Source(models.Model):
-    """ The source from which a registation originates.
+    """ The source from which a registration originates.
         The User foreignkey is used to identify the source based on the
         user's api token.
     """
@@ -39,16 +39,16 @@ class RegistrationException(Exception):
 
 @python_2_unicode_compatible
 class Registration(models.Model):
-    """ A registation submitted via Vumi or other sources.
+    """ A registration submitted via Vumi or other sources.
 
-    After a registation has been created, a task will fire that
+    After a registration has been created, a task will fire that
     validates if the data provided is sufficient for the stage
     of pregnancy.
 
     Args:
         stage (str): The stage of pregnancy of the mother
         data (json): Registration info in json format
-        validated (bool): True if the registation has been
+        validated (bool): True if the registration has been
             validated after creation
         source (object): Auto-completed field based on the Api key
     """
