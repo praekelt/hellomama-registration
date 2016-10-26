@@ -12,6 +12,11 @@ try:
 except ImportError:
     from urlparse import urlparse
 
+try:
+    import mock
+except ImportError:
+    from unittest import mock
+
 from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 from django.db.models.signals import post_save
@@ -36,7 +41,8 @@ from .models import (
 from .tasks import (
     validate_registration,
     is_valid_date, is_valid_uuid, is_valid_lang, is_valid_msg_type,
-    is_valid_msg_receiver, is_valid_loss_reason, is_valid_state, is_valid_role)
+    is_valid_msg_receiver, is_valid_loss_reason, is_valid_state, is_valid_role,
+    repopulate_metrics)
 
 
 def override_get_today():
@@ -2883,3 +2889,28 @@ class VerifyScheduleSequenceTest(ManagementTaskTestCase):
         self.assertEqual(
             SubscriptionRequest.objects.get(pk=sub1.pk).next_sequence_number,
             45)
+
+
+class TestRepopulateMetricsTask(TestCase):
+    @mock.patch('registrations.tasks.RepopulateMetric.run')
+    def test_runs_repopulate_metric_tasks(self, mock_repopulate):
+        """
+        The repopulate metrics task should spawn repopulate metric tasks with
+        the appropriate parameters.
+        """
+        repopulate_metrics.delay(
+            'amqp://test', ['metric.foo', 'metric.bar'], '30s:1m')
+        args = [args for args, _ in mock_repopulate.call_args_list]
+
+        # Relative instead of absolute times
+        start = min(args, key=lambda a: a[2])[2]
+        args = [[a, m, s-start, e-start] for a, m, s, e in args]
+
+        expected = [
+            ['amqp://test', 'metric.foo', 0, 30],
+            ['amqp://test', 'metric.foo', 30, 60],
+            ['amqp://test', 'metric.bar', 0, 30],
+            ['amqp://test', 'metric.bar', 30, 60],
+        ]
+
+        self.assertEqual(sorted(expected), sorted(args))

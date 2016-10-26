@@ -1,14 +1,16 @@
-import datetime
 import json
 import requests
 import uuid
+from datetime import datetime
 
+from celery import group
 from celery.task import Task
 from celery.utils.log import get_task_logger
 from django.conf import settings
 from go_http.metrics import MetricsApiClient
 
 from hellomama_registration import utils
+from .graphite import GraphiteRetentions
 from .models import Registration, SubscriptionRequest
 
 
@@ -17,7 +19,7 @@ logger = get_task_logger(__name__)
 
 def is_valid_date(date):
     try:
-        datetime.datetime.strptime(date, "%Y%m%d")
+        datetime.strptime(date, "%Y%m%d")
         return True
     except:
         return False
@@ -344,3 +346,37 @@ class FireMetric(Task):
             metric_name, metric_value)
 
 fire_metric = FireMetric()
+
+
+class RepopulateMetrics(Task):
+    """
+    Repopulates historical metrics.
+    """
+    name = 'hellomama_registration.tasks.repopulate_metrics'
+
+    def _timestamp_to_float(self, timestamp):
+        return (timestamp - datetime.fromtimestamp(0)).total_seconds()
+
+    def run(self, amqp_url, metric_names, graphite_retentions, **kwargs):
+        ret = GraphiteRetentions(graphite_retentions)
+        tasks = []
+        for start, end in ret.get_buckets():
+            start = self._timestamp_to_float(start)
+            end = self._timestamp_to_float(end)
+            for metric in metric_names:
+                tasks.append(repopulate_metric.s(amqp_url, metric, start, end))
+        return group(tasks).apply_async()
+
+repopulate_metrics = RepopulateMetrics()
+
+
+class RepopulateMetric(Task):
+    """
+    Repopulates a single metric for a single timeframe.
+    """
+    name = 'hellomama_registration.tasks.repopulate_metric'
+
+    def run(self, amqp_url, metric_name, start, end, **kwargs):
+        return True
+
+repopulate_metric = RepopulateMetric()
