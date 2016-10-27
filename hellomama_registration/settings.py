@@ -213,6 +213,12 @@ CELERY_ROUTES = {
     'uniqueids.tasks.add_unique_id_to_identity': {
         'queue': 'priority',
     },
+    'registrations.tasks.repopulate_metrics': {
+        'queue': 'mediumpriority',
+    },
+    'registrations.tasks.repopulate_metric': {
+        'queue': 'mediumpriority',
+    },
 }
 
 CACHES = {

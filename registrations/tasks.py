@@ -353,7 +353,7 @@ class RepopulateMetrics(Task):
     """
     Repopulates historical metrics.
     """
-    name = 'hellomama_registration.tasks.repopulate_metrics'
+    name = 'registrations.tasks.repopulate_metrics'
 
     def run(self, amqp_url, metric_names, graphite_retentions, **kwargs):
         ret = GraphiteRetentions(graphite_retentions)
@@ -372,14 +372,13 @@ class RepopulateMetric(Task):
     """
     Repopulates a single metric for a single timeframe.
     """
-    name = 'hellomama_registration.tasks.repopulate_metric'
+    name = 'registrations.tasks.repopulate_metric'
 
     def run(self, amqp_url, metric_name, start, end, **kwargs):
         start = datetime.utcfromtimestamp(float(start))
         end = datetime.utcfromtimestamp(float(end))
 
         value = MetricGenerator().generate_metric(metric_name, start, end)
-        print value
 
         timestamp = start + (end - start) / 2
         send_metric(amqp_url, metric_name, value, timestamp)
