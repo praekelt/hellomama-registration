@@ -1,8 +1,7 @@
 from datetime import datetime, timedelta
 from django.test import TestCase
 
-from registrations.management.commands.fire_retroactive_metrics import (
-    GraphiteRetention, GraphiteRetentions)
+from registrations.graphite import GraphiteRetention, GraphiteRetentions
 
 
 class TestGraphiteRetention(TestCase):
