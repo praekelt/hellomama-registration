@@ -2583,8 +2583,9 @@ class ManagementTaskTestCase(TestCase):
         }
         return Source.objects.create(**data)
 
-    def mk_registration_at_week(self, source, week):
+    def mk_registration_at_week(self, source, week, today=None):
         # prepare registration data
+        today = today or datetime.now()
         registration_data = {
             "stage": "prebirth",
             "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
@@ -2594,7 +2595,7 @@ class ManagementTaskTestCase(TestCase):
         registration_data["data"].update({
             "preg_week": week,
             "last_period_date": (
-                datetime.now() - timedelta(days=(7 * week))).strftime('%Y%m%d')
+                today - timedelta(days=(7 * week))).strftime('%Y%m%d')
         })
         return Registration.objects.create(**registration_data)
 
@@ -2779,10 +2780,11 @@ class VerifyScheduleSequenceTest(ManagementTaskTestCase):
     def test_verify_subreq_next_sequence_number_on_specific_day(self):
         src1 = self.mk_source(self.user1)
 
-        reg1 = self.mk_registration_at_week(src1, week=25)
+        reg1 = self.mk_registration_at_week(
+            src1, week=25, today=datetime(2016, 9, 27))
         sub1 = self.mk_subscription_request(reg1)
 
-        # This is obviously wrong, should be 25
+        # This is obviously wrong, should be 42
         sub1.next_sequence_number = 1
         sub1.save()
 
