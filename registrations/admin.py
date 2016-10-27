@@ -14,12 +14,18 @@ class RepopulateMetricsForm(forms.Form):
     amqp_url = forms.CharField(
         label='AMQP URL', initial='amqp://guest:guest@localhost:5672/%2F',
         widget=forms.TextInput(attrs={'size': 80}))
-    metric_names = forms.MultipleChoiceField(
-        choices=[(m, m) for m in get_available_metrics()],
-        initial=get_available_metrics())
+    metric_names = forms.MultipleChoiceField(choices=[])
     graphite_retentions = forms.CharField(
         label='Graphite Retentions', initial='1m:1d,5m:1y,1h:5y',
         widget=forms.TextInput(attrs={'size': 80}))
+
+    def __init__(self, *args, **kwargs):
+        super(RepopulateMetricsForm, self).__init__(*args, **kwargs)
+        # We populate the choices here because they rely on database values,
+        # so they could change between import and form render.
+        metrics = get_available_metrics()
+        self.fields['metric_names'].choices = [(m, m) for m in metrics]
+        self.fields['metric_names'].initial = metrics
 
 
 class RegistrationAdmin(admin.ModelAdmin):
