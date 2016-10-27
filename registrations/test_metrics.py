@@ -26,11 +26,10 @@ class MetricsGeneratorTests(AuthenticatedAPITestCase):
 
         generator.foo_bar.assert_called_once_with(start, end)
 
-    def create_registration_on(self, timestamp, source, operator_id=None):
-        r = Registration.objects.create(mother_id='motherid', source=source)
+    def create_registration_on(self, timestamp, source, **kwargs):
+        r = Registration.objects.create(
+            mother_id='motherid', source=source, data=kwargs)
         r.created_at = timestamp
-        if operator_id:
-            r.data = {'operator_id': operator_id}
         r.save()
         return r
 
@@ -89,14 +88,20 @@ class MetricsGeneratorTests(AuthenticatedAPITestCase):
         end = datetime(2016, 10, 25)
 
         # Registration before should exclude 1
-        self.create_registration_on(datetime(2016, 10, 14), source, '1')
-        self.create_registration_on(datetime(2016, 10, 20), source, '1')
+        self.create_registration_on(
+            datetime(2016, 10, 14), source, operator_id='1')
+        self.create_registration_on(
+            datetime(2016, 10, 20), source, operator_id='1')
         # Two registrations during should exclude 2
-        self.create_registration_on(datetime(2016, 10, 20), source, '2')
-        self.create_registration_on(datetime(2016, 10, 20), source, '2')
+        self.create_registration_on(
+            datetime(2016, 10, 20), source, operator_id='2')
+        self.create_registration_on(
+            datetime(2016, 10, 20), source, operator_id='2')
         # Registration after shouldn't exclude 3
-        self.create_registration_on(datetime(2016, 10, 20), source, '3')
-        self.create_registration_on(datetime(2016, 10, 26), source, '3')
+        self.create_registration_on(
+            datetime(2016, 10, 20), source, operator_id='3')
+        self.create_registration_on(
+            datetime(2016, 10, 26), source, operator_id='3')
 
         reg_count = MetricGenerator().registrations_unique_operators_sum(
             start, end)
