@@ -40,7 +40,7 @@ class RegistrationAdmin(admin.ModelAdmin):
 
         if request.method == 'POST':
             form = RepopulateMetricsForm(request.POST)
-            if form.is_valid:
+            if form.is_valid():
                 # TODO: Start celery task to repopulate metrics
                 messages.success(request, 'Metrics repopulation started')
                 return redirect('admin:registrations_registration_changelist')
