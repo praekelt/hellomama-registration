@@ -354,15 +354,12 @@ class RepopulateMetrics(Task):
     """
     name = 'hellomama_registration.tasks.repopulate_metrics'
 
-    def _timestamp_to_float(self, timestamp):
-        return (timestamp - datetime.fromtimestamp(0)).total_seconds()
-
     def run(self, amqp_url, metric_names, graphite_retentions, **kwargs):
         ret = GraphiteRetentions(graphite_retentions)
         tasks = []
         for start, end in ret.get_buckets():
-            start = self._timestamp_to_float(start)
-            end = self._timestamp_to_float(end)
+            start = utils.timestamp_to_epoch(start)
+            end = utils.timestamp_to_epoch(end)
             for metric in metric_names:
                 tasks.append(repopulate_metric.s(amqp_url, metric, start, end))
         return group(tasks).apply_async()

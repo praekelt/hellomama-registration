@@ -251,3 +251,10 @@ def normalise_string(string):
     """
     string = (string.strip()).lower()
     return re.sub(r'\W+', '_', string)
+
+
+def timestamp_to_epoch(timestamp):
+    """
+    Takes a timestamp and returns a float representing the unix epoch time.
+    """
+    return (timestamp - datetime.datetime.utcfromtimestamp(0)).total_seconds()
