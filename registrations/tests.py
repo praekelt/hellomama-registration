@@ -42,7 +42,7 @@ from .tasks import (
     validate_registration,
     is_valid_date, is_valid_uuid, is_valid_lang, is_valid_msg_type,
     is_valid_msg_receiver, is_valid_loss_reason, is_valid_state, is_valid_role,
-    repopulate_metrics)
+    repopulate_metrics, repopulate_metric)
 
 
 def override_get_today():
@@ -2914,3 +2914,22 @@ class TestRepopulateMetricsTask(TestCase):
         ]
 
         self.assertEqual(sorted(expected), sorted(args))
+
+
+class TestRepopulateMetricTask(TestCase):
+    @mock.patch('registrations.tasks.MetricGenerator.generate_metric')
+    @mock.patch('registrations.tasks.send_metric')
+    def test_repopulate_metric_task(
+            self, mock_send_metric, mock_metric_generator):
+        """
+        The repopulate metric task should use the metric generator to generate
+        the appropriate metric, then send that metric to Graphite.
+        """
+        mock_metric_generator.return_value = 17.2
+        repopulate_metric.delay('amqp://foo', 'foo.bar', 300.0, 500.0)
+
+        mock_metric_generator.assert_called_once_with(
+            'foo.bar', datetime.utcfromtimestamp(300),
+            datetime.utcfromtimestamp(500))
+        mock_send_metric.assert_called_once_with(
+            'amqp://foo', 'foo.bar', 17.2, datetime.utcfromtimestamp(400))

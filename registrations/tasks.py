@@ -12,6 +12,7 @@ from go_http.metrics import MetricsApiClient
 from hellomama_registration import utils
 from .graphite import GraphiteRetentions
 from .models import Registration, SubscriptionRequest
+from .metrics import MetricGenerator, send_metric
 
 
 logger = get_task_logger(__name__)
@@ -374,6 +375,13 @@ class RepopulateMetric(Task):
     name = 'hellomama_registration.tasks.repopulate_metric'
 
     def run(self, amqp_url, metric_name, start, end, **kwargs):
-        return True
+        start = datetime.utcfromtimestamp(float(start))
+        end = datetime.utcfromtimestamp(float(end))
+
+        value = MetricGenerator().generate_metric(metric_name, start, end)
+        print value
+
+        timestamp = start + (end - start) / 2
+        send_metric(amqp_url, metric_name, value, timestamp)
 
 repopulate_metric = RepopulateMetric()
