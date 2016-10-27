@@ -33,7 +33,7 @@ class RegistrationAdmin(admin.ModelAdmin):
         return [
             url(r'^repopulate_registration_metrics/$',
                 self.admin_site.admin_view(self.repopulate_metrics),
-                name='repopulate_registration_metrics'),
+                name='registrations_registration_repopulate_metrics'),
         ] + urls
 
     def repopulate_metrics(self, request):
