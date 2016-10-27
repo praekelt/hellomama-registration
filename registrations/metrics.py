@@ -1,5 +1,7 @@
 import pika
 
+from django.db.models import Count
+from django.db.models.expressions import RawSQL
 from hellomama_registration import utils
 
 from .models import Registration
@@ -27,6 +29,22 @@ class MetricGenerator(object):
     def registrations_created_total_last(self, start, end):
         return Registration.objects\
             .filter(created_at__lte=end)\
+            .count()
+
+    def registrations_unique_operators_sum(self, start, end):
+        operators_before = Registration.objects\
+            .filter(created_at__lte=start)\
+            .annotate(operator=RawSQL("(data->>%s)", ('operator_id',)))\
+            .values('operator')
+
+        return Registration.objects\
+            .filter(created_at__gt=start)\
+            .filter(created_at__lte=end)\
+            .annotate(operator=RawSQL("(data->>%s)", ('operator_id',)))\
+            .values('operator')\
+            .annotate(count=Count('operator'))\
+            .filter(count=1)\
+            .exclude(operator__in=operators_before)\
             .count()
 
 

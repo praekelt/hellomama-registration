@@ -26,9 +26,11 @@ class MetricsGeneratorTests(AuthenticatedAPITestCase):
 
         generator.foo_bar.assert_called_once_with(start, end)
 
-    def create_registration_on(self, timestamp, source):
+    def create_registration_on(self, timestamp, source, operator_id=None):
         r = Registration.objects.create(mother_id='motherid', source=source)
         r.created_at = timestamp
+        if operator_id:
+            r.data = {'operator_id': operator_id}
         r.save()
         return r
 
@@ -74,6 +76,31 @@ class MetricsGeneratorTests(AuthenticatedAPITestCase):
         reg_count = MetricGenerator().registrations_created_total_last(
             start, end)
         self.assertEqual(reg_count, 2)
+
+    def test_registrations_unique_operators_sum(self):
+        """
+        Should return the amount of new operators in the given timeframe.
+        """
+        user = User.objects.create(username='user1')
+        source = Source.objects.create(
+            name='TestSource', authority='hw_full', user=user)
+
+        start = datetime(2016, 10, 15)
+        end = datetime(2016, 10, 25)
+
+        # Registration before should exclude 1
+        self.create_registration_on(datetime(2016, 10, 14), source, '1')
+        self.create_registration_on(datetime(2016, 10, 20), source, '1')
+        # Two registrations during should exclude 2
+        self.create_registration_on(datetime(2016, 10, 20), source, '2')
+        self.create_registration_on(datetime(2016, 10, 20), source, '2')
+        # Registration after shouldn't exclude 3
+        self.create_registration_on(datetime(2016, 10, 20), source, '3')
+        self.create_registration_on(datetime(2016, 10, 26), source, '3')
+
+        reg_count = MetricGenerator().registrations_unique_operators_sum(
+            start, end)
+        self.assertEqual(reg_count, 1)
 
 
 class SendMetricTests(TestCase):
