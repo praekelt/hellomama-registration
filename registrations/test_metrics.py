@@ -55,6 +55,26 @@ class MetricsGeneratorTests(AuthenticatedAPITestCase):
         reg_count = MetricGenerator().registrations_created_sum(start, end)
         self.assertEqual(reg_count, 2)
 
+    def test_registrations_created_total_last(self):
+        """
+        Should return the total amount of registrations at the 'end' point in
+        time.
+        """
+        user = User.objects.create(username='user1')
+        source = Source.objects.create(
+            name='TestSource', authority='hw_full', user=user)
+
+        start = datetime(2016, 10, 15)
+        end = datetime(2016, 10, 25)
+
+        self.create_registration_on(datetime(2016, 10, 14), source)  # Before
+        self.create_registration_on(datetime(2016, 10, 25), source)  # On
+        self.create_registration_on(datetime(2016, 10, 26), source)  # After
+
+        reg_count = MetricGenerator().registrations_created_total_last(
+            start, end)
+        self.assertEqual(reg_count, 2)
+
 
 class SendMetricTests(TestCase):
     @mock.patch('pika.BlockingConnection')

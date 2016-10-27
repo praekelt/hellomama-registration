@@ -24,6 +24,11 @@ class MetricGenerator(object):
             .filter(created_at__lte=end)\
             .count()
 
+    def registrations_created_total_last(self, start, end):
+        return Registration.objects\
+            .filter(created_at__lte=end)\
+            .count()
+
 
 def send_metric(amqp_url, prefix, name, value, timestamp):
     parameters = pika.URLParameters(amqp_url)
