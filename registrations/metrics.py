@@ -2,12 +2,22 @@ import pika
 
 from django.db.models import Count
 from django.db.models.expressions import RawSQL
+from django.conf import settings
+from functools import partial
+
 from hellomama_registration import utils
 
 from .models import Registration
 
 
 class MetricGenerator(object):
+    def __init__(self):
+        for msg_type in settings.MSG_TYPES:
+            setattr(
+                self, 'registrations_msg_type_{}_sum'.format(msg_type),
+                partial(self.registrations_msg_type_sum, msg_type)
+            )
+
     def generate_metric(self, name, start, end):
         """
         Generates a metric value for the given parameters.
@@ -45,6 +55,13 @@ class MetricGenerator(object):
             .annotate(count=Count('operator'))\
             .filter(count=1)\
             .exclude(operator__in=operators_before)\
+            .count()
+
+    def registrations_msg_type_sum(self, msg_type, start, end):
+        return Registration.objects\
+            .filter(created_at__gt=start)\
+            .filter(created_at__lte=end)\
+            .filter(data__msg_type=msg_type)\
             .count()
 
 
