@@ -2,6 +2,8 @@ import pika
 
 from hellomama_registration import utils
 
+from .models import Registration
+
 
 class MetricGenerator(object):
     def generate_metric(self, name, start, end):
@@ -15,6 +17,12 @@ class MetricGenerator(object):
         """
         metric_func = getattr(self, name.replace('.', '_'))
         return metric_func(start, end)
+
+    def registrations_created_sum(self, start, end):
+        return Registration.objects\
+            .filter(created_at__gt=start)\
+            .filter(created_at__lte=end)\
+            .count()
 
 
 def send_metric(amqp_url, prefix, name, value, timestamp):
