@@ -7,6 +7,7 @@ from django.template.response import TemplateResponse
 
 from hellomama_registration.utils import get_available_metrics
 from .models import Source, Registration, SubscriptionRequest
+from .tasks import repopulate_metrics
 
 
 class RepopulateMetricsForm(forms.Form):
@@ -41,7 +42,10 @@ class RegistrationAdmin(admin.ModelAdmin):
         if request.method == 'POST':
             form = RepopulateMetricsForm(request.POST)
             if form.is_valid():
-                # TODO: Start celery task to repopulate metrics
+                data = form.cleaned_data
+                repopulate_metrics.delay(
+                    data['amqp_url'], data['metric_names'],
+                    data['graphite_retentions'])
                 messages.success(request, 'Metrics repopulation started')
                 return redirect('admin:registrations_registration_changelist')
         else:
