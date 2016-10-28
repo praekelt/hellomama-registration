@@ -355,14 +355,17 @@ class RepopulateMetrics(Task):
     """
     name = 'registrations.tasks.repopulate_metrics'
 
-    def run(self, amqp_url, metric_names, graphite_retentions, **kwargs):
+    def run(
+            self, amqp_url, prefix, metric_names, graphite_retentions,
+            **kwargs):
         ret = GraphiteRetentions(graphite_retentions)
         tasks = []
         for start, end in ret.get_buckets():
             start = utils.timestamp_to_epoch(start)
             end = utils.timestamp_to_epoch(end)
             for metric in metric_names:
-                tasks.append(repopulate_metric.s(amqp_url, metric, start, end))
+                tasks.append(repopulate_metric.s(
+                    amqp_url, prefix, metric, start, end))
         return group(tasks).apply_async()
 
 repopulate_metrics = RepopulateMetrics()
@@ -374,13 +377,13 @@ class RepopulateMetric(Task):
     """
     name = 'registrations.tasks.repopulate_metric'
 
-    def run(self, amqp_url, metric_name, start, end, **kwargs):
+    def run(self, amqp_url, prefix, metric_name, start, end, **kwargs):
         start = datetime.utcfromtimestamp(float(start))
         end = datetime.utcfromtimestamp(float(end))
 
         value = MetricGenerator().generate_metric(metric_name, start, end)
 
         timestamp = start + (end - start) / 2
-        send_metric(amqp_url, metric_name, value, timestamp)
+        send_metric(amqp_url, prefix, metric_name, value, timestamp)
 
 repopulate_metric = RepopulateMetric()

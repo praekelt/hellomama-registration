@@ -14,6 +14,9 @@ class RepopulateMetricsForm(forms.Form):
     amqp_url = forms.CharField(
         label='AMQP URL', initial='amqp://guest:guest@localhost:5672/%2F',
         widget=forms.TextInput(attrs={'size': 80}))
+    prefix = forms.CharField(
+        label='Metric Name Prefix', initial='',
+        widget=forms.TextInput(attrs={'size': 80}))
     metric_names = forms.MultipleChoiceField(choices=[])
     graphite_retentions = forms.CharField(
         label='Graphite Retentions', initial='1m:1d,5m:1y,1h:5y',
@@ -50,7 +53,7 @@ class RegistrationAdmin(admin.ModelAdmin):
             if form.is_valid():
                 data = form.cleaned_data
                 repopulate_metrics.delay(
-                    data['amqp_url'], data['metric_names'],
+                    data['amqp_url'], data['prefix'], data['metric_names'],
                     data['graphite_retentions'])
                 messages.success(request, 'Metrics repopulation started')
                 return redirect('admin:registrations_registration_changelist')

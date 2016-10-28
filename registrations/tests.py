@@ -2901,18 +2901,18 @@ class TestRepopulateMetricsTask(TestCase):
         the appropriate parameters.
         """
         repopulate_metrics.delay(
-            'amqp://test', ['metric.foo', 'metric.bar'], '30s:1m')
+            'amqp://test', 'prefix', ['metric.foo', 'metric.bar'], '30s:1m')
         args = [args for args, _ in mock_repopulate.call_args_list]
 
         # Relative instead of absolute times
-        start = min(args, key=lambda a: a[2])[2]
-        args = [[a, m, s-start, e-start] for a, m, s, e in args]
+        start = min(args, key=lambda a: a[3])[3]
+        args = [[a, p, m, s-start, e-start] for a, p, m, s, e in args]
 
         expected = [
-            ['amqp://test', 'metric.foo', 0, 30],
-            ['amqp://test', 'metric.foo', 30, 60],
-            ['amqp://test', 'metric.bar', 0, 30],
-            ['amqp://test', 'metric.bar', 30, 60],
+            ['amqp://test', 'prefix', 'metric.foo', 0, 30],
+            ['amqp://test', 'prefix', 'metric.foo', 30, 60],
+            ['amqp://test', 'prefix', 'metric.bar', 0, 30],
+            ['amqp://test', 'prefix', 'metric.bar', 30, 60],
         ]
 
         self.assertEqual(sorted(expected), sorted(args))
@@ -2928,10 +2928,12 @@ class TestRepopulateMetricTask(TestCase):
         the appropriate metric, then send that metric to Graphite.
         """
         mock_metric_generator.return_value = 17.2
-        repopulate_metric.delay('amqp://foo', 'foo.bar', 300.0, 500.0)
+        repopulate_metric.delay(
+            'amqp://foo', 'prefix', 'foo.bar', 300.0, 500.0)
 
         mock_metric_generator.assert_called_once_with(
             'foo.bar', datetime.utcfromtimestamp(300),
             datetime.utcfromtimestamp(500))
         mock_send_metric.assert_called_once_with(
-            'amqp://foo', 'foo.bar', 17.2, datetime.utcfromtimestamp(400))
+            'amqp://foo', 'prefix', 'foo.bar', 17.2,
+            datetime.utcfromtimestamp(400))

@@ -17,12 +17,15 @@ class MetricGenerator(object):
         return metric_func(start, end)
 
 
-def send_metric(amqp_url, name, value, timestamp):
+def send_metric(amqp_url, prefix, name, value, timestamp):
     parameters = pika.URLParameters(amqp_url)
     connection = pika.BlockingConnection(parameters)
     channel = connection.channel()
 
     timestamp = utils.timestamp_to_epoch(timestamp)
+
+    if prefix:
+        name = '{}.{}'.format(prefix, name)
 
     channel.basic_publish(
         'graphite', name, '{} {}'.format(float(value), int(timestamp)),
