@@ -33,6 +33,11 @@ class MetricGenerator(object):
                 partial(
                     self.registrations_receiver_type_total_last, receiver_type)
             )
+        for language in settings.LANGUAGES:
+            setattr(
+                self, 'registrations_language_{}_sum'.format(language),
+                partial(self.registrations_language_sum, language)
+            )
 
     def generate_metric(self, name, start, end):
         """
@@ -93,10 +98,18 @@ class MetricGenerator(object):
             .filter(data__msg_receiver=receiver_type)\
             .count()
 
-    def registrations_receiver_type_total_last(self, msg_type, start, end):
+    def registrations_receiver_type_total_last(
+            self, receiver_type, start, end):
         return Registration.objects\
             .filter(created_at__lte=end)\
-            .filter(data__msg_receiver=msg_type)\
+            .filter(data__msg_receiver=receiver_type)\
+            .count()
+
+    def registrations_language_sum(self, language, start, end):
+        return Registration.objects\
+            .filter(created_at__gt=start)\
+            .filter(created_at__lte=end)\
+            .filter(data__language=language)\
             .count()
 
 
