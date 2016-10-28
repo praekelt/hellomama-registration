@@ -187,6 +187,48 @@ class MetricsGeneratorTests(AuthenticatedAPITestCase):
                 MetricGenerator(),
                 'registrations_msg_type_{}_total_last'.format(msg_type))))
 
+    def test_registrations_receiver_type_sum(self):
+        """
+        Should return the amount of registrations in the given timeframe for
+        a specific receiver type.
+
+        Only one of the borders of the timeframe should be included, to avoid
+        duplication.
+        """
+        user = User.objects.create(username='user1')
+        source = Source.objects.create(
+            name='TestSource', authority='hw_full', user=user)
+
+        start = datetime(2016, 10, 15)
+        end = datetime(2016, 10, 25)
+
+        self.create_registration_on(
+            datetime(2016, 10, 14), source, msg_receiver='type1')  # Before
+        self.create_registration_on(
+            datetime(2016, 10, 15), source, msg_receiver='type1')  # On
+        self.create_registration_on(
+            datetime(2016, 10, 20), source, msg_receiver='type1')  # During
+        self.create_registration_on(
+            datetime(2016, 10, 20), source, msg_receiver='type2')  # Wrong type
+        self.create_registration_on(
+            datetime(2016, 10, 25), source, msg_receiver='type1')  # On
+        self.create_registration_on(
+            datetime(2016, 10, 26), source, msg_receiver='type1')  # After
+
+        reg_count = MetricGenerator().registrations_receiver_type_sum(
+            'type1', start, end)
+        self.assertEqual(reg_count, 2)
+
+    def test_registrations_receiver_type_sum_correct_functions(self):
+        """
+        The correct functions must be created on the MetricGenerator according
+        to the settings in the settings file.
+        """
+        for receiver_type in settings.RECEIVER_TYPES:
+            self.assertTrue(callable(getattr(
+                MetricGenerator(),
+                'registrations_receiver_type_{}_sum'.format(receiver_type))))
+
 
 class SendMetricTests(TestCase):
     @mock.patch('pika.BlockingConnection')

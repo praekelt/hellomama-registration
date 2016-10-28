@@ -21,6 +21,12 @@ class MetricGenerator(object):
                 self, 'registrations_msg_type_{}_total_last'.format(msg_type),
                 partial(self.registrations_msg_type_total_last, msg_type)
             )
+        for receiver_type in settings.RECEIVER_TYPES:
+            setattr(
+                self, 'registrations_receiver_type_{}_sum'.format(
+                    receiver_type),
+                partial(self.registrations_receiver_type_sum, receiver_type)
+            )
 
     def generate_metric(self, name, start, end):
         """
@@ -72,6 +78,13 @@ class MetricGenerator(object):
         return Registration.objects\
             .filter(created_at__lte=end)\
             .filter(data__msg_type=msg_type)\
+            .count()
+
+    def registrations_receiver_type_sum(self, receiver_type, start, end):
+        return Registration.objects\
+            .filter(created_at__gt=start)\
+            .filter(created_at__lte=end)\
+            .filter(data__msg_receiver=receiver_type)\
             .count()
 
 
