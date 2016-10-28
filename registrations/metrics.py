@@ -38,6 +38,10 @@ class MetricGenerator(object):
                 self, 'registrations_language_{}_sum'.format(language),
                 partial(self.registrations_language_sum, language)
             )
+            setattr(
+                self, 'registrations_language_{}_total_last'.format(language),
+                partial(self.registrations_language_total_last, language)
+            )
 
     def generate_metric(self, name, start, end):
         """
@@ -108,6 +112,12 @@ class MetricGenerator(object):
     def registrations_language_sum(self, language, start, end):
         return Registration.objects\
             .filter(created_at__gt=start)\
+            .filter(created_at__lte=end)\
+            .filter(data__language=language)\
+            .count()
+
+    def registrations_language_total_last(self, language, start, end):
+        return Registration.objects\
             .filter(created_at__lte=end)\
             .filter(data__language=language)\
             .count()
