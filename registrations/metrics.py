@@ -47,6 +47,10 @@ class MetricGenerator(object):
                 self, 'registrations_state_{}_sum'.format(state),
                 partial(self.registrations_state_sum, state)
             )
+            setattr(
+                self, 'registrations_state_{}_total_last'.format(state),
+                partial(self.registrations_state_total_last, state)
+            )
 
     def generate_metric(self, name, start, end):
         """
@@ -131,6 +135,12 @@ class MetricGenerator(object):
         return registrations_for_identity_field(
             {"details__state": state})\
             .filter(created_at__gt=start)\
+            .filter(created_at__lte=end)\
+            .count()
+
+    def registrations_state_total_last(self, state, start, end):
+        return registrations_for_identity_field(
+            {"details__state": state})\
             .filter(created_at__lte=end)\
             .count()
 
