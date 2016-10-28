@@ -42,6 +42,11 @@ class MetricGenerator(object):
                 self, 'registrations_language_{}_total_last'.format(language),
                 partial(self.registrations_language_total_last, language)
             )
+        for state in settings.STATES:
+            setattr(
+                self, 'registrations_state_{}_sum'.format(state),
+                partial(self.registrations_state_sum, state)
+            )
 
     def generate_metric(self, name, start, end):
         """
@@ -121,6 +126,25 @@ class MetricGenerator(object):
             .filter(created_at__lte=end)\
             .filter(data__language=language)\
             .count()
+
+    def registrations_state_sum(self, state, start, end):
+        registrations = Registration.objects\
+            .filter(created_at__gt=start)\
+            .filter(created_at__lte=end)
+
+        state_cache = {}
+        registration_count = 0
+
+        for reg in registrations:
+            reg_state = state_cache.get(reg.data['operator_id'])
+            if reg_state is None:
+                reg_state = utils.get_identity(reg.data['operator_id']).get(
+                    'details', {}).get('state')
+                state_cache[reg.data['operator_id']] = reg_state
+            if reg_state == state:
+                registration_count += 1
+
+        return registration_count
 
 
 def send_metric(amqp_url, prefix, name, value, timestamp):

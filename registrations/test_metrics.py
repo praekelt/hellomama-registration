@@ -3,6 +3,9 @@ try:
 except ImportError:
     from unittest import mock
 
+import json
+import responses
+
 from datetime import datetime
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -346,6 +349,74 @@ class MetricsGeneratorTests(AuthenticatedAPITestCase):
                 MetricGenerator(),
                 'registrations_language_{}_total_last'.format(
                     language))))
+
+    def identity1_callback(self, request):
+        headers = {'Content-Type': "application/json"}
+        resp = {
+            "id": "id1",
+            "details": {"state": "state1"},
+        }
+        return (200, headers, json.dumps(resp))
+
+    def identity2_callback(self, request):
+        headers = {'Content-Type': "application/json"}
+        resp = {
+            "id": "id2",
+            "details": {"state": "state2"},
+        }
+        return (200, headers, json.dumps(resp))
+
+    @responses.activate
+    def test_registrations_state_sum(self):
+        """
+        Should return the amount of registrations in the given timeframe for
+        a specific state. The identity store calls should be cached.
+
+        Only one of the borders of the timeframe should be included, to avoid
+        duplication.
+        """
+        user = User.objects.create(username='user1')
+        source = Source.objects.create(
+            name='TestSource', authority='hw_full', user=user)
+
+        url = 'http://localhost:8001/api/v1/identities/id1/'
+        responses.add_callback(
+            responses.GET, url, callback=self.identity1_callback,
+            content_type="application/json")
+        url = 'http://localhost:8001/api/v1/identities/id2/'
+        responses.add_callback(
+            responses.GET, url, callback=self.identity2_callback,
+            content_type="application/json")
+
+        start = datetime(2016, 10, 15)
+        end = datetime(2016, 10, 25)
+
+        self.create_registration_on(
+            datetime(2016, 10, 14), source, operator_id='id1')  # Before
+        self.create_registration_on(
+            datetime(2016, 10, 15), source, operator_id='id1')  # On
+        self.create_registration_on(
+            datetime(2016, 10, 20), source, operator_id='id1')  # During
+        self.create_registration_on(
+            datetime(2016, 10, 20), source, operator_id='id2')  # Wrong type
+        self.create_registration_on(
+            datetime(2016, 10, 25), source, operator_id='id1')  # On
+        self.create_registration_on(
+            datetime(2016, 10, 26), source, operator_id='id1')  # After
+
+        reg_count = MetricGenerator().registrations_state_sum(
+            'state1', start, end)
+        self.assertEqual(reg_count, 2)
+
+    def test_registrations_state_sum_correct_functions(self):
+        """
+        The correct functions must be created on the MetricGenerator according
+        to the settings in the settings file.
+        """
+        for state in settings.STATES:
+            self.assertTrue(callable(getattr(
+                MetricGenerator(),
+                'registrations_state_{}_sum'.format(state))))
 
 
 class SendMetricTests(TestCase):
