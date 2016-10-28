@@ -73,6 +73,8 @@ class RetentionScheme(object):
         for r in self.retentions:
             beginning = now
             for start, end in r.get_buckets(now=now, finish=finish):
+                # We always want to end the next retention at the earliest
+                # point that this retention covers, to avoice overlaps
                 beginning = min(beginning, start)
                 yield (start, end)
             # The next retention should end where this one started
