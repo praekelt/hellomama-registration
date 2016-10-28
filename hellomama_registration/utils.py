@@ -69,7 +69,13 @@ def search_identities(params):
         'Content-Type': 'application/json'
     }
     r = requests.get(url, params=params, headers=headers).json()
-    return r["results"]
+    while True:
+        for identity in r['results']:
+            yield identity
+        if r.get('next'):
+            r = requests.get(r['next'], headers=headers).json()
+        else:
+            break
 
 
 def patch_identity(identity, data):
