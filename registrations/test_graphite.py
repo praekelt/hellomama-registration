@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from django.test import TestCase
 
-from registrations.graphite import GraphiteRetention, GraphiteRetentions
+from registrations.graphite import GraphiteRetention, RetentionScheme
 
 
 class TestGraphiteRetention(TestCase):
@@ -110,7 +110,7 @@ class TestGraphiteRetentions(TestCase):
         The get_buckets function should return all the buckets for the given
         retentions, with no overlap.
         """
-        ret = GraphiteRetentions('30s:1m,1m:3m')
+        ret = RetentionScheme('30s:1m,1m:3m')
         now = datetime(2016, 10, 26, 12, 00, 00)
         buckets = list(ret.get_buckets(now=now))
         buckets.sort(key=lambda d: d[0])
@@ -144,7 +144,7 @@ class TestGraphiteRetentions(TestCase):
         The get_buckets function should return all the buckets for the given
         retentions, with no overlap, even if the boundaries don't match up.
         """
-        ret = GraphiteRetentions('45s:90s,1m:3m')
+        ret = RetentionScheme('45s:90s,1m:3m')
         now = datetime(2016, 10, 26, 12, 00, 00)
         buckets = list(ret.get_buckets(now=now))
         buckets.sort(key=lambda d: d[0])

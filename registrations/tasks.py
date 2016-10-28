@@ -10,7 +10,7 @@ from django.conf import settings
 from go_http.metrics import MetricsApiClient
 
 from hellomama_registration import utils
-from .graphite import GraphiteRetentions
+from .graphite import RetentionScheme
 from .models import Registration, SubscriptionRequest
 from .metrics import MetricGenerator, send_metric
 
@@ -358,7 +358,7 @@ class RepopulateMetrics(Task):
     def run(
             self, amqp_url, prefix, metric_names, graphite_retentions,
             **kwargs):
-        ret = GraphiteRetentions(graphite_retentions)
+        ret = RetentionScheme(graphite_retentions)
         tasks = []
         for start, end in ret.get_buckets():
             start = utils.timestamp_to_epoch(start)

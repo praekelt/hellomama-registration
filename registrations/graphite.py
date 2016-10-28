@@ -50,7 +50,7 @@ class GraphiteRetention(object):
             start = end
 
 
-class GraphiteRetentions(object):
+class RetentionScheme(object):
     """
     Represents multiple graphite retentions. Provides utilities to get time
     buckets across all retentions.
