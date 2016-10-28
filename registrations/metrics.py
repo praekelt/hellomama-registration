@@ -7,7 +7,7 @@ from functools import partial
 
 from hellomama_registration import utils
 
-from .models import Registration
+from .models import Registration, registrations_for_identity_field
 
 
 class MetricGenerator(object):
@@ -128,23 +128,11 @@ class MetricGenerator(object):
             .count()
 
     def registrations_state_sum(self, state, start, end):
-        registrations = Registration.objects\
+        return registrations_for_identity_field(
+            {"details__state": state})\
             .filter(created_at__gt=start)\
-            .filter(created_at__lte=end)
-
-        state_cache = {}
-        registration_count = 0
-
-        for reg in registrations:
-            reg_state = state_cache.get(reg.data['operator_id'])
-            if reg_state is None:
-                reg_state = utils.get_identity(reg.data['operator_id']).get(
-                    'details', {}).get('state')
-                state_cache[reg.data['operator_id']] = reg_state
-            if reg_state == state:
-                registration_count += 1
-
-        return registration_count
+            .filter(created_at__lte=end)\
+            .count()
 
 
 def send_metric(amqp_url, prefix, name, value, timestamp):

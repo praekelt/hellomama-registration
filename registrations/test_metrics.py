@@ -350,19 +350,15 @@ class MetricsGeneratorTests(AuthenticatedAPITestCase):
                 'registrations_language_{}_total_last'.format(
                     language))))
 
-    def identity1_callback(self, request):
+    def identity_search_callback(self, request):
         headers = {'Content-Type': "application/json"}
         resp = {
-            "id": "id1",
-            "details": {"state": "state1"},
-        }
-        return (200, headers, json.dumps(resp))
-
-    def identity2_callback(self, request):
-        headers = {'Content-Type': "application/json"}
-        resp = {
-            "id": "id2",
-            "details": {"state": "state2"},
+            "results": [
+                {
+                    "id": "id1",
+                    "details": {"state": "state2"},
+                },
+            ]
         }
         return (200, headers, json.dumps(resp))
 
@@ -370,7 +366,7 @@ class MetricsGeneratorTests(AuthenticatedAPITestCase):
     def test_registrations_state_sum(self):
         """
         Should return the amount of registrations in the given timeframe for
-        a specific state. The identity store calls should be cached.
+        a specific state.
 
         Only one of the borders of the timeframe should be included, to avoid
         duplication.
@@ -379,14 +375,11 @@ class MetricsGeneratorTests(AuthenticatedAPITestCase):
         source = Source.objects.create(
             name='TestSource', authority='hw_full', user=user)
 
-        url = 'http://localhost:8001/api/v1/identities/id1/'
+        url = 'http://localhost:8001/api/v1/identities/search/?' \
+              'details__state=state1'
         responses.add_callback(
-            responses.GET, url, callback=self.identity1_callback,
-            content_type="application/json")
-        url = 'http://localhost:8001/api/v1/identities/id2/'
-        responses.add_callback(
-            responses.GET, url, callback=self.identity2_callback,
-            content_type="application/json")
+            responses.GET, url, callback=self.identity_search_callback,
+            content_type="application/json", match_querystring=True)
 
         start = datetime(2016, 10, 15)
         end = datetime(2016, 10, 25)
