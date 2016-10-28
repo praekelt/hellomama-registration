@@ -150,6 +150,43 @@ class MetricsGeneratorTests(AuthenticatedAPITestCase):
                 MetricGenerator(),
                 'registrations_msg_type_{}_sum'.format(msg_type))))
 
+    def test_registrations_msg_type_total_last(self):
+        """
+        Should return the amount of registrations before the end of the
+        timeframe for the given message type.
+        """
+        user = User.objects.create(username='user1')
+        source = Source.objects.create(
+            name='TestSource', authority='hw_full', user=user)
+
+        start = datetime(2016, 10, 15)
+        end = datetime(2016, 10, 25)
+
+        self.create_registration_on(
+            datetime(2016, 10, 14), source, msg_type='type1')  # Before
+        self.create_registration_on(
+            datetime(2016, 10, 20), source, msg_type='type1')  # During
+        self.create_registration_on(
+            datetime(2016, 10, 20), source, msg_type='type2')  # Wrong type
+        self.create_registration_on(
+            datetime(2016, 10, 25), source, msg_type='type1')  # On
+        self.create_registration_on(
+            datetime(2016, 10, 26), source, msg_type='type1')  # After
+
+        reg_count = MetricGenerator().registrations_msg_type_total_last(
+            'type1', start, end)
+        self.assertEqual(reg_count, 3)
+
+    def test_registrations_msg_type_total_last_correct_functions(self):
+        """
+        The correct functions must be created on the MetricGenerator according
+        to the settings in the settings file.
+        """
+        for msg_type in settings.MSG_TYPES:
+            self.assertTrue(callable(getattr(
+                MetricGenerator(),
+                'registrations_msg_type_{}_total_last'.format(msg_type))))
+
 
 class SendMetricTests(TestCase):
     @mock.patch('pika.BlockingConnection')
