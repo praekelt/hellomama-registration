@@ -28,6 +28,7 @@ setup(
         'django-filter==0.12.0',
         'seed-services-client==0.8.0',
         'drfdocs==0.0.11',
+        'pika==0.10.0',
     ],
     classifiers=[
         'Development Status :: 4 - Beta',

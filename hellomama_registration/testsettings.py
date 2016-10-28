@@ -6,7 +6,7 @@ SECRET_KEY = 'TESTSEKRET'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-TEMPLATE_DEBUG = True
+TEMPLATES[0]['OPTIONS']['debug'] = True
 
 CELERY_EAGER_PROPAGATES_EXCEPTIONS = True
 CELERY_ALWAYS_EAGER = True

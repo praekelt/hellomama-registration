@@ -12,6 +12,11 @@ try:
 except ImportError:
     from urlparse import urlparse
 
+try:
+    import mock
+except ImportError:
+    from unittest import mock
+
 from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 from django.db.models.signals import post_save
@@ -36,7 +41,8 @@ from .models import (
 from .tasks import (
     validate_registration,
     is_valid_date, is_valid_uuid, is_valid_lang, is_valid_msg_type,
-    is_valid_msg_receiver, is_valid_loss_reason, is_valid_state, is_valid_role)
+    is_valid_msg_receiver, is_valid_loss_reason, is_valid_state, is_valid_role,
+    repopulate_metrics, repopulate_metric)
 
 
 def override_get_today():
@@ -2577,8 +2583,9 @@ class ManagementTaskTestCase(TestCase):
         }
         return Source.objects.create(**data)
 
-    def mk_registration_at_week(self, source, week):
+    def mk_registration_at_week(self, source, week, today=None):
         # prepare registration data
+        today = today or datetime.now()
         registration_data = {
             "stage": "prebirth",
             "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
@@ -2588,7 +2595,7 @@ class ManagementTaskTestCase(TestCase):
         registration_data["data"].update({
             "preg_week": week,
             "last_period_date": (
-                datetime.now() - timedelta(days=(7 * week))).strftime('%Y%m%d')
+                today - timedelta(days=(7 * week))).strftime('%Y%m%d')
         })
         return Registration.objects.create(**registration_data)
 
@@ -2773,10 +2780,11 @@ class VerifyScheduleSequenceTest(ManagementTaskTestCase):
     def test_verify_subreq_next_sequence_number_on_specific_day(self):
         src1 = self.mk_source(self.user1)
 
-        reg1 = self.mk_registration_at_week(src1, week=25)
+        reg1 = self.mk_registration_at_week(
+            src1, week=25, today=datetime(2016, 9, 27))
         sub1 = self.mk_subscription_request(reg1)
 
-        # This is obviously wrong, should be 25
+        # This is obviously wrong, should be 42
         sub1.next_sequence_number = 1
         sub1.save()
 
@@ -2883,3 +2891,49 @@ class VerifyScheduleSequenceTest(ManagementTaskTestCase):
         self.assertEqual(
             SubscriptionRequest.objects.get(pk=sub1.pk).next_sequence_number,
             45)
+
+
+class TestRepopulateMetricsTask(TestCase):
+    @mock.patch('registrations.tasks.RepopulateMetric.run')
+    def test_runs_repopulate_metric_tasks(self, mock_repopulate):
+        """
+        The repopulate metrics task should spawn repopulate metric tasks with
+        the appropriate parameters.
+        """
+        repopulate_metrics.delay(
+            'amqp://test', 'prefix', ['metric.foo', 'metric.bar'], '30s:1m')
+        args = [args for args, _ in mock_repopulate.call_args_list]
+
+        # Relative instead of absolute times
+        start = min(args, key=lambda a: a[3])[3]
+        args = [[a, p, m, s-start, e-start] for a, p, m, s, e in args]
+
+        expected = [
+            ['amqp://test', 'prefix', 'metric.foo', 0, 30],
+            ['amqp://test', 'prefix', 'metric.foo', 30, 60],
+            ['amqp://test', 'prefix', 'metric.bar', 0, 30],
+            ['amqp://test', 'prefix', 'metric.bar', 30, 60],
+        ]
+
+        self.assertEqual(sorted(expected), sorted(args))
+
+
+class TestRepopulateMetricTask(TestCase):
+    @mock.patch('registrations.tasks.MetricGenerator.generate_metric')
+    @mock.patch('registrations.tasks.send_metric')
+    def test_repopulate_metric_task(
+            self, mock_send_metric, mock_metric_generator):
+        """
+        The repopulate metric task should use the metric generator to generate
+        the appropriate metric, then send that metric to Graphite.
+        """
+        mock_metric_generator.return_value = 17.2
+        repopulate_metric.delay(
+            'amqp://foo', 'prefix', 'foo.bar', 300.0, 500.0)
+
+        mock_metric_generator.assert_called_once_with(
+            'foo.bar', datetime.utcfromtimestamp(300),
+            datetime.utcfromtimestamp(500))
+        mock_send_metric.assert_called_once_with(
+            'amqp://foo', 'prefix', 'foo.bar', 17.2,
+            datetime.utcfromtimestamp(400))

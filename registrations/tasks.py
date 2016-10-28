@@ -1,15 +1,18 @@
-import datetime
 import json
 import requests
 import uuid
+from datetime import datetime
 
+from celery import group
 from celery.task import Task
 from celery.utils.log import get_task_logger
 from django.conf import settings
 from go_http.metrics import MetricsApiClient
 
 from hellomama_registration import utils
+from .graphite import RetentionScheme
 from .models import Registration, SubscriptionRequest
+from .metrics import MetricGenerator, send_metric
 
 
 logger = get_task_logger(__name__)
@@ -17,7 +20,7 @@ logger = get_task_logger(__name__)
 
 def is_valid_date(date):
     try:
-        datetime.datetime.strptime(date, "%Y%m%d")
+        datetime.strptime(date, "%Y%m%d")
         return True
     except:
         return False
@@ -344,3 +347,43 @@ class FireMetric(Task):
             metric_name, metric_value)
 
 fire_metric = FireMetric()
+
+
+class RepopulateMetrics(Task):
+    """
+    Repopulates historical metrics.
+    """
+    name = 'registrations.tasks.repopulate_metrics'
+
+    def run(
+            self, amqp_url, prefix, metric_names, graphite_retentions,
+            **kwargs):
+        ret = RetentionScheme(graphite_retentions)
+        tasks = []
+        for start, end in ret.get_buckets():
+            start = utils.timestamp_to_epoch(start)
+            end = utils.timestamp_to_epoch(end)
+            for metric in metric_names:
+                tasks.append(repopulate_metric.s(
+                    amqp_url, prefix, metric, start, end))
+        return group(tasks).apply_async()
+
+repopulate_metrics = RepopulateMetrics()
+
+
+class RepopulateMetric(Task):
+    """
+    Repopulates a single metric for a single timeframe.
+    """
+    name = 'registrations.tasks.repopulate_metric'
+
+    def run(self, amqp_url, prefix, metric_name, start, end, **kwargs):
+        start = datetime.utcfromtimestamp(float(start))
+        end = datetime.utcfromtimestamp(float(end))
+
+        value = MetricGenerator().generate_metric(metric_name, start, end)
+
+        timestamp = start + (end - start) / 2
+        send_metric(amqp_url, prefix, metric_name, value, timestamp)
+
+repopulate_metric = RepopulateMetric()
