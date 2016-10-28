@@ -7,13 +7,13 @@ import json
 import responses
 
 from datetime import datetime
-from django.conf import settings
 from django.contrib.auth.models import User
 from django.test import TestCase
 
 from .metrics import MetricGenerator, send_metric
 from .tests import AuthenticatedAPITestCase
 from .models import Registration, Source
+from hellomama_registration import utils
 
 
 class MetricsGeneratorTests(AuthenticatedAPITestCase):
@@ -143,16 +143,6 @@ class MetricsGeneratorTests(AuthenticatedAPITestCase):
             'type1', start, end)
         self.assertEqual(reg_count, 2)
 
-    def test_registrations_msg_type_sum_correct_functions(self):
-        """
-        The correct functions must be created on the MetricGenerator according
-        to the settings in the settings file.
-        """
-        for msg_type in settings.MSG_TYPES:
-            self.assertTrue(callable(getattr(
-                MetricGenerator(),
-                'registrations_msg_type_{}_sum'.format(msg_type))))
-
     def test_registrations_msg_type_total_last(self):
         """
         Should return the amount of registrations before the end of the
@@ -179,16 +169,6 @@ class MetricsGeneratorTests(AuthenticatedAPITestCase):
         reg_count = MetricGenerator().registrations_msg_type_total_last(
             'type1', start, end)
         self.assertEqual(reg_count, 3)
-
-    def test_registrations_msg_type_total_last_correct_functions(self):
-        """
-        The correct functions must be created on the MetricGenerator according
-        to the settings in the settings file.
-        """
-        for msg_type in settings.MSG_TYPES:
-            self.assertTrue(callable(getattr(
-                MetricGenerator(),
-                'registrations_msg_type_{}_total_last'.format(msg_type))))
 
     def test_registrations_receiver_type_sum(self):
         """
@@ -222,16 +202,6 @@ class MetricsGeneratorTests(AuthenticatedAPITestCase):
             'type1', start, end)
         self.assertEqual(reg_count, 2)
 
-    def test_registrations_receiver_type_sum_correct_functions(self):
-        """
-        The correct functions must be created on the MetricGenerator according
-        to the settings in the settings file.
-        """
-        for receiver_type in settings.RECEIVER_TYPES:
-            self.assertTrue(callable(getattr(
-                MetricGenerator(),
-                'registrations_receiver_type_{}_sum'.format(receiver_type))))
-
     def test_registrations_receiver_type_total_last(self):
         """
         Should return the amount of registrations before the end of the
@@ -258,17 +228,6 @@ class MetricsGeneratorTests(AuthenticatedAPITestCase):
         reg_count = MetricGenerator().registrations_receiver_type_total_last(
             'type1', start, end)
         self.assertEqual(reg_count, 3)
-
-    def test_registrations_receiver_type_total_last_correct_functions(self):
-        """
-        The correct functions must be created on the MetricGenerator according
-        to the settings in the settings file.
-        """
-        for receiver_type in settings.RECEIVER_TYPES:
-            self.assertTrue(callable(getattr(
-                MetricGenerator(),
-                'registrations_receiver_type_{}_total_last'.format(
-                    receiver_type))))
 
     def test_registrations_language_sum(self):
         """
@@ -302,16 +261,6 @@ class MetricsGeneratorTests(AuthenticatedAPITestCase):
             'eng', start, end)
         self.assertEqual(reg_count, 2)
 
-    def test_registrations_language_sum_correct_functions(self):
-        """
-        The correct functions must be created on the MetricGenerator according
-        to the settings in the settings file.
-        """
-        for language in settings.LANGUAGES:
-            self.assertTrue(callable(getattr(
-                MetricGenerator(),
-                'registrations_language_{}_sum'.format(language))))
-
     def test_registrations_language_total_last(self):
         """
         Should return the amount of registrations before the end of the
@@ -338,17 +287,6 @@ class MetricsGeneratorTests(AuthenticatedAPITestCase):
         reg_count = MetricGenerator().registrations_language_total_last(
             'eng', start, end)
         self.assertEqual(reg_count, 3)
-
-    def test_registrations_language_total_last_correct_functions(self):
-        """
-        The correct functions must be created on the MetricGenerator according
-        to the settings in the settings file.
-        """
-        for language in settings.LANGUAGES:
-            self.assertTrue(callable(getattr(
-                MetricGenerator(),
-                'registrations_language_{}_total_last'.format(
-                    language))))
 
     def identity_search_callback(self, request):
         headers = {'Content-Type': "application/json"}
@@ -401,16 +339,6 @@ class MetricsGeneratorTests(AuthenticatedAPITestCase):
             'state1', start, end)
         self.assertEqual(reg_count, 2)
 
-    def test_registrations_state_sum_correct_functions(self):
-        """
-        The correct functions must be created on the MetricGenerator according
-        to the settings in the settings file.
-        """
-        for state in settings.STATES:
-            self.assertTrue(callable(getattr(
-                MetricGenerator(),
-                'registrations_state_{}_sum'.format(state))))
-
     @responses.activate
     def test_registrations_state_total_last(self):
         """
@@ -444,16 +372,6 @@ class MetricsGeneratorTests(AuthenticatedAPITestCase):
         reg_count = MetricGenerator().registrations_state_total_last(
             'state1', start, end)
         self.assertEqual(reg_count, 3)
-
-    def test_registrations_state_total_last_correct_functions(self):
-        """
-        The correct functions must be created on the MetricGenerator according
-        to the settings in the settings file.
-        """
-        for state in settings.STATES:
-            self.assertTrue(callable(getattr(
-                MetricGenerator(),
-                'registrations_state_{}_total_last'.format(state))))
 
     @responses.activate
     def test_registrations_role_sum(self):
@@ -494,16 +412,6 @@ class MetricsGeneratorTests(AuthenticatedAPITestCase):
             'role1', start, end)
         self.assertEqual(reg_count, 2)
 
-    def test_registrations_role_sum_correct_functions(self):
-        """
-        The correct functions must be created on the MetricGenerator according
-        to the settings in the settings file.
-        """
-        for role in settings.ROLES:
-            self.assertTrue(callable(getattr(
-                MetricGenerator(),
-                'registrations_role_{}_sum'.format(role))))
-
     @responses.activate
     def test_registrations_role_total_last(self):
         """
@@ -538,15 +446,57 @@ class MetricsGeneratorTests(AuthenticatedAPITestCase):
             'role1', start, end)
         self.assertEqual(reg_count, 3)
 
-    def test_registrations_role_total_last_correct_functions(self):
+    def test_registrations_source_sum(self):
         """
-        The correct functions must be created on the MetricGenerator according
-        to the settings in the settings file.
+        Should return the amount of registrations in the given timeframe for
+        a specific source.
+
+        Only one of the borders of the timeframe should be included, to avoid
+        duplication.
         """
-        for role in settings.ROLES:
+        user1 = User.objects.create(username='user1')
+        user2 = User.objects.create(username='user2')
+        source1 = Source.objects.create(
+            name='TestSource1', authority='hw_full', user=user1)
+        source2 = Source.objects.create(
+            name='TestSource2', authority='hw_full', user=user2)
+
+        url = 'http://localhost:8001/api/v1/identities/search/?' \
+              'details__state=state1'
+        responses.add_callback(
+            responses.GET, url, callback=self.identity_search_callback,
+            content_type="application/json", match_querystring=True)
+
+        start = datetime(2016, 10, 15)
+        end = datetime(2016, 10, 25)
+
+        self.create_registration_on(
+            datetime(2016, 10, 14), source1)  # Before
+        self.create_registration_on(
+            datetime(2016, 10, 15), source1)  # On
+        self.create_registration_on(
+            datetime(2016, 10, 20), source1)  # During
+        self.create_registration_on(
+            datetime(2016, 10, 20), source2)  # Wrong type
+        self.create_registration_on(
+            datetime(2016, 10, 25), source1)  # On
+        self.create_registration_on(
+            datetime(2016, 10, 26), source1)  # After
+
+        reg_count = MetricGenerator().registrations_source_sum(
+            'user1', start, end)
+        self.assertEqual(reg_count, 2)
+
+    def test_that_all_metrics_are_present(self):
+        """
+        We need to make sure that we have a function for each of the metrics.
+        """
+        user = User.objects.create(username='user1')
+        Source.objects.create(
+            name='TestSource', authority='hw_full', user=user)
+        for metric in utils.get_available_metrics():
             self.assertTrue(callable(getattr(
-                MetricGenerator(),
-                'registrations_role_{}_total_last'.format(role))))
+                MetricGenerator(), metric.replace('.', '_'))))
 
 
 class SendMetricTests(TestCase):
