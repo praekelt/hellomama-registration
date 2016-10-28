@@ -455,6 +455,55 @@ class MetricsGeneratorTests(AuthenticatedAPITestCase):
                 MetricGenerator(),
                 'registrations_state_{}_total_last'.format(state))))
 
+    @responses.activate
+    def test_registrations_role_sum(self):
+        """
+        Should return the amount of registrations in the given timeframe for
+        a specific role.
+
+        Only one of the borders of the timeframe should be included, to avoid
+        duplication.
+        """
+        user = User.objects.create(username='user1')
+        source = Source.objects.create(
+            name='TestSource', authority='hw_full', user=user)
+
+        url = 'http://localhost:8001/api/v1/identities/search/?' \
+              'details__role=role1'
+        responses.add_callback(
+            responses.GET, url, callback=self.identity_search_callback,
+            content_type="application/json", match_querystring=True)
+
+        start = datetime(2016, 10, 15)
+        end = datetime(2016, 10, 25)
+
+        self.create_registration_on(
+            datetime(2016, 10, 14), source, operator_id='id1')  # Before
+        self.create_registration_on(
+            datetime(2016, 10, 15), source, operator_id='id1')  # On
+        self.create_registration_on(
+            datetime(2016, 10, 20), source, operator_id='id1')  # During
+        self.create_registration_on(
+            datetime(2016, 10, 20), source, operator_id='id2')  # Wrong type
+        self.create_registration_on(
+            datetime(2016, 10, 25), source, operator_id='id1')  # On
+        self.create_registration_on(
+            datetime(2016, 10, 26), source, operator_id='id1')  # After
+
+        reg_count = MetricGenerator().registrations_role_sum(
+            'role1', start, end)
+        self.assertEqual(reg_count, 2)
+
+    def test_registrations_role_sum_correct_functions(self):
+        """
+        The correct functions must be created on the MetricGenerator according
+        to the settings in the settings file.
+        """
+        for role in settings.ROLES:
+            self.assertTrue(callable(getattr(
+                MetricGenerator(),
+                'registrations_role_{}_sum'.format(role))))
+
 
 class SendMetricTests(TestCase):
     @mock.patch('pika.BlockingConnection')
