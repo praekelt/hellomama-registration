@@ -461,12 +461,6 @@ class MetricsGeneratorTests(AuthenticatedAPITestCase):
         source2 = Source.objects.create(
             name='TestSource2', authority='hw_full', user=user2)
 
-        url = 'http://localhost:8001/api/v1/identities/search/?' \
-              'details__state=state1'
-        responses.add_callback(
-            responses.GET, url, callback=self.identity_search_callback,
-            content_type="application/json", match_querystring=True)
-
         start = datetime(2016, 10, 15)
         end = datetime(2016, 10, 25)
 
