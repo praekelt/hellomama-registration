@@ -216,9 +216,6 @@ CELERY_ROUTES = {
     'registrations.tasks.repopulate_metrics': {
         'queue': 'mediumpriority',
     },
-    'registrations.tasks.repopulate_metric': {
-        'queue': 'mediumpriority',
-    },
 }
 
 CACHES = {
