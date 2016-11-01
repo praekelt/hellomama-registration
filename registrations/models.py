@@ -263,9 +263,7 @@ def fire_language_metric(sender, instance, created, **kwargs):
 def registrations_for_identity_field(params):
     from hellomama_registration.utils import search_identities
     identities = search_identities(params=params)
-    ids = ()
-    for data in identities:
-        ids = ids + (data["id"],)
+    ids = tuple(data['id'] for data in identities)
 
     return Registration.objects.filter(
         data__operator_id__in=ids)

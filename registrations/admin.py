@@ -15,7 +15,7 @@ class RepopulateMetricsForm(forms.Form):
         label='AMQP URL', initial='amqp://guest:guest@localhost:5672/%2F',
         widget=forms.TextInput(attrs={'size': 80}))
     prefix = forms.CharField(
-        label='Metric Name Prefix', initial='',
+        label='Metric Name Prefix', initial='', required=False,
         widget=forms.TextInput(attrs={'size': 80}))
     metric_names = forms.MultipleChoiceField(choices=[])
     graphite_retentions = forms.CharField(
