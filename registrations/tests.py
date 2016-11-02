@@ -2894,11 +2894,12 @@ class VerifyScheduleSequenceTest(ManagementTaskTestCase):
 
 
 class TestRepopulateMetricsTask(TestCase):
+    @mock.patch('registrations.tasks.pika')
     @mock.patch('registrations.tasks.RepopulateMetrics.generate_and_send')
-    def test_run_repopulate_metrics(self, mock_repopulate):
+    def test_run_repopulate_metrics(self, mock_repopulate, mock_pika):
         """
-        The repopulate metrics task should call generate_and_send with the
-        appropriate parameters.
+        The repopulate metrics task should create an amqp connection, and call
+        generate_and_send with the appropriate parameters.
         """
         repopulate_metrics.delay(
             'amqp://test', 'prefix', ['metric.foo', 'metric.bar'], '30s:1m')
@@ -2908,18 +2909,27 @@ class TestRepopulateMetricsTask(TestCase):
         start = min(args, key=lambda a: a[3])[3]
         args = [[a, p, m, s-start, e-start] for a, p, m, s, e in args]
 
+        connection = mock_pika.BlockingConnection.return_value
+        channel = connection.channel.return_value
         expected = [
-            ['amqp://test', 'prefix', 'metric.foo',
+            [channel, 'prefix', 'metric.foo',
                 timedelta(seconds=0), timedelta(seconds=30)],
-            ['amqp://test', 'prefix', 'metric.foo',
+            [channel, 'prefix', 'metric.foo',
                 timedelta(seconds=30), timedelta(seconds=60)],
-            ['amqp://test', 'prefix', 'metric.bar',
+            [channel, 'prefix', 'metric.bar',
                 timedelta(seconds=0), timedelta(seconds=30)],
-            ['amqp://test', 'prefix', 'metric.bar',
+            [channel, 'prefix', 'metric.bar',
                 timedelta(seconds=30), timedelta(seconds=60)],
         ]
 
         self.assertEqual(sorted(expected), sorted(args))
+
+        # Assert that the amqp parameters were set from the correc url
+        [url], _ = mock_pika.URLParameters.call_args
+        self.assertEqual(url, 'amqp://test')
+        # Assert that the connection was created with the generated parameters
+        [parameters], _ = mock_pika.BlockingConnection.call_args
+        self.assertEqual(parameters, mock_pika.URLParameters.return_value)
 
     @mock.patch('registrations.tasks.MetricGenerator.generate_metric')
     @mock.patch('registrations.tasks.send_metric')

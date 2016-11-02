@@ -3,6 +3,7 @@ import requests
 import uuid
 from datetime import datetime
 
+import pika
 from celery.task import Task
 from celery.utils.log import get_task_logger
 from django.conf import settings
@@ -367,10 +368,16 @@ class RepopulateMetrics(Task):
     def run(
             self, amqp_url, prefix, metric_names, graphite_retentions,
             **kwargs):
+        parameters = pika.URLParameters(amqp_url)
+        connection = pika.BlockingConnection(parameters)
+        amqp_channel = connection.channel()
+
         ret = RetentionScheme(graphite_retentions)
         for start, end in ret.get_buckets():
             for metric in metric_names:
                 self.generate_and_send(
-                    amqp_url, prefix, metric, start, end)
+                    amqp_channel, prefix, metric, start, end)
+
+        connection.close()
 
 repopulate_metrics = RepopulateMetrics()
