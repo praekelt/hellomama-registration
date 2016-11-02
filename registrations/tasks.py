@@ -3,7 +3,6 @@ import requests
 import uuid
 from datetime import datetime
 
-from celery import group
 from celery.task import Task
 from celery.utils.log import get_task_logger
 from django.conf import settings
@@ -355,35 +354,23 @@ class RepopulateMetrics(Task):
     """
     name = 'registrations.tasks.repopulate_metrics'
 
-    def run(
-            self, amqp_url, prefix, metric_names, graphite_retentions,
-            **kwargs):
-        ret = RetentionScheme(graphite_retentions)
-        tasks = []
-        for start, end in ret.get_buckets():
-            start = utils.timestamp_to_epoch(start)
-            end = utils.timestamp_to_epoch(end)
-            for metric in metric_names:
-                tasks.append(repopulate_metric.s(
-                    amqp_url, prefix, metric, start, end))
-        return group(tasks).apply_async()
-
-repopulate_metrics = RepopulateMetrics()
-
-
-class RepopulateMetric(Task):
-    """
-    Repopulates a single metric for a single timeframe.
-    """
-    name = 'registrations.tasks.repopulate_metric'
-
-    def run(self, amqp_url, prefix, metric_name, start, end, **kwargs):
-        start = datetime.utcfromtimestamp(float(start))
-        end = datetime.utcfromtimestamp(float(end))
-
+    def generate_and_send(
+            self, amqp_url, prefix, metric_name, start, end):
+        """
+        Generates the value for the specified metric, and sends it.
+        """
         value = MetricGenerator().generate_metric(metric_name, start, end)
 
         timestamp = start + (end - start) / 2
         send_metric(amqp_url, prefix, metric_name, value, timestamp)
 
-repopulate_metric = RepopulateMetric()
+    def run(
+            self, amqp_url, prefix, metric_names, graphite_retentions,
+            **kwargs):
+        ret = RetentionScheme(graphite_retentions)
+        for start, end in ret.get_buckets():
+            for metric in metric_names:
+                self.generate_and_send(
+                    amqp_url, prefix, metric, start, end)
+
+repopulate_metrics = RepopulateMetrics()

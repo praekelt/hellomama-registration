@@ -42,7 +42,7 @@ from .tasks import (
     validate_registration,
     is_valid_date, is_valid_uuid, is_valid_lang, is_valid_msg_type,
     is_valid_msg_receiver, is_valid_loss_reason, is_valid_state, is_valid_role,
-    repopulate_metrics, repopulate_metric)
+    repopulate_metrics)
 
 
 def override_get_today():
@@ -2894,11 +2894,11 @@ class VerifyScheduleSequenceTest(ManagementTaskTestCase):
 
 
 class TestRepopulateMetricsTask(TestCase):
-    @mock.patch('registrations.tasks.RepopulateMetric.run')
-    def test_runs_repopulate_metric_tasks(self, mock_repopulate):
+    @mock.patch('registrations.tasks.RepopulateMetrics.generate_and_send')
+    def test_run_repopulate_metrics(self, mock_repopulate):
         """
-        The repopulate metrics task should spawn repopulate metric tasks with
-        the appropriate parameters.
+        The repopulate metrics task should call generate_and_send with the
+        appropriate parameters.
         """
         repopulate_metrics.delay(
             'amqp://test', 'prefix', ['metric.foo', 'metric.bar'], '30s:1m')
@@ -2909,27 +2909,30 @@ class TestRepopulateMetricsTask(TestCase):
         args = [[a, p, m, s-start, e-start] for a, p, m, s, e in args]
 
         expected = [
-            ['amqp://test', 'prefix', 'metric.foo', 0, 30],
-            ['amqp://test', 'prefix', 'metric.foo', 30, 60],
-            ['amqp://test', 'prefix', 'metric.bar', 0, 30],
-            ['amqp://test', 'prefix', 'metric.bar', 30, 60],
+            ['amqp://test', 'prefix', 'metric.foo',
+                timedelta(seconds=0), timedelta(seconds=30)],
+            ['amqp://test', 'prefix', 'metric.foo',
+                timedelta(seconds=30), timedelta(seconds=60)],
+            ['amqp://test', 'prefix', 'metric.bar',
+                timedelta(seconds=0), timedelta(seconds=30)],
+            ['amqp://test', 'prefix', 'metric.bar',
+                timedelta(seconds=30), timedelta(seconds=60)],
         ]
 
         self.assertEqual(sorted(expected), sorted(args))
 
-
-class TestRepopulateMetricTask(TestCase):
     @mock.patch('registrations.tasks.MetricGenerator.generate_metric')
     @mock.patch('registrations.tasks.send_metric')
-    def test_repopulate_metric_task(
+    def test_generate_and_send(
             self, mock_send_metric, mock_metric_generator):
         """
-        The repopulate metric task should use the metric generator to generate
-        the appropriate metric, then send that metric to Graphite.
+        The generate_and_send function should use the metric generator to
+        generate the appropriate metric, then send that metric to Graphite.
         """
         mock_metric_generator.return_value = 17.2
-        repopulate_metric.delay(
-            'amqp://foo', 'prefix', 'foo.bar', 300.0, 500.0)
+        repopulate_metrics.generate_and_send(
+            'amqp://foo', 'prefix', 'foo.bar',
+            datetime.utcfromtimestamp(300.0), datetime.utcfromtimestamp(500.0))
 
         mock_metric_generator.assert_called_once_with(
             'foo.bar', datetime.utcfromtimestamp(300),
