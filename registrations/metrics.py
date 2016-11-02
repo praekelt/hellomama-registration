@@ -1,5 +1,4 @@
 import pika
-
 from django.db.models import Count
 from django.db.models.expressions import RawSQL
 from django.conf import settings
@@ -182,18 +181,12 @@ class MetricGenerator(object):
             .count()
 
 
-def send_metric(amqp_url, prefix, name, value, timestamp):
-    parameters = pika.URLParameters(amqp_url)
-    connection = pika.BlockingConnection(parameters)
-    channel = connection.channel()
-
+def send_metric(amqp_channel, prefix, name, value, timestamp):
     timestamp = utils.timestamp_to_epoch(timestamp)
 
     if prefix:
         name = '{}.{}'.format(prefix, name)
 
-    channel.basic_publish(
+    amqp_channel.basic_publish(
         'graphite', name, '{} {}'.format(float(value), int(timestamp)),
         pika.BasicProperties(content_type='text/plain', delivery_mode=2))
-
-    connection.close()
