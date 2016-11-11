@@ -59,3 +59,13 @@ def change_post_save(sender, instance, created, **kwargs):
         implement_action.apply_async(
             kwargs={"change_id": str(instance.id)})
         pass
+
+
+@receiver(post_save, sender=Change)
+def fire_language_change_metric(sender, instance, created, **kwargs):
+    from registrations.tasks import fire_metric
+    if created and instance.action == 'change_language':
+        fire_metric.apply_async(kwargs={
+            "metric_name": 'change.language.sum',
+            "metric_value": 1.0
+        })
