@@ -66,11 +66,11 @@ def fire_language_change_metric(sender, instance, created, **kwargs):
     from registrations.tasks import fire_metric
     if created and instance.action == 'change_language':
         fire_metric.apply_async(kwargs={
-            "metric_name": 'change.language.sum',
+            "metric_name": 'registrations.change.language.sum',
             "metric_value": 1.0
         })
 
-        total_key = 'change.language.total.last'
+        total_key = 'registrations.change.language.total.last'
         total = get_or_incr_cache(
             total_key,
             Change.objects.filter(action='change_language').count)

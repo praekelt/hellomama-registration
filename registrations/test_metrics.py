@@ -15,11 +15,7 @@ from rest_hooks.models import model_saved
 
 from .metrics import MetricGenerator, send_metric
 from .tests import AuthenticatedAPITestCase
-from .models import (
-        Source, Registration, registration_post_save, fire_created_metric,
-        fire_unique_operator_metric, fire_message_type_metric,
-        fire_receiver_type_metric, fire_source_metric, fire_language_metric,
-        fire_state_metric, fire_role_metric)
+from .models import Source, Registration
 from hellomama_registration import utils
 from changes.models import (Change, change_post_save,
                             fire_language_change_metric)
@@ -56,64 +52,14 @@ class MetricsGeneratorTests(AuthenticatedAPITestCase):
         post_save.connect(receiver=model_saved,
                           dispatch_uid='instance-saved-hook')
 
-    def _replace_post_save_hooks_registration(self):
-        def has_listeners():
-            return post_save.has_listeners(Registration)
-        assert has_listeners(), (
-            "Registration model has no post_save listeners. Make sure"
-            " helpers cleaned up properly in earlier tests.")
-        post_save.disconnect(receiver=registration_post_save,
-                             sender=Registration)
-        post_save.disconnect(receiver=fire_created_metric,
-                             sender=Registration)
-        post_save.disconnect(receiver=fire_source_metric,
-                             sender=Registration)
-        post_save.disconnect(receiver=fire_unique_operator_metric,
-                             sender=Registration)
-        post_save.disconnect(receiver=fire_message_type_metric,
-                             sender=Registration)
-        post_save.disconnect(receiver=fire_receiver_type_metric,
-                             sender=Registration)
-        post_save.disconnect(receiver=fire_language_metric,
-                             sender=Registration)
-        post_save.disconnect(receiver=fire_state_metric,
-                             sender=Registration)
-        post_save.disconnect(receiver=fire_role_metric,
-                             sender=Registration)
-        post_save.disconnect(receiver=model_saved,
-                             dispatch_uid='instance-saved-hook')
-        assert not has_listeners(), (
-            "Registration model still has post_save listeners. Make sure"
-            " helpers cleaned up properly in earlier tests.")
-
-    def _restore_post_save_hooks_registration(self):
-        def has_listeners():
-            return post_save.has_listeners(Registration)
-        post_save.connect(receiver=registration_post_save,
-                          sender=Registration)
-        post_save.connect(receiver=fire_created_metric,
-                          sender=Registration)
-        post_save.connect(receiver=fire_source_metric,
-                          sender=Registration)
-        post_save.connect(receiver=fire_unique_operator_metric,
-                          sender=Registration)
-        post_save.connect(receiver=fire_language_metric,
-                          sender=Registration)
-        post_save.connect(receiver=fire_state_metric,
-                          sender=Registration)
-        post_save.connect(receiver=fire_role_metric,
-                          sender=Registration)
-        post_save.connect(receiver=model_saved,
-                          dispatch_uid='instance-saved-hook')
-
     def setUp(self):
-        super(AuthenticatedAPITestCase, self).setUp()
+        super(MetricsGeneratorTests, self).setUp()
+        print 1
         self._replace_post_save_hooks_change()
-        self._replace_post_save_hooks_registration()
 
     def tearDown(self):
+        super(MetricsGeneratorTests, self).tearDown()
         self._restore_post_save_hooks_change()
-        self._restore_post_save_hooks_registration()
 
     def test_generate_metric(self):
         """
@@ -627,7 +573,8 @@ class MetricsGeneratorTests(AuthenticatedAPITestCase):
         # Make sure other change type is not added
         self.create_messaging_change_on(datetime(2016, 10, 20), source)  # In
 
-        change_count = MetricGenerator().change_language_sum(start, end)
+        change_count = MetricGenerator()\
+            .registrations_change_language_sum(start, end)
         self.assertEqual(change_count, 2)
 
     def test_change_language_total_last(self):
@@ -649,7 +596,8 @@ class MetricsGeneratorTests(AuthenticatedAPITestCase):
         # Make sure other change type is not added
         self.create_messaging_change_on(datetime(2016, 10, 24), source)  # In
 
-        change_count = MetricGenerator().change_language_total_last(start, end)
+        change_count = MetricGenerator()\
+            .registrations_change_language_total_last(start, end)
         self.assertEqual(change_count, 2)
 
     def test_that_all_metrics_are_present(self):

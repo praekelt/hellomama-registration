@@ -181,14 +181,14 @@ class MetricGenerator(object):
             .filter(source__user__username=user)\
             .count()
 
-    def change_language_sum(self, start, end):
+    def registrations_change_language_sum(self, start, end):
         return Change.objects\
             .filter(created_at__gt=start)\
             .filter(created_at__lte=end)\
             .filter(action='change_language')\
             .count()
 
-    def change_language_total_last(self, start, end):
+    def registrations_change_language_total_last(self, start, end):
         return Change.objects\
             .filter(created_at__lte=end)\
             .filter(action='change_language')\
