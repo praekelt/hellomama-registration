@@ -11,7 +11,7 @@ from rest_framework.authtoken.models import Token
 from rest_hooks.models import model_saved
 
 from .models import Record, record_post_save
-from .tasks import add_unique_id_to_identity
+from .tasks import add_unique_id_to_identity, send_personnel_code
 
 
 class APITestCase(TestCase):
@@ -366,3 +366,45 @@ class TestRecordTasks(AuthenticatedAPITestCase):
         self.assertEqual(
             result.get(),
             "Identity <70097580-c9fe-4f92-a55e-8f5f54b19799> not found")
+
+    @responses.activate
+    def test_send_personnel_code(self):
+        """
+        The task should attempt to send a message to the identity, with the
+        generated personnel code.
+        """
+        responses.add(
+            responses.GET,
+            'http://localhost:8001/api/v1/identities/70097580-c9fe-4f92-a55e-'
+            '8f5f54b19799/addresses/msisdn?default=True',
+            json={
+                'results': [
+                    {'address': '+27123456789'},
+                ],
+            },
+            content_type='application/json', match_querystring=True
+        )
+        responses.add(
+            responses.POST,
+            'http://localhost:8006/api/v1/outbound/',
+            body='{}',
+            content_type='application/json'
+        )
+
+        result = send_personnel_code.delay(
+            '70097580-c9fe-4f92-a55e-8f5f54b19799', 1234567890)
+
+        self.assertEqual(
+            result.get(),
+            "Sent personnel code to 70097580-c9fe-4f92-a55e-8f5f54b19799. "
+            "Result: {}")
+
+        [_, message_send] = responses.calls
+        self.assertEqual(json.loads(message_send.request.body), {
+            'to_addr': '+27123456789',
+            'content': (
+                'Welcome to HelloMama. You have been registered as a HCW. '
+                'Dial 55500 to start registering mothers. Your personnel '
+                'code is 1234567890.'),
+            'metadata': {},
+        })

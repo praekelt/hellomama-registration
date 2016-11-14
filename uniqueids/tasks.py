@@ -1,5 +1,6 @@
 from celery.task import Task
 from celery.utils.log import get_task_logger
+from django.conf import settings
 
 from hellomama_registration import utils
 
@@ -29,3 +30,19 @@ class AddUniqueIDToIdentity(Task):
             return "Identity <%s> not found" % (identity,)
 
 add_unique_id_to_identity = AddUniqueIDToIdentity()
+
+
+class SendPersonnelCode(Task):
+    def run(self, identity, personnel_code):
+        text = settings.HCW_PERSONNEL_CODE_TEXT_ENG_NG.format(
+            personnel_code=personnel_code)
+        address = utils.get_identity_address(identity)
+        result = utils.post_message({
+            "to_addr": address,
+            "content": text,
+            "metadata": {},
+        })
+        return "Sent personnel code to {0}. Result: {1}".format(
+            identity, result)
+
+send_personnel_code = SendPersonnelCode()

@@ -295,5 +295,9 @@ MOTHER_WELCOME_TEXT_NG_ENG = os.environ.get(
     'MOTHER_WELCOME_TEXT_NG_ENG', 'Welcome to HelloMama!')
 HOUSEHOLD_WELCOME_TEXT_NG_ENG = os.environ.get(
     'HOUSEHOLD_WELCOME_TEXT_NG_ENG', 'Welcome household to HelloMama!')
+HCW_PERSONNEL_CODE_TEXT_ENG_NG = os.environ.get(
+    'HCW_PERSONNEL_CODE_TEXT_ENG_NG', 'Welcome to HelloMama. You have been '
+    'registered as a HCW. Dial 55500 to start registering mothers. '
+    'Your personnel code is {personnel_code}.')
 
 djcelery.setup_loader()
