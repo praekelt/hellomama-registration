@@ -6,7 +6,7 @@ from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from django.utils.encoding import python_2_unicode_compatible
 
-from .tasks import add_unique_id_to_identity
+from .tasks import add_unique_id_to_identity, send_personnel_code
 
 
 @python_2_unicode_compatible
@@ -43,12 +43,18 @@ def record_post_save(sender, instance, created, **kwargs):
     """ Post save hook to patch the source identity
     """
     if created:
-        add_unique_id_to_identity.apply_async(
+        s = add_unique_id_to_identity.s(
             kwargs={
                 "identity": str(instance.identity),
                 "unique_id": instance.id,
                 "write_to": instance.write_to
             })
+        if instance.write_to != 'health_id':
+            s.link(send_personnel_code.s(kwargs={
+                "identity": str(instance.identity),
+                "personnel_code": instance.id
+            }))
+        s.apply_async()
 
 
 def random_digits(digits):
