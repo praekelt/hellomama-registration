@@ -7,7 +7,7 @@ from django.contrib.auth.models import User
 from django.contrib.postgres.fields import JSONField
 from django.utils.encoding import python_2_unicode_compatible
 
-from registrations.models import Source
+from registrations.models import Source, get_or_incr_cache
 
 
 @python_2_unicode_compatible
@@ -68,4 +68,13 @@ def fire_language_change_metric(sender, instance, created, **kwargs):
         fire_metric.apply_async(kwargs={
             "metric_name": 'change.language.sum',
             "metric_value": 1.0
+        })
+
+        total_key = 'change.language.total.last'
+        total = get_or_incr_cache(
+            total_key,
+            Change.objects.filter(action='change_language').count)
+        fire_metric.apply_async(kwargs={
+            'metric_name': total_key,
+            'metric_value': total,
         })

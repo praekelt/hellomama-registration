@@ -2182,9 +2182,13 @@ class TestMetrics(AuthenticatedAPITestCase):
 
         self.make_change_normaluser()
 
-        [last_call1] = responses.calls
+        [last_call1, last_call2] = responses.calls
         self.assertEqual(json.loads(last_call1.request.body), {
             "change.language.sum": 1.0
+        })
+
+        self.assertEqual(json.loads(last_call2.request.body), {
+            "change.language.total.last": 1.0
         })
 
         post_save.disconnect(fire_language_change_metric, sender=Change)
