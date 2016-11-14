@@ -594,8 +594,6 @@ class MetricsGeneratorTests(AuthenticatedAPITestCase):
             .registrations_change_language_total_last(start, end)
         self.assertEqual(change_count, 2)
 
-        #self.assertEqual('test', 'test3')
-
     def test_that_all_metrics_are_present(self):
         """
         We need to make sure that we have a function for each of the metrics.
