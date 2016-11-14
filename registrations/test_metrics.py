@@ -40,11 +40,6 @@ class MetricsGeneratorTests(AuthenticatedAPITestCase):
             " helpers cleaned up properly in earlier tests.")
 
     def _restore_post_save_hooks_change(self):
-        def has_listeners():
-            return post_save.has_listeners(Change)
-        assert not has_listeners(), (
-            "Change model still has post_save listeners. Make sure"
-            " helpers removed them properly in earlier tests.")
         post_save.connect(receiver=change_post_save,
                           sender=Change)
         post_save.connect(receiver=fire_language_change_metric,
@@ -54,7 +49,6 @@ class MetricsGeneratorTests(AuthenticatedAPITestCase):
 
     def setUp(self):
         super(MetricsGeneratorTests, self).setUp()
-        print 1
         self._replace_post_save_hooks_change()
 
     def tearDown(self):
@@ -599,6 +593,8 @@ class MetricsGeneratorTests(AuthenticatedAPITestCase):
         change_count = MetricGenerator()\
             .registrations_change_language_total_last(start, end)
         self.assertEqual(change_count, 2)
+
+        #self.assertEqual('test', 'test3')
 
     def test_that_all_metrics_are_present(self):
         """
