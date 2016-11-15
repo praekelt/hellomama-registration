@@ -17,8 +17,9 @@ from .metrics import MetricGenerator, send_metric
 from .tests import AuthenticatedAPITestCase
 from .models import Source, Registration
 from hellomama_registration import utils
-from changes.models import (Change, change_post_save,
-                            fire_language_change_metric)
+from changes.models import (
+    Change, change_post_save, fire_language_change_metric,
+    fire_baby_change_metric)
 
 
 class MetricsGeneratorTests(AuthenticatedAPITestCase):
@@ -33,6 +34,8 @@ class MetricsGeneratorTests(AuthenticatedAPITestCase):
                              sender=Change)
         post_save.disconnect(receiver=fire_language_change_metric,
                              sender=Change)
+        post_save.disconnect(receiver=fire_baby_change_metric,
+                             sender=Change)
         post_save.disconnect(receiver=model_saved,
                              dispatch_uid='instance-saved-hook')
         assert not has_listeners(), (
@@ -43,6 +46,8 @@ class MetricsGeneratorTests(AuthenticatedAPITestCase):
         post_save.connect(receiver=change_post_save,
                           sender=Change)
         post_save.connect(receiver=fire_language_change_metric,
+                          sender=Change)
+        post_save.connect(receiver=fire_baby_change_metric,
                           sender=Change)
         post_save.connect(receiver=model_saved,
                           dispatch_uid='instance-saved-hook')
@@ -76,21 +81,18 @@ class MetricsGeneratorTests(AuthenticatedAPITestCase):
         return r
 
     def create_lang_change_on(self, timestamp, source, **kwargs):
-        data = {
-            "mother_id": "846877e6-afaa-43de-acb1-09f61ad4de99",
-            "action": "change_language",
-            "data": {"test_adminuser_change": "test_adminuser_changed"},
-            "source": source
-        }
-        c = Change.objects.create(**data)
-        c.created_at = timestamp
-        c.save()
-        return c
+        return self.create_change_on(timestamp, source, 'change_language')
+
+    def create_baby_change_on(self, timestamp, source, **kwargs):
+        return self.create_change_on(timestamp, source, 'change_baby')
 
     def create_messaging_change_on(self, timestamp, source, **kwargs):
+        return self.create_change_on(timestamp, source, 'change_messaging')
+
+    def create_change_on(self, timestamp, source, action, **kwargs):
         data = {
             "mother_id": "846877e6-afaa-43de-acb1-09f61ad4de99",
-            "action": "change_messaging",
+            "action": action,
             "data": {"test_adminuser_change": "test_adminuser_changed"},
             "source": source
         }
@@ -592,6 +594,58 @@ class MetricsGeneratorTests(AuthenticatedAPITestCase):
 
         change_count = MetricGenerator()\
             .registrations_change_language_total_last(start, end)
+        self.assertEqual(change_count, 2)
+
+    def test_change_baby_sum(self):
+        """
+        Should return the amount of pregnancy to baby changes in the given
+        timeframe.
+
+        Only one of the borders of the timeframe should be included, to avoid
+        duplication.
+        """
+
+        user = User.objects.create(username='user1')
+        source = Source.objects.create(
+            name='TestSource', authority='hw_full', user=user)
+
+        start = datetime(2016, 10, 15)
+        end = datetime(2016, 10, 25)
+
+        self.create_baby_change_on(datetime(2016, 10, 14), source)  # Before
+        self.create_baby_change_on(datetime(2016, 10, 15), source)  # On
+        self.create_baby_change_on(datetime(2016, 10, 20), source)  # In
+        self.create_baby_change_on(datetime(2016, 10, 25), source)  # On
+        self.create_baby_change_on(datetime(2016, 10, 26), source)  # After
+
+        # Make sure other change type is not added
+        self.create_messaging_change_on(datetime(2016, 10, 20), source)  # In
+
+        change_count = MetricGenerator()\
+            .registrations_change_pregnant_to_baby_sum(start, end)
+        self.assertEqual(change_count, 2)
+
+    def test_change_baby_total_last(self):
+        """
+        Should return the total amount of pregnancy to baby changes at the
+        'end' point in time.
+        """
+        user = User.objects.create(username='user1')
+        source = Source.objects.create(
+            name='TestSource', authority='hw_full', user=user)
+
+        start = datetime(2016, 10, 15)
+        end = datetime(2016, 10, 25)
+
+        self.create_baby_change_on(datetime(2016, 10, 14), source)  # Before
+        self.create_baby_change_on(datetime(2016, 10, 25), source)  # On
+        self.create_baby_change_on(datetime(2016, 10, 26), source)  # After
+
+        # Make sure other change type is not added
+        self.create_messaging_change_on(datetime(2016, 10, 24), source)  # In
+
+        change_count = MetricGenerator()\
+            .registrations_change_pregnant_to_baby_total_last(start, end)
         self.assertEqual(change_count, 2)
 
     def test_that_all_metrics_are_present(self):

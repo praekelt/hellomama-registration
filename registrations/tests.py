@@ -1876,6 +1876,8 @@ class TestMetricsAPI(AuthenticatedAPITestCase):
                 'registrations.source.testadminuser.sum',
                 'registrations.change.language.sum',
                 'registrations.change.language.total.last',
+                'registrations.change.pregnant_to_baby.sum',
+                'registrations.change.pregnant_to_baby.total.last',
             ])
         )
 
