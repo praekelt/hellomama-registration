@@ -1824,7 +1824,7 @@ class TestMetricsAPI(AuthenticatedAPITestCase):
         # Check
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
-            response.data["metrics_available"], [
+            sorted(response.data["metrics_available"]), sorted([
                 'registrations.created.sum',
                 'registrations.created.total.last',
                 'registrations.unique_operators.sum',
@@ -1874,7 +1874,9 @@ class TestMetricsAPI(AuthenticatedAPITestCase):
                 'registrations.role.mama.total.last',
                 'registrations.source.testnormaluser.sum',
                 'registrations.source.testadminuser.sum',
-            ]
+                'registrations.change.language.sum',
+                'registrations.change.language.total.last',
+            ])
         )
 
     @responses.activate

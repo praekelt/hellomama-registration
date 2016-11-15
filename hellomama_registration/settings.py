@@ -237,6 +237,8 @@ METRICS_REALTIME = [
     'registrations.created.sum',
     'registrations.created.total.last',
     'registrations.unique_operators.sum',
+    'registrations.change.language.sum',
+    'registrations.change.language.total.last'
 ]
 METRICS_REALTIME.extend(
     ['registrations.msg_type.%s.sum' % mt for mt in MSG_TYPES])

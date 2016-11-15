@@ -9,14 +9,52 @@ import responses
 from datetime import datetime
 from django.contrib.auth.models import User
 from django.test import TestCase
+from django.db.models.signals import post_save
+
+from rest_hooks.models import model_saved
 
 from .metrics import MetricGenerator, send_metric
 from .tests import AuthenticatedAPITestCase
-from .models import Registration, Source
+from .models import Source, Registration
 from hellomama_registration import utils
+from changes.models import (Change, change_post_save,
+                            fire_language_change_metric)
 
 
 class MetricsGeneratorTests(AuthenticatedAPITestCase):
+
+    def _replace_post_save_hooks_change(self):
+        def has_listeners():
+            return post_save.has_listeners(Change)
+        assert has_listeners(), (
+            "Change model has no post_save listeners. Make sure"
+            " helpers cleaned up properly in earlier tests.")
+        post_save.disconnect(receiver=change_post_save,
+                             sender=Change)
+        post_save.disconnect(receiver=fire_language_change_metric,
+                             sender=Change)
+        post_save.disconnect(receiver=model_saved,
+                             dispatch_uid='instance-saved-hook')
+        assert not has_listeners(), (
+            "Change model still has post_save listeners. Make sure"
+            " helpers cleaned up properly in earlier tests.")
+
+    def _restore_post_save_hooks_change(self):
+        post_save.connect(receiver=change_post_save,
+                          sender=Change)
+        post_save.connect(receiver=fire_language_change_metric,
+                          sender=Change)
+        post_save.connect(receiver=model_saved,
+                          dispatch_uid='instance-saved-hook')
+
+    def setUp(self):
+        super(MetricsGeneratorTests, self).setUp()
+        self._replace_post_save_hooks_change()
+
+    def tearDown(self):
+        super(MetricsGeneratorTests, self).tearDown()
+        self._restore_post_save_hooks_change()
+
     def test_generate_metric(self):
         """
         The generate_metric function should call the correct function with the
@@ -36,6 +74,30 @@ class MetricsGeneratorTests(AuthenticatedAPITestCase):
         r.created_at = timestamp
         r.save()
         return r
+
+    def create_lang_change_on(self, timestamp, source, **kwargs):
+        data = {
+            "mother_id": "846877e6-afaa-43de-acb1-09f61ad4de99",
+            "action": "change_language",
+            "data": {"test_adminuser_change": "test_adminuser_changed"},
+            "source": source
+        }
+        c = Change.objects.create(**data)
+        c.created_at = timestamp
+        c.save()
+        return c
+
+    def create_messaging_change_on(self, timestamp, source, **kwargs):
+        data = {
+            "mother_id": "846877e6-afaa-43de-acb1-09f61ad4de99",
+            "action": "change_messaging",
+            "data": {"test_adminuser_change": "test_adminuser_changed"},
+            "source": source
+        }
+        c = Change.objects.create(**data)
+        c.created_at = timestamp
+        c.save()
+        return c
 
     def test_registrations_created_sum(self):
         """
@@ -480,6 +542,57 @@ class MetricsGeneratorTests(AuthenticatedAPITestCase):
         reg_count = MetricGenerator().registrations_source_sum(
             'user1', start, end)
         self.assertEqual(reg_count, 2)
+
+    def test_change_language_sum(self):
+        """
+        Should return the amount of language changes in the given timeframe.
+
+        Only one of the borders of the timeframe should be included, to avoid
+        duplication.
+        """
+
+        user = User.objects.create(username='user1')
+        source = Source.objects.create(
+            name='TestSource', authority='hw_full', user=user)
+
+        start = datetime(2016, 10, 15)
+        end = datetime(2016, 10, 25)
+
+        self.create_lang_change_on(datetime(2016, 10, 14), source)  # Before
+        self.create_lang_change_on(datetime(2016, 10, 15), source)  # On
+        self.create_lang_change_on(datetime(2016, 10, 20), source)  # In
+        self.create_lang_change_on(datetime(2016, 10, 25), source)  # On
+        self.create_lang_change_on(datetime(2016, 10, 26), source)  # After
+
+        # Make sure other change type is not added
+        self.create_messaging_change_on(datetime(2016, 10, 20), source)  # In
+
+        change_count = MetricGenerator()\
+            .registrations_change_language_sum(start, end)
+        self.assertEqual(change_count, 2)
+
+    def test_change_language_total_last(self):
+        """
+        Should return the total amount of language changes at the 'end' point
+        in time.
+        """
+        user = User.objects.create(username='user1')
+        source = Source.objects.create(
+            name='TestSource', authority='hw_full', user=user)
+
+        start = datetime(2016, 10, 15)
+        end = datetime(2016, 10, 25)
+
+        self.create_lang_change_on(datetime(2016, 10, 14), source)  # Before
+        self.create_lang_change_on(datetime(2016, 10, 25), source)  # On
+        self.create_lang_change_on(datetime(2016, 10, 26), source)  # After
+
+        # Make sure other change type is not added
+        self.create_messaging_change_on(datetime(2016, 10, 24), source)  # In
+
+        change_count = MetricGenerator()\
+            .registrations_change_language_total_last(start, end)
+        self.assertEqual(change_count, 2)
 
     def test_that_all_metrics_are_present(self):
         """

@@ -7,7 +7,7 @@ from django.contrib.auth.models import User
 from django.contrib.postgres.fields import JSONField
 from django.utils.encoding import python_2_unicode_compatible
 
-from registrations.models import Source
+from registrations.models import Source, get_or_incr_cache
 
 
 @python_2_unicode_compatible
@@ -59,3 +59,22 @@ def change_post_save(sender, instance, created, **kwargs):
         implement_action.apply_async(
             kwargs={"change_id": str(instance.id)})
         pass
+
+
+@receiver(post_save, sender=Change)
+def fire_language_change_metric(sender, instance, created, **kwargs):
+    from registrations.tasks import fire_metric
+    if created and instance.action == 'change_language':
+        fire_metric.apply_async(kwargs={
+            "metric_name": 'registrations.change.language.sum',
+            "metric_value": 1.0
+        })
+
+        total_key = 'registrations.change.language.total.last'
+        total = get_or_incr_cache(
+            total_key,
+            Change.objects.filter(action='change_language').count)
+        fire_metric.apply_async(kwargs={
+            'metric_name': total_key,
+            'metric_value': total,
+        })

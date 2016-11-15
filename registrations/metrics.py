@@ -7,6 +7,7 @@ from functools import partial
 from hellomama_registration import utils
 
 from .models import Registration, Source, registrations_for_identity_field
+from changes.models import Change
 
 
 class MetricGenerator(object):
@@ -178,6 +179,19 @@ class MetricGenerator(object):
             .filter(created_at__gt=start)\
             .filter(created_at__lte=end)\
             .filter(source__user__username=user)\
+            .count()
+
+    def registrations_change_language_sum(self, start, end):
+        return Change.objects\
+            .filter(created_at__gt=start)\
+            .filter(created_at__lte=end)\
+            .filter(action='change_language')\
+            .count()
+
+    def registrations_change_language_total_last(self, start, end):
+        return Change.objects\
+            .filter(created_at__lte=end)\
+            .filter(action='change_language')\
             .count()
 
 

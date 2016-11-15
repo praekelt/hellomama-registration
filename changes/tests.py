@@ -17,7 +17,7 @@ from registrations.models import (
     fire_created_metric, fire_unique_operator_metric, fire_message_type_metric,
     fire_receiver_type_metric, fire_source_metric, fire_language_metric,
     fire_state_metric, fire_role_metric)
-from .models import Change, change_post_save
+from .models import Change, change_post_save, fire_language_change_metric
 from .tasks import implement_action
 
 
@@ -44,6 +44,8 @@ class AuthenticatedAPITestCase(APITestCase):
             " helpers cleaned up properly in earlier tests.")
         post_save.disconnect(receiver=change_post_save,
                              sender=Change)
+        post_save.disconnect(receiver=fire_language_change_metric,
+                             sender=Change)
         post_save.disconnect(receiver=model_saved,
                              dispatch_uid='instance-saved-hook')
         assert not has_listeners(), (
@@ -57,6 +59,8 @@ class AuthenticatedAPITestCase(APITestCase):
             "Change model still has post_save listeners. Make sure"
             " helpers removed them properly in earlier tests.")
         post_save.connect(receiver=change_post_save,
+                          sender=Change)
+        post_save.connect(receiver=fire_language_change_metric,
                           sender=Change)
         post_save.connect(receiver=model_saved,
                           dispatch_uid='instance-saved-hook')
@@ -2157,3 +2161,34 @@ class TestChangeLoss(AuthenticatedAPITestCase):
         self.assertEqual(d.next_sequence_number, 1)
         self.assertEqual(d.lang, "hau_NG")
         self.assertEqual(d.schedule, 4)
+
+
+class TestMetrics(AuthenticatedAPITestCase):
+
+    @responses.activate
+    def test_language_change_metric(self):
+        """
+        When a new change is created, a sum metric should be fired if it is a
+        language change
+        """
+        # deactivate Testsession for this test
+        self.session = None
+        # add metric post response
+        responses.add(responses.POST,
+                      "http://metrics-url/metrics/",
+                      json={"foo": "bar"},
+                      status=200, content_type='application/json')
+        post_save.connect(fire_language_change_metric, sender=Change)
+
+        self.make_change_normaluser()
+
+        [last_call1, last_call2] = responses.calls
+        self.assertEqual(json.loads(last_call1.request.body), {
+            "registrations.change.language.sum": 1.0
+        })
+
+        self.assertEqual(json.loads(last_call2.request.body), {
+            "registrations.change.language.total.last": 1.0
+        })
+
+        post_save.disconnect(fire_language_change_metric, sender=Change)
