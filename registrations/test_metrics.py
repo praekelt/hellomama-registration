@@ -19,7 +19,7 @@ from .models import Source, Registration
 from hellomama_registration import utils
 from changes.models import (
     Change, change_post_save, fire_language_change_metric,
-    fire_baby_change_metric)
+    fire_baby_change_metric, fire_message_change_metric)
 
 
 class MetricsGeneratorTests(AuthenticatedAPITestCase):
@@ -36,6 +36,8 @@ class MetricsGeneratorTests(AuthenticatedAPITestCase):
                              sender=Change)
         post_save.disconnect(receiver=fire_baby_change_metric,
                              sender=Change)
+        post_save.disconnect(receiver=fire_message_change_metric,
+                             sender=Change)
         post_save.disconnect(receiver=model_saved,
                              dispatch_uid='instance-saved-hook')
         assert not has_listeners(), (
@@ -48,6 +50,8 @@ class MetricsGeneratorTests(AuthenticatedAPITestCase):
         post_save.connect(receiver=fire_language_change_metric,
                           sender=Change)
         post_save.connect(receiver=fire_baby_change_metric,
+                          sender=Change)
+        post_save.connect(receiver=fire_message_change_metric,
                           sender=Change)
         post_save.connect(receiver=model_saved,
                           dispatch_uid='instance-saved-hook')
@@ -646,6 +650,58 @@ class MetricsGeneratorTests(AuthenticatedAPITestCase):
 
         change_count = MetricGenerator()\
             .registrations_change_pregnant_to_baby_total_last(start, end)
+        self.assertEqual(change_count, 2)
+
+    def test_change_message_sum(self):
+        """
+        Should return the amount of messaging changes in the given
+        timeframe.
+
+        Only one of the borders of the timeframe should be included, to avoid
+        duplication.
+        """
+
+        user = User.objects.create(username='user1')
+        source = Source.objects.create(
+            name='TestSource', authority='hw_full', user=user)
+
+        start = datetime(2016, 10, 15)
+        end = datetime(2016, 10, 25)
+
+        self.create_messaging_change_on(datetime(2016, 10, 14), source)  # Bef
+        self.create_messaging_change_on(datetime(2016, 10, 15), source)  # On
+        self.create_messaging_change_on(datetime(2016, 10, 20), source)  # In
+        self.create_messaging_change_on(datetime(2016, 10, 25), source)  # On
+        self.create_messaging_change_on(datetime(2016, 10, 26), source)  # Aft
+
+        # Make sure other change type is not added
+        self.create_baby_change_on(datetime(2016, 10, 20), source)  # In
+
+        change_count = MetricGenerator()\
+            .registrations_change_messaging_sum(start, end)
+        self.assertEqual(change_count, 2)
+
+    def test_change_message_total_last(self):
+        """
+        Should return the total amount of messaging changes at the
+        'end' point in time.
+        """
+        user = User.objects.create(username='user1')
+        source = Source.objects.create(
+            name='TestSource', authority='hw_full', user=user)
+
+        start = datetime(2016, 10, 15)
+        end = datetime(2016, 10, 25)
+
+        self.create_messaging_change_on(datetime(2016, 10, 14), source)  # Befo
+        self.create_messaging_change_on(datetime(2016, 10, 25), source)  # On
+        self.create_messaging_change_on(datetime(2016, 10, 26), source)  # Aft
+
+        # Make sure other change type is not added
+        self.create_baby_change_on(datetime(2016, 10, 24), source)  # In
+
+        change_count = MetricGenerator()\
+            .registrations_change_messaging_total_last(start, end)
         self.assertEqual(change_count, 2)
 
     def test_that_all_metrics_are_present(self):
