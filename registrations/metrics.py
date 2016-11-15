@@ -194,6 +194,19 @@ class MetricGenerator(object):
             .filter(action='change_language')\
             .count()
 
+    def registrations_change_pregnant_to_baby_sum(self, start, end):
+        return Change.objects\
+            .filter(created_at__gt=start)\
+            .filter(created_at__lte=end)\
+            .filter(action='change_baby')\
+            .count()
+
+    def registrations_change_pregnant_to_baby_total_last(self, start, end):
+        return Change.objects\
+            .filter(created_at__lte=end)\
+            .filter(action='change_baby')\
+            .count()
+
 
 def send_metric(amqp_channel, prefix, name, value, timestamp):
     timestamp = utils.timestamp_to_epoch(timestamp)

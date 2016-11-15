@@ -17,7 +17,9 @@ from registrations.models import (
     fire_created_metric, fire_unique_operator_metric, fire_message_type_metric,
     fire_receiver_type_metric, fire_source_metric, fire_language_metric,
     fire_state_metric, fire_role_metric)
-from .models import Change, change_post_save, fire_language_change_metric
+from .models import (
+    Change, change_post_save, fire_language_change_metric,
+    fire_baby_change_metric)
 from .tasks import implement_action
 
 
@@ -46,6 +48,8 @@ class AuthenticatedAPITestCase(APITestCase):
                              sender=Change)
         post_save.disconnect(receiver=fire_language_change_metric,
                              sender=Change)
+        post_save.disconnect(receiver=fire_baby_change_metric,
+                             sender=Change)
         post_save.disconnect(receiver=model_saved,
                              dispatch_uid='instance-saved-hook')
         assert not has_listeners(), (
@@ -61,6 +65,8 @@ class AuthenticatedAPITestCase(APITestCase):
         post_save.connect(receiver=change_post_save,
                           sender=Change)
         post_save.connect(receiver=fire_language_change_metric,
+                          sender=Change)
+        post_save.connect(receiver=fire_baby_change_metric,
                           sender=Change)
         post_save.connect(receiver=model_saved,
                           dispatch_uid='instance-saved-hook')
@@ -2192,3 +2198,37 @@ class TestMetrics(AuthenticatedAPITestCase):
         })
 
         post_save.disconnect(fire_language_change_metric, sender=Change)
+
+    @responses.activate
+    def test_baby_change_metric(self):
+        """
+        When a new change is created, a sum metric should be fired if it is a
+        pregnancy to baby change
+        """
+        # deactivate Testsession for this test
+        self.session = None
+        # add metric post response
+        responses.add(responses.POST,
+                      "http://metrics-url/metrics/",
+                      json={"foo": "bar"},
+                      status=200, content_type='application/json')
+        post_save.connect(fire_baby_change_metric, sender=Change)
+
+        change_data = {
+            "mother_id": "846877e6-afaa-43de-acb1-09f61ad4de99",
+            "action": "change_baby",
+            "data": {},
+            "source": self.make_source_adminuser()
+        }
+        Change.objects.create(**change_data)
+
+        [last_call1, last_call2] = responses.calls
+        self.assertEqual(json.loads(last_call1.request.body), {
+            "registrations.change.pregnant_to_baby.sum": 1.0
+        })
+
+        self.assertEqual(json.loads(last_call2.request.body), {
+            "registrations.change.pregnant_to_baby.total.last": 1.0
+        })
+
+        post_save.disconnect(fire_baby_change_metric, sender=Change)
