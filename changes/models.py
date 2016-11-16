@@ -100,6 +100,25 @@ def fire_baby_change_metric(sender, instance, created, **kwargs):
 
 
 @receiver(post_save, sender=Change)
+def fire_loss_change_metric(sender, instance, created, **kwargs):
+    from registrations.tasks import fire_metric
+    if created and instance.action == 'change_loss':
+        fire_metric.apply_async(kwargs={
+            "metric_name": 'registrations.change.pregnant_to_loss.sum',
+            "metric_value": 1.0
+        })
+
+        total_key = 'registrations.change.pregnant_to_loss.total.last'
+        total = get_or_incr_cache(
+            total_key,
+            Change.objects.filter(action='change_loss').count)
+        fire_metric.apply_async(kwargs={
+            'metric_name': total_key,
+            'metric_value': total,
+        })
+
+
+@receiver(post_save, sender=Change)
 def fire_message_change_metric(sender, instance, created, **kwargs):
     from registrations.tasks import fire_metric
     if created and instance.action == 'change_messaging':
