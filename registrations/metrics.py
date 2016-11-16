@@ -207,6 +207,19 @@ class MetricGenerator(object):
             .filter(action='change_baby')\
             .count()
 
+    def registrations_change_pregnant_to_loss_sum(self, start, end):
+        return Change.objects\
+            .filter(created_at__gt=start)\
+            .filter(created_at__lte=end)\
+            .filter(action='change_loss')\
+            .count()
+
+    def registrations_change_pregnant_to_loss_total_last(self, start, end):
+        return Change.objects\
+            .filter(created_at__lte=end)\
+            .filter(action='change_loss')\
+            .count()
+
     def registrations_change_messaging_sum(self, start, end):
         return Change.objects\
             .filter(created_at__gt=start)\
