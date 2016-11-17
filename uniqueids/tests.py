@@ -1,6 +1,11 @@
 import json
 import responses
 
+try:
+    import mock
+except ImportError:
+    from unittest import mock
+
 from django.test import TestCase
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
@@ -111,6 +116,39 @@ class TestRecordCreation(AuthenticatedAPITestCase):
         Record.objects.create(**data2)
         # Check
         self.assertEqual(Record.objects.all().count(), 2)
+
+    @mock.patch("uniqueids.tasks.add_unique_id_to_identity.s")
+    @mock.patch("uniqueids.tasks.send_personnel_code")
+    def test_record_post_save_not_send_code(self, mock_send_code, mock_add_id):
+        data = {
+            "identity": "9d02ae1a-16e4-4674-abdc-daf9cce9c52d",
+            "write_to": "health_id"
+        }
+        # Execute
+        record = Record.objects.create(**data)
+
+        record_post_save(Record, record, True)
+
+        mock_add_id.assert_called_once_with(identity=str(
+            record.identity), unique_id=record.id, write_to="health_id")
+        mock_send_code.assert_not_called()
+
+    @mock.patch("uniqueids.tasks.add_unique_id_to_identity.s")
+    @mock.patch("uniqueids.tasks.send_personnel_code.si")
+    def test_record_post_save_send_code(self, mock_send_code, mock_add_id):
+        data = {
+            "identity": "9d02ae1a-16e4-4674-abdc-daf9cce9c52d",
+            "write_to": "personnel_code"
+        }
+        # Execute
+        record = Record.objects.create(**data)
+
+        record_post_save(Record, record, True)
+
+        mock_add_id.assert_called_once_with(identity=str(
+            record.identity), unique_id=record.id, write_to="personnel_code")
+        mock_send_code.assert_called_once_with(identity=str(
+            record.identity), personnel_code=record.id)
 
 
 class TestRecordAPI(AuthenticatedAPITestCase):
