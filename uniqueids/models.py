@@ -50,7 +50,7 @@ def record_post_save(sender, instance, created, **kwargs):
                 "write_to": instance.write_to
             })
         if instance.write_to != 'health_id':
-            s.link(send_personnel_code.s(kwargs={
+            s.link(send_personnel_code.si(kwargs={
                 "identity": str(instance.identity),
                 "personnel_code": instance.id
             }))
