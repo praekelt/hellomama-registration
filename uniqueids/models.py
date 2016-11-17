@@ -44,16 +44,13 @@ def record_post_save(sender, instance, created, **kwargs):
     """
     if created:
         s = add_unique_id_to_identity.s(
-            kwargs={
-                "identity": str(instance.identity),
-                "unique_id": instance.id,
-                "write_to": instance.write_to
-            })
+            identity=str(instance.identity),
+            unique_id=instance.id,
+            write_to=instance.write_to)
         if instance.write_to != 'health_id':
-            s.link(send_personnel_code.si(kwargs={
-                "identity": str(instance.identity),
-                "personnel_code": instance.id
-            }))
+            s.link(send_personnel_code.si(
+                identity=str(instance.identity),
+                personnel_code=instance.id))
         s.apply_async()
 
 
