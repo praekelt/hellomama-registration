@@ -53,20 +53,14 @@ class Command(BaseCommand):
         registrations = Registration.objects.filter(validated=True)
 
         for reg in registrations:
-            skip = False
             requests = reg.get_subscription_requests()
             if requests.exists():
                 continue
-            for req in requests:
-                if check_subscription and self.count_subscriptions(client,
-                                                                   req):
-                    self.log(('Registration %s without Subscription Requests '
-                              'already has subscription (identity: %s). '
-                              'Skipping.')
-                             % (reg.pk, reg.mother_id))
-                    skip = True
-                    break
-            if skip:
+            if check_subscription and self.count_subscriptions(client, reg):
+                self.log(('Registration %s without Subscription Requests '
+                          'already has subscription (identity: %s). '
+                          'Skipping.')
+                         % (reg.pk, reg.mother_id))
                 continue
 
             """
@@ -81,8 +75,8 @@ class Command(BaseCommand):
     def log(self, log):
         self.stdout.write('%s\n' % (log,))
 
-    def count_subscriptions(self, sbm_client, subscription_request):
+    def count_subscriptions(self, sbm_client, registration):
         subscriptions = sbm_client.get_subscriptions({
-            'identity': subscription_request.identity,
+            'identity': registration.mother_id,
         })
         return int(subscriptions['count'])
