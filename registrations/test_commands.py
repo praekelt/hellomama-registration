@@ -15,7 +15,7 @@ class ManagementCommandsTests(AuthenticatedAPITestCase):
         with self.assertRaises(management.CommandError) as ce:
             management.call_command("repopulate_subscriptions")
         self.assertEqual(
-            ce.exception.message, "Please make sure either the "
+            str(ce.exception), "Please make sure either the "
             "STAGE_BASED_MESSAGING_URL environment variable or --sbm-url is "
             "set.")
 
@@ -24,7 +24,7 @@ class ManagementCommandsTests(AuthenticatedAPITestCase):
             management.call_command("repopulate_subscriptions",
                                     sbm_url="http://example.com")
         self.assertEqual(
-            ce.exception.message, "Please make sure either the "
+            str(ce.exception), "Please make sure either the "
             "STAGE_BASED_MESSAGING_TOKEN environment variable or --sbm-token "
             "is set.")
 
