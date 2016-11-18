@@ -74,7 +74,7 @@ class Command(BaseCommand):
             subscriptions and creates the Subscription Request
             """
             output = validate_registration.apply_async(
-                registration_id=str(reg.id))
+                kwargs={"registration_id": str(reg.id)})
             output = output + " (%s)"
             self.log(output % (reg.mother_id))
 
