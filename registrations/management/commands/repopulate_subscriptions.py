@@ -76,7 +76,11 @@ class Command(BaseCommand):
         self.stdout.write('%s\n' % (log,))
 
     def count_subscriptions(self, sbm_client, registration):
-        subscriptions = sbm_client.get_subscriptions({
-            'identity': registration.mother_id,
-        })
-        return int(subscriptions['count'])
+        receivers = registration.get_receiver_ids()
+        count = 0
+        for receiver in receivers:
+            subscriptions = sbm_client.get_subscriptions({
+                'identity': receiver,
+            })
+            count += int(subscriptions['count'])
+        return count
