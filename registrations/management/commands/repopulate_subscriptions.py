@@ -73,7 +73,8 @@ class Command(BaseCommand):
             validate_registration() ensures no invalid registrations get
             subscriptions and creates the Subscription Request
             """
-            output = validate_registration(registration_id=str(reg.id))
+            output = validate_registration.apply_async(
+                registration_id=str(reg.id))
             output = output + " (%s)"
             self.log(output % (reg.mother_id))
 
