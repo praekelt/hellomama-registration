@@ -5,9 +5,10 @@ from django.conf.urls import url
 from django.shortcuts import redirect
 from django.template.response import TemplateResponse
 
-from hellomama_registration.utils import get_available_metrics
+from hellomama_registration.utils import get_available_metrics, get_identity
 from .models import Source, Registration, SubscriptionRequest
 from .tasks import repopulate_metrics
+from uniqueids.models import Record
 
 
 class RepopulateMetricsForm(forms.Form):
@@ -37,6 +38,7 @@ class RegistrationAdmin(admin.ModelAdmin):
         "created_at", "updated_at", "created_by", "updated_by"]
     list_filter = ["source", "validated", "created_at"]
     search_fields = ["mother_id", "to_addr"]
+    actions = ["regenerate_personnel_code"]
 
     def get_urls(self):
         urls = super(RegistrationAdmin, self).get_urls()
@@ -72,6 +74,38 @@ class RegistrationAdmin(admin.ModelAdmin):
             request,
             "admin/registrations/registration/repopulate_metrics.html",
             context)
+
+    def regenerate_personnel_code(self, request, queryset):
+        created = 0
+        skipped = 0
+        for reg in queryset:
+            identity = get_identity(reg.mother_id)
+            if identity.get("detail") == "Not found.":
+                skipped += 1
+                continue
+            print identity
+            current_code = identity['details'].get("personnel_code", None)
+            if current_code:
+                Record.objects.create(
+                    identity=identity['id'], write_to="personnel_code",
+                    length=len(current_code), created_by=request.user)
+                created += 1
+            else:
+                skipped += 1
+        if created == 1:
+            created_text = "%s Registration was" % created
+        else:
+            created_text = "%s Registrations were" % created
+        if skipped == 1:
+            skipped_text = "%s Registration was" % skipped
+        else:
+            skipped_text = "%s Registrations were" % skipped
+        self.message_user(
+            request, "%s successfully changed. %s skipped because they are "
+            "not a HCW." % (created_text, skipped_text))
+
+    regenerate_personnel_code.short_description = "Change personnel code and "\
+        "SMS"
 
 
 class SubscriptionRequestAdmin(admin.ModelAdmin):
