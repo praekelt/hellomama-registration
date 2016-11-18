@@ -53,8 +53,9 @@ class Command(BaseCommand):
         registrations = Registration.objects.filter(validated=True)
 
         for reg in registrations:
+            skip = False
             requests = reg.get_subscription_requests()
-            if requests.count() > 0:
+            if requests.exists():
                 continue
             for req in requests:
                 if check_subscription and self.count_subscriptions(client,
@@ -63,7 +64,10 @@ class Command(BaseCommand):
                               'already has subscription (identity: %s). '
                               'Skipping.')
                              % (reg.pk, reg.mother_id))
-                    continue
+                    skip = True
+                    break
+            if skip:
+                continue
 
             """
             validate_registration() ensures no invalid registrations get
