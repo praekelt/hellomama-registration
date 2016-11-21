@@ -67,10 +67,10 @@ class Command(BaseCommand):
             validate_registration() ensures no invalid registrations get
             subscriptions and creates the Subscription Request
             """
-            output = validate_registration.apply_async(
+            validate_registration.apply_async(
                 kwargs={"registration_id": str(reg.id)})
-            output = output + " (%s)"
-            self.log(output % (reg.mother_id))
+            self.log("Attempted to repopulate subscriptions for registration "
+                     "%s" % (reg.id))
 
     def log(self, log):
         self.stdout.write('%s\n' % (log,))
