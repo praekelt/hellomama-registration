@@ -32,11 +32,16 @@ class Command(BaseCommand):
             default=environ.get('STAGE_BASED_MESSAGING_TOKEN'),
             help=('The Authorization token for the SBM Service')
         )
+        parser.add_argument(
+            '--reg-query', dest='query', default=None,
+            help=('Filter query to restrict registrations searched')
+        )
 
     def handle(self, *args, **kwargs):
         sbm_url = kwargs['sbm_url']
         sbm_token = kwargs['sbm_token']
         check_subscription = kwargs['check_subscription']
+        query = kwargs['query']
 
         if check_subscription:
             if not sbm_url:
@@ -50,7 +55,15 @@ class Command(BaseCommand):
                     'environment variable or --sbm-token is set.')
             client = StageBasedMessagingApiClient(sbm_token, sbm_url)
 
-        registrations = Registration.objects.filter(validated=True)
+        filters = {"validated": True}
+        if query:
+            try:
+                query_key, query_value = query.split("=")
+            except ValueError:
+                raise CommandError(
+                    "Please use the format 'key'='value' for --reg-query")
+            filters[query_key] = query_value
+        registrations = Registration.objects.filter(**filters)
 
         for reg in registrations:
             requests = reg.get_subscription_requests()
