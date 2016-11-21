@@ -1,6 +1,11 @@
 import json
 import responses
 
+try:
+    import mock
+except ImportError:
+    from unittest import mock
+
 from django.test import TestCase
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
@@ -11,7 +16,7 @@ from rest_framework.authtoken.models import Token
 from rest_hooks.models import model_saved
 
 from .models import Record, record_post_save
-from .tasks import add_unique_id_to_identity
+from .tasks import add_unique_id_to_identity, send_personnel_code
 
 
 class APITestCase(TestCase):
@@ -111,6 +116,39 @@ class TestRecordCreation(AuthenticatedAPITestCase):
         Record.objects.create(**data2)
         # Check
         self.assertEqual(Record.objects.all().count(), 2)
+
+    @mock.patch("uniqueids.tasks.add_unique_id_to_identity.s")
+    @mock.patch("uniqueids.tasks.send_personnel_code")
+    def test_record_post_save_not_send_code(self, mock_send_code, mock_add_id):
+        data = {
+            "identity": "9d02ae1a-16e4-4674-abdc-daf9cce9c52d",
+            "write_to": "health_id"
+        }
+        # Execute
+        record = Record.objects.create(**data)
+
+        record_post_save(Record, record, True)
+
+        mock_add_id.assert_called_once_with(identity=str(
+            record.identity), unique_id=record.id, write_to="health_id")
+        mock_send_code.assert_not_called()
+
+    @mock.patch("uniqueids.tasks.add_unique_id_to_identity.s")
+    @mock.patch("uniqueids.tasks.send_personnel_code.si")
+    def test_record_post_save_send_code(self, mock_send_code, mock_add_id):
+        data = {
+            "identity": "9d02ae1a-16e4-4674-abdc-daf9cce9c52d",
+            "write_to": "personnel_code"
+        }
+        # Execute
+        record = Record.objects.create(**data)
+
+        record_post_save(Record, record, True)
+
+        mock_add_id.assert_called_once_with(identity=str(
+            record.identity), unique_id=record.id, write_to="personnel_code")
+        mock_send_code.assert_called_once_with(identity=str(
+            record.identity), personnel_code=record.id)
 
 
 class TestRecordAPI(AuthenticatedAPITestCase):
@@ -366,3 +404,45 @@ class TestRecordTasks(AuthenticatedAPITestCase):
         self.assertEqual(
             result.get(),
             "Identity <70097580-c9fe-4f92-a55e-8f5f54b19799> not found")
+
+    @responses.activate
+    def test_send_personnel_code(self):
+        """
+        The task should attempt to send a message to the identity, with the
+        generated personnel code.
+        """
+        responses.add(
+            responses.GET,
+            'http://localhost:8001/api/v1/identities/70097580-c9fe-4f92-a55e-'
+            '8f5f54b19799/addresses/msisdn?default=True',
+            json={
+                'results': [
+                    {'address': '+27123456789'},
+                ],
+            },
+            content_type='application/json', match_querystring=True
+        )
+        responses.add(
+            responses.POST,
+            'http://localhost:8006/api/v1/outbound/',
+            body='{}',
+            content_type='application/json'
+        )
+
+        result = send_personnel_code.delay(
+            '70097580-c9fe-4f92-a55e-8f5f54b19799', 1234567890)
+
+        self.assertEqual(
+            result.get(),
+            "Sent personnel code to 70097580-c9fe-4f92-a55e-8f5f54b19799. "
+            "Result: {}")
+
+        [_, message_send] = responses.calls
+        self.assertEqual(json.loads(message_send.request.body), {
+            'to_addr': '+27123456789',
+            'content': (
+                'Welcome to HelloMama. You have been registered as a HCW. '
+                'Dial 55500 to start registering mothers. Your personnel '
+                'code is 1234567890.'),
+            'metadata': {},
+        })
