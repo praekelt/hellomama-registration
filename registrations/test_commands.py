@@ -125,3 +125,46 @@ class ManagementCommandsTests(AuthenticatedAPITestCase):
                                 sbm_url="http://localhost:8005/api/v1",
                                 sbm_token="test_token")
         mock_validation.assert_not_called()
+
+    @responses.activate
+    @mock.patch("registrations.tasks.validate_registration.apply_async")
+    def test_command_query_given(self, mock_validation):
+        # prepare registration data
+        registration_data = {
+            "stage": "prebirth",
+            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
+            "data": REG_DATA["hw_pre_mother"].copy(),
+            "source": self.make_source_adminuser(),
+            "validated": True
+        }
+        registration1 = Registration.objects.create(**registration_data)
+        registration_data = {
+            "stage": "postbirth",
+            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
+            "data": REG_DATA["hw_post"].copy(),
+            "source": self.make_source_adminuser(),
+            "validated": True
+        }
+        Registration.objects.create(**registration_data)
+        self.assertFalse(SubscriptionRequest.objects.all().exists())
+
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/subscriptions/?identity=%s' %
+            registration1.mother_id,
+            json={
+                "count": 0,
+                "next": None,
+                "previous": None,
+                "results": []
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+
+        management.call_command("repopulate_subscriptions",
+                                sbm_url="http://localhost:8005/api/v1",
+                                sbm_token="test_token",
+                                reg_query="stage:prebirth")
+        mock_validation.assert_called_once_with(
+            kwargs={"registration_id": str(registration1.id)})
