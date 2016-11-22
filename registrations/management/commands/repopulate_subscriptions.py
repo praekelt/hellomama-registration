@@ -58,10 +58,10 @@ class Command(BaseCommand):
         filters = {"validated": True}
         if query:
             try:
-                query_key, query_value = query.split("=")
+                query_key, query_value = query.split(":")
             except ValueError:
                 raise CommandError(
-                    "Please use the format 'key'='value' for --reg-query")
+                    "Please use the format 'key':'value' for --reg-query")
             filters[query_key] = query_value
         registrations = Registration.objects.filter(**filters)
 

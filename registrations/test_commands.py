@@ -165,6 +165,6 @@ class ManagementCommandsTests(AuthenticatedAPITestCase):
         management.call_command("repopulate_subscriptions",
                                 sbm_url="http://localhost:8005/api/v1",
                                 sbm_token="test_token",
-                                reg_query="stage=prebirth")
+                                reg_query="stage:prebirth")
         mock_validation.assert_called_once_with(
             kwargs={"registration_id": str(registration1.id)})
