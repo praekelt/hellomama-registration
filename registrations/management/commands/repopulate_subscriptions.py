@@ -58,7 +58,7 @@ class Command(BaseCommand):
         filters = {"validated": True}
         if query:
             try:
-                query_key, query_value = query.split(":")
+                query_key, query_value = query.split(":", 1)
             except ValueError:
                 raise CommandError(
                     "Please use the format 'key':'value' for --reg-query")
