@@ -8,6 +8,7 @@ except ImportError:
 
 from django.test import TestCase
 from django.contrib.auth.models import User
+from django.core.urlresolvers import reverse
 from django.db.models.signals import post_save
 
 from rest_framework import status
@@ -446,3 +447,75 @@ class TestRecordTasks(AuthenticatedAPITestCase):
                 'code is 1234567890.'),
             'metadata': {},
         })
+
+
+class TestRecordAdmin(AuthenticatedAPITestCase):
+    def setUp(self):
+        super(TestRecordAdmin, self).setUp()
+        self.adminclient.login(username=self.adminusername,
+                               password=self.adminpassword)
+
+    def test_regenerate_personnel_code_only_selected(self):
+        record1 = Record.objects.create(
+            identity="9d02ae1a-16e4-4674-abdc-daf9cce9c52d",
+            write_to="personnel_code")
+        Record.objects.create(
+            identity="c304f463-6db4-4f89-a095-46319da06ac9",
+            write_to="personnel_code"
+        )
+        data = {'action': 'regenerate_personnel_code',
+                '_selected_action': [record1.pk]}
+
+        response = self.adminclient.post(
+            reverse('admin:uniqueids_record_changelist'), data, follow=True)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertContains(response, "1 Record was successfully changed. 0 "
+                            "Records were skipped because they are not a HCW.")
+        records = Record.objects.all()
+        self.assertEqual(len(records), 3)
+        self.assertEqual(records[0].identity, records[2].identity)
+
+    def test_regenerate_personnel_code_multiple(self):
+        record1 = Record.objects.create(
+            identity="9d02ae1a-16e4-4674-abdc-daf9cce9c52d",
+            write_to="personnel_code")
+        record2 = Record.objects.create(
+            identity="c304f463-6db4-4f89-a095-46319da06ac9",
+            write_to="personnel_code"
+        )
+        data = {'action': 'regenerate_personnel_code',
+                '_selected_action': [record1.pk, record2.pk]}
+
+        response = self.adminclient.post(
+            reverse('admin:uniqueids_record_changelist'), data, follow=True)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertContains(response, "2 Records were successfully changed. 0 "
+                            "Records were skipped because they are not a HCW.")
+        records_id_1 = Record.objects.filter(identity=record1.identity)
+        records_id_2 = Record.objects.filter(identity=record2.identity)
+        self.assertEqual(len(records_id_1), 2)
+        self.assertEqual(len(records_id_2), 2)
+
+    def test_regenerate_personnel_code_only_hcw(self):
+        record1 = Record.objects.create(
+            identity="9d02ae1a-16e4-4674-abdc-daf9cce9c52d",
+            write_to="personnel_code")
+        record2 = Record.objects.create(
+            identity="c304f463-6db4-4f89-a095-46319da06ac9",
+            write_to="health_id"
+        )
+        data = {'action': 'regenerate_personnel_code',
+                '_selected_action': [record1.pk, record2.pk]}
+
+        response = self.adminclient.post(
+            reverse('admin:uniqueids_record_changelist'), data, follow=True)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertContains(response, "1 Record was successfully changed. 1 "
+                            "Record was skipped because they are not a HCW.")
+        records_id_1 = Record.objects.filter(identity=record1.identity)
+        records_id_2 = Record.objects.filter(identity=record2.identity)
+        self.assertEqual(len(records_id_1), 2)
+        self.assertEqual(len(records_id_2), 1)
