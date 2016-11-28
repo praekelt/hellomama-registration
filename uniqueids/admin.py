@@ -14,7 +14,7 @@ class RecordAdmin(admin.ModelAdmin):
     def resend_personnel_code(self, request, queryset):
         created = 0
         skipped = 0
-        for record in queryset:
+        for record in queryset.iterator():
             if record.write_to != "personnel_code":
                 skipped += 1
                 continue
