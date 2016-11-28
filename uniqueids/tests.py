@@ -471,8 +471,7 @@ class TestRecordAdmin(AuthenticatedAPITestCase):
             reverse('admin:uniqueids_record_changelist'), data, follow=True)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertContains(response, "1 Record was successfully changed. 0 "
-                            "Records were skipped because they are not a HCW.")
+        self.assertContains(response, "1 Record was resent.")
 
         mock_send_code.assert_called_once_with(kwargs={"identity": str(
             record1.identity), "personnel_code": record1.id})
@@ -493,8 +492,7 @@ class TestRecordAdmin(AuthenticatedAPITestCase):
             reverse('admin:uniqueids_record_changelist'), data, follow=True)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertContains(response, "2 Records were successfully changed. 0 "
-                            "Records were skipped because they are not a HCW.")
+        self.assertContains(response, "2 Records were resent.")
 
         mock_send_code.assert_any_call(kwargs={"identity": str(
             record1.identity), "personnel_code": record1.id})
@@ -517,8 +515,7 @@ class TestRecordAdmin(AuthenticatedAPITestCase):
             reverse('admin:uniqueids_record_changelist'), data, follow=True)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertContains(response, "1 Record was successfully changed. 1 "
-                            "Record was skipped because they are not a HCW.")
+        self.assertContains(response, "1 Record was resent.")
 
         mock_send_code.assert_called_once_with(kwargs={"identity": str(
             record1.identity), "personnel_code": record1.id})

@@ -13,11 +13,7 @@ class RecordAdmin(admin.ModelAdmin):
 
     def resend_personnel_code(self, request, queryset):
         created = 0
-        skipped = 0
-        for record in queryset.iterator():
-            if record.write_to != "personnel_code":
-                skipped += 1
-                continue
+        for record in queryset.filter(write_to="personnel_code").iterator():
             send_personnel_code.apply_async(kwargs={
                 "identity": str(record.identity),
                 "personnel_code": record.id})
@@ -26,13 +22,7 @@ class RecordAdmin(admin.ModelAdmin):
             created_text = "%s Record was" % created
         else:
             created_text = "%s Records were" % created
-        if skipped == 1:
-            skipped_text = "%s Record was" % skipped
-        else:
-            skipped_text = "%s Records were" % skipped
-        self.message_user(
-            request, "%s successfully changed. %s skipped because they are "
-            "not a HCW." % (created_text, skipped_text))
+        self.message_user(request, "%s resent." % created_text)
 
     resend_personnel_code.short_description = "Send code by SMS (personnel "\
         "code only)"
