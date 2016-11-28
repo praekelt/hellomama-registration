@@ -455,7 +455,8 @@ class TestRecordAdmin(AuthenticatedAPITestCase):
         self.adminclient.login(username=self.adminusername,
                                password=self.adminpassword)
 
-    def test_regenerate_personnel_code_only_selected(self):
+    @mock.patch("uniqueids.tasks.send_personnel_code.apply_async")
+    def test_resend_personnel_code_only_selected(self, mock_send_code):
         record1 = Record.objects.create(
             identity="9d02ae1a-16e4-4674-abdc-daf9cce9c52d",
             write_to="personnel_code")
@@ -463,7 +464,7 @@ class TestRecordAdmin(AuthenticatedAPITestCase):
             identity="c304f463-6db4-4f89-a095-46319da06ac9",
             write_to="personnel_code"
         )
-        data = {'action': 'regenerate_personnel_code',
+        data = {'action': 'resend_personnel_code',
                 '_selected_action': [record1.pk]}
 
         response = self.adminclient.post(
@@ -472,11 +473,12 @@ class TestRecordAdmin(AuthenticatedAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertContains(response, "1 Record was successfully changed. 0 "
                             "Records were skipped because they are not a HCW.")
-        records = Record.objects.all()
-        self.assertEqual(len(records), 3)
-        self.assertEqual(records[0].identity, records[2].identity)
 
-    def test_regenerate_personnel_code_multiple(self):
+        mock_send_code.assert_called_once_with(identity=str(
+            record1.identity), personnel_code=record1.id)
+
+    @mock.patch("uniqueids.tasks.send_personnel_code.apply_async")
+    def test_resend_personnel_code_multiple(self, mock_send_code):
         record1 = Record.objects.create(
             identity="9d02ae1a-16e4-4674-abdc-daf9cce9c52d",
             write_to="personnel_code")
@@ -484,7 +486,7 @@ class TestRecordAdmin(AuthenticatedAPITestCase):
             identity="c304f463-6db4-4f89-a095-46319da06ac9",
             write_to="personnel_code"
         )
-        data = {'action': 'regenerate_personnel_code',
+        data = {'action': 'resend_personnel_code',
                 '_selected_action': [record1.pk, record2.pk]}
 
         response = self.adminclient.post(
@@ -493,12 +495,14 @@ class TestRecordAdmin(AuthenticatedAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertContains(response, "2 Records were successfully changed. 0 "
                             "Records were skipped because they are not a HCW.")
-        records_id_1 = Record.objects.filter(identity=record1.identity)
-        records_id_2 = Record.objects.filter(identity=record2.identity)
-        self.assertEqual(len(records_id_1), 2)
-        self.assertEqual(len(records_id_2), 2)
 
-    def test_regenerate_personnel_code_only_hcw(self):
+        mock_send_code.assert_any_call(identity=str(
+            record1.identity), personnel_code=record1.id)
+        mock_send_code.assert_any_call(identity=str(
+            record2.identity), personnel_code=record2.id)
+
+    @mock.patch("uniqueids.tasks.send_personnel_code.apply_async")
+    def test_resend_personnel_code_only_hcw(self, mock_send_code):
         record1 = Record.objects.create(
             identity="9d02ae1a-16e4-4674-abdc-daf9cce9c52d",
             write_to="personnel_code")
@@ -506,7 +510,7 @@ class TestRecordAdmin(AuthenticatedAPITestCase):
             identity="c304f463-6db4-4f89-a095-46319da06ac9",
             write_to="health_id"
         )
-        data = {'action': 'regenerate_personnel_code',
+        data = {'action': 'resend_personnel_code',
                 '_selected_action': [record1.pk, record2.pk]}
 
         response = self.adminclient.post(
@@ -515,7 +519,6 @@ class TestRecordAdmin(AuthenticatedAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertContains(response, "1 Record was successfully changed. 1 "
                             "Record was skipped because they are not a HCW.")
-        records_id_1 = Record.objects.filter(identity=record1.identity)
-        records_id_2 = Record.objects.filter(identity=record2.identity)
-        self.assertEqual(len(records_id_1), 2)
-        self.assertEqual(len(records_id_2), 1)
+
+        mock_send_code.assert_called_once_with(identity=str(
+            record1.identity), personnel_code=record1.id)
