@@ -474,8 +474,8 @@ class TestRecordAdmin(AuthenticatedAPITestCase):
         self.assertContains(response, "1 Record was successfully changed. 0 "
                             "Records were skipped because they are not a HCW.")
 
-        mock_send_code.assert_called_once_with(identity=str(
-            record1.identity), personnel_code=record1.id)
+        mock_send_code.assert_called_once_with(kwargs={"identity": str(
+            record1.identity), "personnel_code": record1.id})
 
     @mock.patch("uniqueids.tasks.send_personnel_code.apply_async")
     def test_resend_personnel_code_multiple(self, mock_send_code):
@@ -496,10 +496,10 @@ class TestRecordAdmin(AuthenticatedAPITestCase):
         self.assertContains(response, "2 Records were successfully changed. 0 "
                             "Records were skipped because they are not a HCW.")
 
-        mock_send_code.assert_any_call(identity=str(
-            record1.identity), personnel_code=record1.id)
-        mock_send_code.assert_any_call(identity=str(
-            record2.identity), personnel_code=record2.id)
+        mock_send_code.assert_any_call(kwargs={"identity": str(
+            record1.identity), "personnel_code": record1.id})
+        mock_send_code.assert_any_call(kwargs={"identity": str(
+            record2.identity), "personnel_code": record2.id})
 
     @mock.patch("uniqueids.tasks.send_personnel_code.apply_async")
     def test_resend_personnel_code_only_hcw(self, mock_send_code):
@@ -520,5 +520,5 @@ class TestRecordAdmin(AuthenticatedAPITestCase):
         self.assertContains(response, "1 Record was successfully changed. 1 "
                             "Record was skipped because they are not a HCW.")
 
-        mock_send_code.assert_called_once_with(identity=str(
-            record1.identity), personnel_code=record1.id)
+        mock_send_code.assert_called_once_with(kwargs={"identity": str(
+            record1.identity), "personnel_code": record1.id})
