@@ -24,7 +24,7 @@ class RecordAdmin(admin.ModelAdmin):
             created_text = "%s Records were" % created
         self.message_user(request, "%s resent." % created_text)
 
-    resend_personnel_code.short_description = "Send code by SMS (personnel "\
-        "code only)"
+    resend_personnel_code.short_description = (
+        "Send code by SMS (personnel code only)")
 
 admin.site.register(Record, RecordAdmin)
