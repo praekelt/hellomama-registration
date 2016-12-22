@@ -1,7 +1,6 @@
 from os import environ
 from datetime import datetime
 
-from uuid import UUID
 from django.core.management.base import BaseCommand, CommandError
 from seed_services_client import StageBasedMessagingApiClient
 
@@ -40,14 +39,14 @@ class Command(BaseCommand):
             help=('The Stage Based Messaging Service to verify '
                   'subscriptions for.'))
         parser.add_argument(
-            '--sbm-token', dest='sbm_token', type=UUID,
+            '--sbm-token', dest='sbm_token', type=str,
             default=environ.get('STAGE_BASED_MESSAGING_TOKEN'),
             help=('The Authorization token for the SBM Service')
         )
 
     def handle(self, *args, **kwargs):
         sbm_url = kwargs['sbm_url']
-        sbm_token = kwargs['sbm_token'].hex
+        sbm_token = kwargs['sbm_token']
         registration = kwargs['registration']
         message_set = kwargs['message_set']
         apply_fix = kwargs['fix']
