@@ -1,5 +1,4 @@
 from os import environ
-from uuid import UUID
 
 from django.core.management.base import BaseCommand, CommandError
 from django.contrib.auth.models import User
@@ -52,7 +51,7 @@ class Command(BaseCommand):
             help=('The Stage Based Messaging Service to verify '
                   'subscriptions for.'))
         parser.add_argument(
-            '--sbm-token', dest='sbm_token', type=UUID,
+            '--sbm-token', dest='sbm_token', type=str,
             default=environ.get('STAGE_BASED_MESSAGING_TOKEN'),
             help=('The Authorization token for the SBM Service')
         )
@@ -62,7 +61,7 @@ class Command(BaseCommand):
         subscription_requests = kwargs['uuids']
         user = kwargs['user']
         sbm_url = kwargs['sbm_url']
-        sbm_token = kwargs['sbm_token'].hex
+        sbm_token = kwargs['sbm_token']
         check_subscription = kwargs['check_subscription']
 
         if check_subscription:

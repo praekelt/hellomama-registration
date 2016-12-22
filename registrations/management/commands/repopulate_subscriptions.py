@@ -28,7 +28,7 @@ class Command(BaseCommand):
             help=('The Stage Based Messaging Service to verify '
                   'subscriptions for.'))
         parser.add_argument(
-            '--sbm-token', dest='sbm_token',
+            '--sbm-token', dest='sbm_token', type=str,
             default=environ.get('STAGE_BASED_MESSAGING_TOKEN'),
             help=('The Authorization token for the SBM Service')
         )
