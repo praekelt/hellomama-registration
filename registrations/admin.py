@@ -79,7 +79,7 @@ class SubscriptionRequestAdmin(admin.ModelAdmin):
         "id", "identity", "messageset", "next_sequence_number", "lang",
         "schedule", "created_at", "updated_at"]
     list_filter = ["messageset", "created_at"]
-    search_fields = ["identity"]
+    search_fields = ["id", "identity"]
 
 
 admin.site.register(Source)
