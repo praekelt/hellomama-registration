@@ -2,6 +2,7 @@ import datetime
 import requests
 import json
 import re
+import six
 from django.conf import settings
 from registrations.models import Source
 
@@ -264,3 +265,13 @@ def timestamp_to_epoch(timestamp):
     Takes a timestamp and returns a float representing the unix epoch time.
     """
     return (timestamp - datetime.datetime.utcfromtimestamp(0)).total_seconds()
+
+
+def json_decode(data):
+    """
+    Decodes the given JSON as primitives
+    """
+    if isinstance(data, six.binary_type):
+        data = data.decode('utf-8')
+
+    return json.loads(data)
