@@ -2322,6 +2322,29 @@ class IdentityStoreOptoutViewTest(AuthenticatedAPITestCase):
         self.factory = RequestFactory()
         super(IdentityStoreOptoutViewTest, self).setUp()
 
+    def optout_search_callback(self, request):
+        headers = {'Content-Type': "application/json"}
+        resp = {
+            "count": 1,
+            "next": None,
+            "previous": None,
+            "results": [{
+                'identity': "846877e6-afaa-43de-acb1-09f61ad4de99",
+                'details': {
+                    'name': "testing",
+                    'addresses': {
+                        'msisdn': {
+                            '+1234': {}
+                        },
+                    },
+                    'language': "eng_NG",
+                },
+                'optout_type': "forget",
+                'optout_reason': "miscarriage",
+            }, ]
+        }
+        return (200, headers, json.dumps(resp))
+
     @responses.activate
     def test_identity_optout_valid(self):
 
@@ -2331,6 +2354,12 @@ class IdentityStoreOptoutViewTest(AuthenticatedAPITestCase):
                       "http://metrics-url/metrics/",
                       json={"foo": "bar"},
                       status=200, content_type='application/json')
+
+        url = 'http://localhost:8001/api/v1/optouts/search/?' \
+              'reason=miscarriage'
+        responses.add_callback(
+            responses.GET, url, callback=self.optout_search_callback,
+            match_querystring=True, content_type="application/json")
 
         request = {
             'identity': "846877e6-afaa-43de-acb1-09f61ad4de99",
@@ -2352,9 +2381,15 @@ class IdentityStoreOptoutViewTest(AuthenticatedAPITestCase):
 
         self.assertEqual(response.status_code, 200)
 
-        [last_call1] = responses.calls
+        [last_call1, last_call2, _, last_call4] = responses.calls
         self.assertEqual(json.loads(last_call1.request.body), {
             "optout.receiver_type.mother_only.sum": 1.0
+        })
+        self.assertEqual(json.loads(last_call2.request.body), {
+            "optout.reason.miscarriage.sum": 1.0
+        })
+        self.assertEqual(json.loads(last_call4.request.body), {
+            "optout.reason.miscarriage.total.last": 1.0
         })
 
     @responses.activate

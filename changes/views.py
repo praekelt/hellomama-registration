@@ -1,6 +1,6 @@
 import django_filters
 from .models import Source, Change
-from registrations.models import Registration
+from registrations.models import Registration, get_or_incr_cache
 from rest_framework import viewsets, mixins, generics, filters
 from rest_framework.permissions import IsAuthenticated
 from .serializers import ChangeSerializer
@@ -89,6 +89,19 @@ def fire_optout_reason_metric(reason):
     fire_metric.apply_async(kwargs={
         "metric_name": 'optout.reason.%s.sum' % reason,
         "metric_value": 1.0
+    })
+
+    def search_optouts_reason():
+        result = utils.search_optouts({"reason": reason})
+        return len(list(result))
+
+    total_key = 'optout.reason.%s.total.last' % reason
+    total = get_or_incr_cache(
+        total_key,
+        search_optouts_reason)
+    fire_metric.apply_async(kwargs={
+        'metric_name': total_key,
+        'metric_value': total,
     })
 
 

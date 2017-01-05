@@ -93,6 +93,24 @@ def patch_identity(identity, data):
     return r.json()
 
 
+def search_optouts(params):
+    """ Returns the optouts matching the given parameters
+    """
+    url = "%s/%s/search/" % (settings.IDENTITY_STORE_URL, "optouts")
+    headers = {
+        'Authorization': 'Token %s' % settings.IDENTITY_STORE_TOKEN,
+        'Content-Type': 'application/json'
+    }
+    r = requests.get(url, params=params, headers=headers).json()
+    while True:
+        for optout in r['results']:
+            yield optout
+        if r.get('next'):
+            r = requests.get(r['next'], headers=headers).json()
+        else:
+            break
+
+
 def get_messageset_by_shortname(short_name):
     url = "%s/%s/" % (settings.STAGE_BASED_MESSAGING_URL, "messageset")
     params = {'short_name': short_name}
