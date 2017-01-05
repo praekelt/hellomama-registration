@@ -2,9 +2,10 @@ import datetime
 import json
 import responses
 
-from django.test import TestCase
+from django.test import TestCase, RequestFactory
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
+from django.conf import settings
 
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -2309,3 +2310,78 @@ class TestMetrics(AuthenticatedAPITestCase):
         })
 
         post_save.disconnect(fire_message_change_metric, sender=Change)
+
+
+class IdentityStoreOptoutViewTest(AuthenticatedAPITestCase):
+    """
+    Tests related to the optout identity store view.
+    """
+    url = '/optout/'
+
+    def setUp(self):
+        self.factory = RequestFactory()
+        super(IdentityStoreOptoutViewTest, self).setUp()
+
+    @responses.activate
+    def test_identity_optout_valid(self):
+
+        self.make_registration_mother_only()
+
+        responses.add(responses.POST,
+                      "http://metrics-url/metrics/",
+                      json={"foo": "bar"},
+                      status=200, content_type='application/json')
+
+        request = {
+            'identity': "846877e6-afaa-43de-acb1-09f61ad4de99",
+            'details': {
+                'name': "testing",
+                'addresses': {
+                    'msisdn': {
+                        '+1234': {}
+                    },
+                },
+                'language': "eng_NG",
+            },
+            'optout_type': "forget",
+            'optout_reason': "miscarriage",
+        }
+        response = self.adminclient.post('/api/v1/optout/',
+                                         json.dumps(request),
+                                         content_type='application/json')
+
+        self.assertEqual(response.status_code, 200)
+
+        [last_call1] = responses.calls
+        self.assertEqual(json.loads(last_call1.request.body), {
+            "optout.receiver_type.mother_only.sum": 1.0
+        })
+
+    @responses.activate
+    def test_identity_optout_invalid(self):
+
+        self.make_registration_mother_only()
+
+        request = {
+            'details': {
+                'name': "testing",
+                'addresses': {
+                    'msisdn': {
+                        '+1234': {}
+                    },
+                },
+                'language': "eng_NG",
+            },
+            'optout_type': "forget",
+            'optout_reason': "miscarriage",
+        }
+        response = self.adminclient.post('/api/v1/optout/',
+                                         json.dumps(request),
+                                         content_type='application/json')
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(utils.json_decode(response.content),
+                         {'reason':
+                         '"identity", "optout_type" and "optout_reason" must '
+                          'be specified.'})
+        self.assertEqual(len(responses.calls), 0)

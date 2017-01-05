@@ -1882,6 +1882,13 @@ class TestMetricsAPI(AuthenticatedAPITestCase):
                 'registrations.change.pregnant_to_loss.total.last',
                 'registrations.change.messaging.sum',
                 'registrations.change.messaging.total.last',
+                'optout.receiver_type.mother_father.sum',
+                'optout.receiver_type.mother_only.sum',
+                'optout.receiver_type.father_only.sum',
+                'optout.receiver_type.mother_family.sum',
+                'optout.receiver_type.mother_friend.sum',
+                'optout.receiver_type.friend_only.sum',
+                'optout.receiver_type.family_only.sum',
             ])
         )
 

@@ -256,6 +256,8 @@ METRICS_REALTIME.extend(
     ['registrations.receiver_type.%s.total.last' % rt for rt in RECEIVER_TYPES]
 )
 METRICS_REALTIME.extend(
+    ['optout.receiver_type.%s.sum' % rt for rt in RECEIVER_TYPES])
+METRICS_REALTIME.extend(
     ['registrations.language.%s.sum' % l for l in LANGUAGES])
 METRICS_REALTIME.extend(
     ['registrations.language.%s.total.last' % l for l in LANGUAGES])
