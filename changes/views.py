@@ -68,7 +68,7 @@ class ReceiveIdentityStoreOptout(mixins.CreateModelMixin,
         try:
             identity_id = data['identity']
             # optout_type = data['optout_type']
-            # optout_reason = data['optout_reason']
+            optout_reason = data['optout_reason']
         except KeyError as e:
             return JsonResponse({'reason': '"identity", "optout_type" and '
                                 '"optout_reason" must be specified.'
@@ -78,7 +78,18 @@ class ReceiveIdentityStoreOptout(mixins.CreateModelMixin,
         if registration.data.get('msg_receiver'):
             fire_optout_receiver_type_metric(registration.data['msg_receiver'])
 
+        fire_optout_reason_metric(optout_reason)
+
         return JsonResponse({})
+
+
+def fire_optout_reason_metric(reason):
+    from registrations.tasks import fire_metric
+
+    fire_metric.apply_async(kwargs={
+        "metric_name": 'optout.reason.%s.sum' % reason,
+        "metric_value": 1.0
+    })
 
 
 def fire_optout_receiver_type_metric(msg_receiver):
