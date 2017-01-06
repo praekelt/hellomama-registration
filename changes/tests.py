@@ -5,7 +5,6 @@ import responses
 from django.test import TestCase, RequestFactory
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
-from django.conf import settings
 
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -2325,11 +2324,24 @@ class IdentityStoreOptoutViewTest(AuthenticatedAPITestCase):
     def optout_search_callback(self, request):
         headers = {'Content-Type': "application/json"}
         resp = {
-            "count": 1,
+            "count": 2,
             "next": None,
             "previous": None,
             "results": [{
                 'identity': "846877e6-afaa-43de-acb1-09f61ad4de99",
+                'details': {
+                    'name': "testing",
+                    'addresses': {
+                        'msisdn': {
+                            '+1234': {}
+                        },
+                    },
+                    'language': "eng_NG",
+                },
+                'optout_type': "forget",
+                'optout_reason': "miscarriage",
+            }, {
+                'identity': "846877e6-afaa-43de-1111-09f61ad4de99",
                 'details': {
                     'name': "testing",
                     'addresses': {
@@ -2349,6 +2361,9 @@ class IdentityStoreOptoutViewTest(AuthenticatedAPITestCase):
     def test_identity_optout_valid(self):
 
         self.make_registration_mother_only()
+        registration = self.make_registration_mother_only()
+        registration.mother_id = '846877e6-afaa-43de-1111-09f61ad4de99'
+        registration.save()
 
         responses.add(responses.POST,
                       "http://metrics-url/metrics/",
@@ -2360,6 +2375,11 @@ class IdentityStoreOptoutViewTest(AuthenticatedAPITestCase):
         responses.add_callback(
             responses.GET, url, callback=self.optout_search_callback,
             match_querystring=True, content_type="application/json")
+
+        url = 'http://localhost:8001/api/v1/optouts/search/'
+        responses.add_callback(
+          responses.GET, url, callback=self.optout_search_callback,
+          match_querystring=True, content_type="application/json")
 
         request = {
             'identity': "846877e6-afaa-43de-acb1-09f61ad4de99",
@@ -2381,15 +2401,19 @@ class IdentityStoreOptoutViewTest(AuthenticatedAPITestCase):
 
         self.assertEqual(response.status_code, 200)
 
-        [last_call1, last_call2, _, last_call4] = responses.calls
-        self.assertEqual(json.loads(last_call1.request.body), {
+        [call1, _, call3, call4, _, call6] = responses.calls
+
+        self.assertEqual(json.loads(call1.request.body), {
             "optout.receiver_type.mother_only.sum": 1.0
         })
-        self.assertEqual(json.loads(last_call2.request.body), {
+        self.assertEqual(json.loads(call3.request.body), {
+            "optout.receiver_type.mother_only.total.last": 2.0
+        })
+        self.assertEqual(json.loads(call4.request.body), {
             "optout.reason.miscarriage.sum": 1.0
         })
-        self.assertEqual(json.loads(last_call4.request.body), {
-            "optout.reason.miscarriage.total.last": 1.0
+        self.assertEqual(json.loads(call6.request.body), {
+            "optout.reason.miscarriage.total.last": 2.0
         })
 
     @responses.activate

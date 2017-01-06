@@ -93,7 +93,7 @@ def patch_identity(identity, data):
     return r.json()
 
 
-def search_optouts(params):
+def search_optouts(params=None):
     """ Returns the optouts matching the given parameters
     """
     url = "%s/%s/search/" % (settings.IDENTITY_STORE_URL, "optouts")

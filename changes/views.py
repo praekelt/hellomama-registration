@@ -5,6 +5,7 @@ from rest_framework import viewsets, mixins, generics, filters
 from rest_framework.permissions import IsAuthenticated
 from .serializers import ChangeSerializer
 from django.http import JsonResponse
+from django.conf import settings
 from hellomama_registration import utils
 
 import six
@@ -86,6 +87,9 @@ class ReceiveIdentityStoreOptout(mixins.CreateModelMixin,
 def fire_optout_reason_metric(reason):
     from registrations.tasks import fire_metric
 
+    if reason not in settings.OPTOUT_REASONS:
+        reason = 'other'
+
     fire_metric.apply_async(kwargs={
         "metric_name": 'optout.reason.%s.sum' % reason,
         "metric_value": 1.0
@@ -111,4 +115,24 @@ def fire_optout_receiver_type_metric(msg_receiver):
     fire_metric.apply_async(kwargs={
         "metric_name": 'optout.receiver_type.%s.sum' % msg_receiver,
         "metric_value": 1.0
+    })
+
+    def search_optouts_receiver_type():
+        result = utils.search_optouts()
+
+        identities = []
+        for data in result:
+            identities.append(data['identity'])
+
+        return Registration.objects.filter(
+                    mother_id__in=identities,
+                    data__msg_receiver=msg_receiver).count()
+
+    total_key = 'optout.receiver_type.%s.total.last' % msg_receiver
+    total = get_or_incr_cache(
+        total_key,
+        search_optouts_receiver_type)
+    fire_metric.apply_async(kwargs={
+        'metric_name': total_key,
+        'metric_value': total,
     })

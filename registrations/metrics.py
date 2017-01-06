@@ -33,6 +33,18 @@ class MetricGenerator(object):
                 partial(
                     self.registrations_receiver_type_total_last, receiver_type)
             )
+            setattr(
+                self, 'optout_receiver_type_{}_sum'.format(
+                    receiver_type),
+                partial(
+                    self.optout_receiver_type_sum, receiver_type)
+            )
+            setattr(
+                self, 'optout_receiver_type_{}_total_last'.format(
+                    receiver_type),
+                partial(
+                    self.optout_receiver_type_total_last, receiver_type)
+            )
         for language in settings.LANGUAGES:
             setattr(
                 self, 'registrations_language_{}_sum'.format(language),
@@ -59,6 +71,15 @@ class MetricGenerator(object):
             setattr(
                 self, 'registrations_role_{}_total_last'.format(role),
                 partial(self.registrations_role_total_last, role)
+            )
+        for reason in settings.OPTOUT_REASONS:
+            setattr(
+                self, 'optout_reason_{}_sum'.format(reason),
+                partial(self.optout_reason_sum, role)
+            )
+            setattr(
+                self, 'optout_reason_{}_total_last'.format(reason),
+                partial(self.optout_reason_total_last, role)
             )
         sources = Source.objects.all()
         sources.prefetch_related('user')
@@ -232,6 +253,48 @@ class MetricGenerator(object):
             .filter(created_at__lte=end)\
             .filter(action='change_messaging')\
             .count()
+
+    def optout_receiver_type_sum(self, receiver_type, start, end):
+        result = utils.search_optouts({
+            "created_at__gt": start,
+            "created_at__lte": end,
+        })
+
+        identities = []
+        for data in result:
+            identities.append(data['identity'])
+
+        return Registration.objects.filter(
+                    mother_id__in=identities,
+                    data__msg_receiver=receiver_type).count()
+
+    def optout_receiver_type_total_last(self, receiver_type, start, end):
+        result = utils.search_optouts({
+            "created_at__lte": end,
+        })
+
+        identities = []
+        for data in result:
+            identities.append(data['identity'])
+
+        return Registration.objects.filter(
+                    mother_id__in=identities,
+                    data__msg_receiver=receiver_type).count()
+
+    def optout_reason_sum(self, reason, start, end):
+        result = utils.search_optouts({
+            "reason": reason,
+            "created_at__gt": start,
+            "created_at__lte": end,
+        })
+        return len(list(result))
+
+    def optout_reason_total_last(self, reason, start, end):
+        result = utils.search_optouts({
+            "reason": reason,
+            "created_at__lte": end,
+        })
+        return len(list(result))
 
 
 def send_metric(amqp_channel, prefix, name, value, timestamp):

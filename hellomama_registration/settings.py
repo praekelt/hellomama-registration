@@ -232,6 +232,8 @@ RECEIVER_TYPES = [
 LANGUAGES = ["eng_NG", "hau_NG", "ibo_NG", "yor_NG", "pcm_NG"]
 STATES = ["ebonyi", "cross_river", "abuja"]
 ROLES = ["oic", "cv", "midwife", "chew", "mama"]
+OPTOUT_REASONS = [
+    "miscarriage", "stillbirth", "babyloss", "not_useful", "other"]
 
 METRICS_REALTIME = [
     'registrations.created.sum',
@@ -256,8 +258,6 @@ METRICS_REALTIME.extend(
     ['registrations.receiver_type.%s.total.last' % rt for rt in RECEIVER_TYPES]
 )
 METRICS_REALTIME.extend(
-    ['optout.receiver_type.%s.sum' % rt for rt in RECEIVER_TYPES])
-METRICS_REALTIME.extend(
     ['registrations.language.%s.sum' % l for l in LANGUAGES])
 METRICS_REALTIME.extend(
     ['registrations.language.%s.total.last' % l for l in LANGUAGES])
@@ -269,6 +269,14 @@ METRICS_REALTIME.extend(
     ['registrations.role.%s.sum' % r for r in ROLES])
 METRICS_REALTIME.extend(
     ['registrations.role.%s.total.last' % r for r in ROLES])
+METRICS_REALTIME.extend(
+    ['optout.receiver_type.%s.sum' % rt for rt in RECEIVER_TYPES])
+METRICS_REALTIME.extend(
+    ['optout.receiver_type.%s.total.last' % rt for rt in RECEIVER_TYPES])
+METRICS_REALTIME.extend(
+    ['optout.reason.%s.sum' % r for r in OPTOUT_REASONS])
+METRICS_REALTIME.extend(
+    ['optout.reason.%s.total.last' % r for r in OPTOUT_REASONS])
 METRICS_SCHEDULED = [
 ]
 METRICS_SCHEDULED_TASKS = [

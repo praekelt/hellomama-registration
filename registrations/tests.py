@@ -1889,6 +1889,23 @@ class TestMetricsAPI(AuthenticatedAPITestCase):
                 'optout.receiver_type.mother_friend.sum',
                 'optout.receiver_type.friend_only.sum',
                 'optout.receiver_type.family_only.sum',
+                'optout.receiver_type.mother_father.total.last',
+                'optout.receiver_type.mother_only.total.last',
+                'optout.receiver_type.father_only.total.last',
+                'optout.receiver_type.mother_family.total.last',
+                'optout.receiver_type.mother_friend.total.last',
+                'optout.receiver_type.friend_only.total.last',
+                'optout.receiver_type.family_only.total.last',
+                'optout.reason.miscarriage.sum',
+                'optout.reason.stillbirth.sum',
+                'optout.reason.babyloss.sum',
+                'optout.reason.not_useful.sum',
+                'optout.reason.other.sum',
+                'optout.reason.miscarriage.total.last',
+                'optout.reason.stillbirth.total.last',
+                'optout.reason.babyloss.total.last',
+                'optout.reason.not_useful.total.last',
+                'optout.reason.other.total.last',
             ])
         )
 
