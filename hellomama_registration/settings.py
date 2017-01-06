@@ -277,6 +277,10 @@ METRICS_REALTIME.extend(
     ['optout.reason.%s.sum' % r for r in OPTOUT_REASONS])
 METRICS_REALTIME.extend(
     ['optout.reason.%s.total.last' % r for r in OPTOUT_REASONS])
+METRICS_REALTIME.extend(
+    ['optout.msg_type.%s.sum' % r for r in MSG_TYPES])
+METRICS_REALTIME.extend(
+    ['optout.msg_type.%s.total.last' % r for r in MSG_TYPES])
 METRICS_SCHEDULED = [
 ]
 METRICS_SCHEDULED_TASKS = [

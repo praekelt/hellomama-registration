@@ -1906,6 +1906,10 @@ class TestMetricsAPI(AuthenticatedAPITestCase):
                 'optout.reason.babyloss.total.last',
                 'optout.reason.not_useful.total.last',
                 'optout.reason.other.total.last',
+                'optout.msg_type.audio.sum',
+                'optout.msg_type.audio.total.last',
+                'optout.msg_type.text.sum',
+                'optout.msg_type.text.total.last',
             ])
         )
 

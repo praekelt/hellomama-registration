@@ -21,6 +21,14 @@ class MetricGenerator(object):
                 self, 'registrations_msg_type_{}_total_last'.format(msg_type),
                 partial(self.registrations_msg_type_total_last, msg_type)
             )
+            setattr(
+                self, 'optout_msg_type_{}_sum'.format(msg_type),
+                partial(self.optout_msg_type_sum, msg_type)
+            )
+            setattr(
+                self, 'optout_msg_type_{}_total_last'.format(msg_type),
+                partial(self.optout_msg_type_total_last, msg_type)
+            )
         for receiver_type in settings.RECEIVER_TYPES:
             setattr(
                 self, 'registrations_receiver_type_{}_sum'.format(
@@ -253,6 +261,33 @@ class MetricGenerator(object):
             .filter(created_at__lte=end)\
             .filter(action='change_messaging')\
             .count()
+
+    def optout_msg_type_sum(self, msg_type, start, end):
+        result = utils.search_optouts({
+            "created_at__gt": start,
+            "created_at__lte": end,
+        })
+
+        identities = []
+        for data in result:
+            identities.append(data['identity'])
+
+        return Registration.objects.filter(
+                    mother_id__in=identities,
+                    data__msg_type=msg_type).count()
+
+    def optout_msg_type_total_last(self, msg_type, start, end):
+        result = utils.search_optouts({
+            "created_at__lte": end,
+        })
+
+        identities = []
+        for data in result:
+            identities.append(data['identity'])
+
+        return Registration.objects.filter(
+                    mother_id__in=identities,
+                    data__msg_type=msg_type).count()
 
     def optout_receiver_type_sum(self, receiver_type, start, end):
         result = utils.search_optouts({

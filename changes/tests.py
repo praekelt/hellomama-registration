@@ -2401,7 +2401,7 @@ class IdentityStoreOptoutViewTest(AuthenticatedAPITestCase):
 
         self.assertEqual(response.status_code, 200)
 
-        [call1, _, call3, call4, _, call6] = responses.calls
+        [call1, _, call3, call4, _, call6, call7, _, call9] = responses.calls
 
         self.assertEqual(json.loads(call1.request.body), {
             "optout.receiver_type.mother_only.sum": 1.0
@@ -2414,6 +2414,12 @@ class IdentityStoreOptoutViewTest(AuthenticatedAPITestCase):
         })
         self.assertEqual(json.loads(call6.request.body), {
             "optout.reason.miscarriage.total.last": 2.0
+        })
+        self.assertEqual(json.loads(call7.request.body), {
+            "optout.msg_type.text.sum": 1.0
+        })
+        self.assertEqual(json.loads(call9.request.body), {
+            "optout.msg_type.text.total.last": 2.0
         })
 
     @responses.activate
