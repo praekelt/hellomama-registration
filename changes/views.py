@@ -69,9 +69,11 @@ class ReceiveIdentityStoreOptout(mixins.CreateModelMixin,
         try:
             identity_id = data['identity']
             optout_reason = data['optout_reason']
+            optout_source = data['optout_source']
         except KeyError as e:
-            return JsonResponse({'reason': '"identity", "optout_type" and '
-                                '"optout_reason" must be specified.'
+            return JsonResponse({'reason': '"identity", "optout_type", '
+                                 '"optout_reason" and "optout_source" must be '
+                                 'specified.'
                                  }, status=400)
 
         registration = Registration.objects.get(mother_id=identity_id)
@@ -82,6 +84,8 @@ class ReceiveIdentityStoreOptout(mixins.CreateModelMixin,
 
         if registration.data.get('msg_type'):
             fire_optout_message_type_metric(registration.data['msg_type'])
+
+        fire_optout_source_metric(optout_source)
 
         return JsonResponse({})
 
@@ -105,6 +109,31 @@ def fire_optout_reason_metric(reason):
     total = get_or_incr_cache(
         total_key,
         search_optouts_reason)
+    fire_metric.apply_async(kwargs={
+        'metric_name': total_key,
+        'metric_value': total,
+    })
+
+
+def fire_optout_source_metric(source):
+    from registrations.tasks import fire_metric
+
+    # remove the _public part
+    source_short = source.split('_')[0]
+
+    fire_metric.apply_async(kwargs={
+        "metric_name": 'optout.source.%s.sum' % source_short,
+        "metric_value": 1.0
+    })
+
+    def search_optouts_source():
+        result = utils.search_optouts({"request_source": source})
+        return len(list(result))
+
+    total_key = 'optout.source.%s.total.last' % source_short
+    total = get_or_incr_cache(
+        total_key,
+        search_optouts_source)
     fire_metric.apply_async(kwargs={
         'metric_name': total_key,
         'metric_value': total,

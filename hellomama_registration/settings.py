@@ -234,6 +234,7 @@ STATES = ["ebonyi", "cross_river", "abuja"]
 ROLES = ["oic", "cv", "midwife", "chew", "mama"]
 OPTOUT_REASONS = [
     "miscarriage", "stillbirth", "babyloss", "not_useful", "other"]
+OPTOUT_SOURCES = ["sms", "ussd", "voice"]
 
 METRICS_REALTIME = [
     'registrations.created.sum',
@@ -281,6 +282,10 @@ METRICS_REALTIME.extend(
     ['optout.msg_type.%s.sum' % r for r in MSG_TYPES])
 METRICS_REALTIME.extend(
     ['optout.msg_type.%s.total.last' % r for r in MSG_TYPES])
+METRICS_REALTIME.extend(
+    ['optout.source.%s.sum' % r for r in OPTOUT_SOURCES])
+METRICS_REALTIME.extend(
+    ['optout.source.%s.total.last' % r for r in OPTOUT_SOURCES])
 METRICS_SCHEDULED = [
 ]
 METRICS_SCHEDULED_TASKS = [

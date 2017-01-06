@@ -2340,6 +2340,7 @@ class IdentityStoreOptoutViewTest(AuthenticatedAPITestCase):
                 },
                 'optout_type': "forget",
                 'optout_reason': "miscarriage",
+                'optout_source': "ussd_public",
             }, {
                 'identity': "846877e6-afaa-43de-1111-09f61ad4de99",
                 'details': {
@@ -2353,6 +2354,7 @@ class IdentityStoreOptoutViewTest(AuthenticatedAPITestCase):
                 },
                 'optout_type': "forget",
                 'optout_reason': "miscarriage",
+                'optout_source': "ussd_public",
             }, ]
         }
         return (200, headers, json.dumps(resp))
@@ -2378,8 +2380,14 @@ class IdentityStoreOptoutViewTest(AuthenticatedAPITestCase):
 
         url = 'http://localhost:8001/api/v1/optouts/search/'
         responses.add_callback(
-          responses.GET, url, callback=self.optout_search_callback,
-          match_querystring=True, content_type="application/json")
+            responses.GET, url, callback=self.optout_search_callback,
+            match_querystring=True, content_type="application/json")
+
+        url = 'http://localhost:8001/api/v1/optouts/search/?' \
+              'request_source=ussd_public'
+        responses.add_callback(
+            responses.GET, url, callback=self.optout_search_callback,
+            match_querystring=True, content_type="application/json")
 
         request = {
             'identity': "846877e6-afaa-43de-acb1-09f61ad4de99",
@@ -2394,32 +2402,38 @@ class IdentityStoreOptoutViewTest(AuthenticatedAPITestCase):
             },
             'optout_type': "forget",
             'optout_reason': "miscarriage",
+            'optout_source': "ussd_public",
         }
         response = self.adminclient.post('/api/v1/optout/',
                                          json.dumps(request),
                                          content_type='application/json')
 
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(responses.calls), 12)
 
-        [call1, _, call3, call4, _, call6, call7, _, call9] = responses.calls
-
-        self.assertEqual(json.loads(call1.request.body), {
+        self.assertEqual(json.loads(responses.calls[0].request.body), {
             "optout.receiver_type.mother_only.sum": 1.0
         })
-        self.assertEqual(json.loads(call3.request.body), {
+        self.assertEqual(json.loads(responses.calls[2].request.body), {
             "optout.receiver_type.mother_only.total.last": 2.0
         })
-        self.assertEqual(json.loads(call4.request.body), {
+        self.assertEqual(json.loads(responses.calls[3].request.body), {
             "optout.reason.miscarriage.sum": 1.0
         })
-        self.assertEqual(json.loads(call6.request.body), {
+        self.assertEqual(json.loads(responses.calls[5].request.body), {
             "optout.reason.miscarriage.total.last": 2.0
         })
-        self.assertEqual(json.loads(call7.request.body), {
+        self.assertEqual(json.loads(responses.calls[6].request.body), {
             "optout.msg_type.text.sum": 1.0
         })
-        self.assertEqual(json.loads(call9.request.body), {
+        self.assertEqual(json.loads(responses.calls[8].request.body), {
             "optout.msg_type.text.total.last": 2.0
+        })
+        self.assertEqual(json.loads(responses.calls[9].request.body), {
+            "optout.source.ussd.sum": 1.0
+        })
+        self.assertEqual(json.loads(responses.calls[11].request.body), {
+            "optout.source.ussd.total.last": 2.0
         })
 
     @responses.activate
@@ -2447,6 +2461,7 @@ class IdentityStoreOptoutViewTest(AuthenticatedAPITestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(utils.json_decode(response.content),
                          {'reason':
-                         '"identity", "optout_type" and "optout_reason" must '
+                          '"identity", "optout_type", "optout_reason" and '
+                          '"optout_source" must '
                           'be specified.'})
         self.assertEqual(len(responses.calls), 0)

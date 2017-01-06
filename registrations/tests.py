@@ -1910,6 +1910,12 @@ class TestMetricsAPI(AuthenticatedAPITestCase):
                 'optout.msg_type.audio.total.last',
                 'optout.msg_type.text.sum',
                 'optout.msg_type.text.total.last',
+                'optout.source.ussd.sum',
+                'optout.source.sms.sum',
+                'optout.source.voice.sum',
+                'optout.source.ussd.total.last',
+                'optout.source.sms.total.last',
+                'optout.source.voice.total.last',
             ])
         )
 

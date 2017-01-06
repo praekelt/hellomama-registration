@@ -83,11 +83,20 @@ class MetricGenerator(object):
         for reason in settings.OPTOUT_REASONS:
             setattr(
                 self, 'optout_reason_{}_sum'.format(reason),
-                partial(self.optout_reason_sum, role)
+                partial(self.optout_reason_sum, reason)
             )
             setattr(
                 self, 'optout_reason_{}_total_last'.format(reason),
-                partial(self.optout_reason_total_last, role)
+                partial(self.optout_reason_total_last, reason)
+            )
+        for source in settings.OPTOUT_SOURCES:
+            setattr(
+                self, 'optout_source_{}_sum'.format(source),
+                partial(self.optout_source_sum, source)
+            )
+            setattr(
+                self, 'optout_source_{}_total_last'.format(source),
+                partial(self.optout_source_total_last, source)
             )
         sources = Source.objects.all()
         sources.prefetch_related('user')
@@ -327,6 +336,21 @@ class MetricGenerator(object):
     def optout_reason_total_last(self, reason, start, end):
         result = utils.search_optouts({
             "reason": reason,
+            "created_at__lte": end,
+        })
+        return len(list(result))
+
+    def optout_source_sum(self, source, start, end):
+        result = utils.search_optouts({
+            "request_source": source,
+            "created_at__gt": start,
+            "created_at__lte": end,
+        })
+        return len(list(result))
+
+    def optout_source_total_last(self, source, start, end):
+        result = utils.search_optouts({
+            "request_source": source,
             "created_at__lte": end,
         })
         return len(list(result))
