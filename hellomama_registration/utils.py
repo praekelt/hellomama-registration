@@ -2,6 +2,7 @@ import datetime
 import requests
 import json
 import re
+import six
 from django.conf import settings
 from registrations.models import Source
 
@@ -102,6 +103,24 @@ def patch_identity(identity, data):
     r = session.patch(url, data=json.dumps(data), headers=headers)
     r.raise_for_status()
     return r.json()
+
+
+def search_optouts(params=None):
+    """ Returns the optouts matching the given parameters
+    """
+    url = "%s/%s/search/" % (settings.IDENTITY_STORE_URL, "optouts")
+    headers = {
+        'Authorization': 'Token %s' % settings.IDENTITY_STORE_TOKEN,
+        'Content-Type': 'application/json'
+    }
+    r = requests.get(url, params=params, headers=headers).json()
+    while True:
+        for optout in r['results']:
+            yield optout
+        if r.get('next'):
+            r = requests.get(r['next'], headers=headers).json()
+        else:
+            break
 
 
 def get_messageset_by_shortname(short_name):
@@ -276,3 +295,13 @@ def timestamp_to_epoch(timestamp):
     Takes a timestamp and returns a float representing the unix epoch time.
     """
     return (timestamp - datetime.datetime.utcfromtimestamp(0)).total_seconds()
+
+
+def json_decode(data):
+    """
+    Decodes the given JSON as primitives
+    """
+    if isinstance(data, six.binary_type):
+        data = data.decode('utf-8')
+
+    return json.loads(data)

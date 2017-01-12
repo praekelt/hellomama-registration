@@ -2,7 +2,7 @@ import datetime
 import json
 import responses
 
-from django.test import TestCase
+from django.test import TestCase, RequestFactory
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 
@@ -2309,3 +2309,158 @@ class TestMetrics(AuthenticatedAPITestCase):
         })
 
         post_save.disconnect(fire_message_change_metric, sender=Change)
+
+
+class IdentityStoreOptoutViewTest(AuthenticatedAPITestCase):
+    """
+    Tests related to the optout identity store view.
+    """
+    url = '/optout/'
+
+    def setUp(self):
+        self.factory = RequestFactory()
+        super(IdentityStoreOptoutViewTest, self).setUp()
+
+    def optout_search_callback(self, request):
+        headers = {'Content-Type': "application/json"}
+        resp = {
+            "count": 2,
+            "next": None,
+            "previous": None,
+            "results": [{
+                'identity': "846877e6-afaa-43de-acb1-09f61ad4de99",
+                'details': {
+                    'name': "testing",
+                    'addresses': {
+                        'msisdn': {
+                            '+1234': {}
+                        },
+                    },
+                    'language': "eng_NG",
+                },
+                'optout_type': "forget",
+                'optout_reason': "miscarriage",
+                'optout_source': "ussd_public",
+            }, {
+                'identity': "846877e6-afaa-43de-1111-09f61ad4de99",
+                'details': {
+                    'name': "testing",
+                    'addresses': {
+                        'msisdn': {
+                            '+1234': {}
+                        },
+                    },
+                    'language': "eng_NG",
+                },
+                'optout_type': "forget",
+                'optout_reason': "miscarriage",
+                'optout_source': "ussd_public",
+            }, ]
+        }
+        return (200, headers, json.dumps(resp))
+
+    @responses.activate
+    def test_identity_optout_valid(self):
+
+        self.make_registration_mother_only()
+        registration = self.make_registration_mother_only()
+        registration.mother_id = '846877e6-afaa-43de-1111-09f61ad4de99'
+        registration.save()
+
+        responses.add(responses.POST,
+                      "http://metrics-url/metrics/",
+                      json={"foo": "bar"},
+                      status=200, content_type='application/json')
+
+        url = 'http://localhost:8001/api/v1/optouts/search/?' \
+              'reason=miscarriage'
+        responses.add_callback(
+            responses.GET, url, callback=self.optout_search_callback,
+            match_querystring=True, content_type="application/json")
+
+        url = 'http://localhost:8001/api/v1/optouts/search/'
+        responses.add_callback(
+            responses.GET, url, callback=self.optout_search_callback,
+            match_querystring=True, content_type="application/json")
+
+        url = 'http://localhost:8001/api/v1/optouts/search/?' \
+              'request_source=ussd_public'
+        responses.add_callback(
+            responses.GET, url, callback=self.optout_search_callback,
+            match_querystring=True, content_type="application/json")
+
+        request = {
+            'identity': "846877e6-afaa-43de-acb1-09f61ad4de99",
+            'details': {
+                'name': "testing",
+                'addresses': {
+                    'msisdn': {
+                        '+1234': {}
+                    },
+                },
+                'language': "eng_NG",
+            },
+            'optout_type': "forget",
+            'optout_reason': "miscarriage",
+            'optout_source': "ussd_public",
+        }
+        response = self.adminclient.post('/api/v1/optout/',
+                                         json.dumps(request),
+                                         content_type='application/json')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(responses.calls), 12)
+
+        self.assertEqual(json.loads(responses.calls[0].request.body), {
+            "optout.receiver_type.mother_only.sum": 1.0
+        })
+        self.assertEqual(json.loads(responses.calls[2].request.body), {
+            "optout.receiver_type.mother_only.total.last": 2.0
+        })
+        self.assertEqual(json.loads(responses.calls[3].request.body), {
+            "optout.reason.miscarriage.sum": 1.0
+        })
+        self.assertEqual(json.loads(responses.calls[5].request.body), {
+            "optout.reason.miscarriage.total.last": 2.0
+        })
+        self.assertEqual(json.loads(responses.calls[6].request.body), {
+            "optout.msg_type.text.sum": 1.0
+        })
+        self.assertEqual(json.loads(responses.calls[8].request.body), {
+            "optout.msg_type.text.total.last": 2.0
+        })
+        self.assertEqual(json.loads(responses.calls[9].request.body), {
+            "optout.source.ussd.sum": 1.0
+        })
+        self.assertEqual(json.loads(responses.calls[11].request.body), {
+            "optout.source.ussd.total.last": 2.0
+        })
+
+    @responses.activate
+    def test_identity_optout_invalid(self):
+
+        self.make_registration_mother_only()
+
+        request = {
+            'details': {
+                'name': "testing",
+                'addresses': {
+                    'msisdn': {
+                        '+1234': {}
+                    },
+                },
+                'language': "eng_NG",
+            },
+            'optout_type': "forget",
+            'optout_reason': "miscarriage",
+        }
+        response = self.adminclient.post('/api/v1/optout/',
+                                         json.dumps(request),
+                                         content_type='application/json')
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(utils.json_decode(response.content),
+                         {'reason':
+                          '"identity", "optout_reason" and "optout_source" '
+                          'must be specified.'})
+        self.assertEqual(len(responses.calls), 0)

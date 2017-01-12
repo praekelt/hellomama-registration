@@ -10,4 +10,6 @@ router.register(r'changes', views.ChangeGetViewSet)
 urlpatterns = [
     url(r'^api/v1/', include(router.urls)),
     url(r'^api/v1/change/', views.ChangePost.as_view()),
+    url(r'^api/v1/optout/', views.ReceiveIdentityStoreOptout.as_view(),
+        name="identity_store_optout"),
 ]
