@@ -6,6 +6,13 @@ from django.conf import settings
 from registrations.models import Source
 
 
+session = requests.Session()
+http = requests.adapters.HTTPAdapter(max_retries=5)
+https = requests.adapters.HTTPAdapter(max_retries=5)
+session.mount('http://', http)
+session.mount('https://', https)
+
+
 def get_today():
     return datetime.datetime.today()
 
@@ -41,7 +48,7 @@ def get_identity(identity):
         'Authorization': 'Token %s' % settings.IDENTITY_STORE_TOKEN,
         'Content-Type': 'application/json'
     }
-    r = requests.get(url, headers=headers)
+    r = session.get(url, headers=headers)
     return r.json()
 
 
@@ -53,7 +60,7 @@ def get_identity_address(identity):
         'Authorization': 'Token %s' % settings.IDENTITY_STORE_TOKEN,
         'Content-Type': 'application/json'
     }
-    r = requests.get(url, params=params, headers=headers).json()
+    r = session.get(url, params=params, headers=headers).json()
     if len(r["results"]) > 0:
         return r["results"][0]["address"]
     else:
@@ -68,12 +75,17 @@ def search_identities(params):
         'Authorization': 'Token %s' % settings.IDENTITY_STORE_TOKEN,
         'Content-Type': 'application/json'
     }
-    r = requests.get(url, params=params, headers=headers).json()
+    r = session.get(url, params=params, headers=headers)
+    r.raise_for_status()
+    r = r.json()
+
     while True:
-        for identity in r['results']:
+        for identity in r.get('results', []):
             yield identity
         if r.get('next'):
-            r = requests.get(r['next'], headers=headers).json()
+            r = session.get(r['next'], headers=headers)
+            r.raise_for_status()
+            r = r.json()
         else:
             break
 
@@ -87,7 +99,7 @@ def patch_identity(identity, data):
         'Authorization': 'Token %s' % settings.IDENTITY_STORE_TOKEN,
         'Content-Type': 'application/json'
     }
-    r = requests.patch(url, data=json.dumps(data), headers=headers)
+    r = session.patch(url, data=json.dumps(data), headers=headers)
     r.raise_for_status()
     return r.json()
 
@@ -99,7 +111,7 @@ def get_messageset_by_shortname(short_name):
         'Authorization': 'Token %s' % settings.STAGE_BASED_MESSAGING_TOKEN,
         'Content-Type': 'application/json'
     }
-    r = requests.get(url, params=params, headers=headers)
+    r = session.get(url, params=params, headers=headers)
     return r.json()["results"][0]  # messagesets should be unique, return 1st
 
 
@@ -110,7 +122,7 @@ def get_messageset(messageset_id):
         'Authorization': 'Token %s' % settings.STAGE_BASED_MESSAGING_TOKEN,
         'Content-Type': 'application/json'
     }
-    r = requests.get(url, headers=headers)
+    r = session.get(url, headers=headers)
     return r.json()
 
 
@@ -121,7 +133,7 @@ def get_schedule(schedule_id):
         'Authorization': 'Token %s' % settings.STAGE_BASED_MESSAGING_TOKEN,
         'Content-Type': 'application/json'
     }
-    r = requests.get(url, headers=headers)
+    r = session.get(url, headers=headers)
     return r.json()
 
 
@@ -134,7 +146,7 @@ def get_subscriptions(identity):
         'Authorization': 'Token %s' % settings.STAGE_BASED_MESSAGING_TOKEN,
         'Content-Type': 'application/json'
     }
-    r = requests.get(url, params=params, headers=headers)
+    r = session.get(url, params=params, headers=headers)
     return r.json()["results"]
 
 
@@ -149,7 +161,7 @@ def patch_subscription(subscription, data):
         'Token %s' % settings.STAGE_BASED_MESSAGING_TOKEN,
         'Content-Type': 'application/json'
     }
-    r = requests.patch(url, data=data, headers=headers)
+    r = session.patch(url, data=data, headers=headers)
     return r.json()
 
 
@@ -223,7 +235,7 @@ def get_messageset_schedule_sequence(short_name, weeks):
 
 
 def post_message(payload):
-    result = requests.post(
+    result = session.post(
         url="%s/outbound/" % settings.MESSAGE_SENDER_URL,
         data=json.dumps(payload),
         headers={

@@ -28,6 +28,7 @@ from rest_framework import status
 from rest_framework.test import APIClient
 from rest_framework.authtoken.models import Token
 from rest_hooks.models import model_saved, Hook
+from requests.exceptions import ConnectTimeout
 from requests_testadapter import TestAdapter, TestSession
 from go_http.metrics import MetricsApiClient
 
@@ -2958,3 +2959,42 @@ class TestRepopulateMetricsTask(TestCase):
         mock_send_metric.assert_called_once_with(
             'amqp://foo', 'prefix', 'foo.bar', 17.2,
             datetime.utcfromtimestamp(400))
+
+    @mock.patch('registrations.tasks.MetricGenerator.generate_metric')
+    @mock.patch('registrations.tasks.send_metric')
+    def test_generate_and_send_connection_error(
+            self, mock_send_metric, mock_metric_generator):
+        """
+        If the generate_metric function tries to contact an external service
+        and fails, then we should just skip sending that metric, and not raise
+        an exception.
+        """
+        mock_metric_generator.side_effect = ConnectTimeout()
+
+        repopulate_metrics.generate_and_send(
+            'amqp://foo', 'prefix', 'foo.bar',
+            datetime.utcfromtimestamp(300.0), datetime.utcfromtimestamp(500.0))
+
+        mock_metric_generator.assert_called_once_with(
+            'foo.bar', datetime.utcfromtimestamp(300),
+            datetime.utcfromtimestamp(500))
+        mock_send_metric.assert_not_called()
+
+    @mock.patch('registrations.tasks.MetricGenerator.generate_metric')
+    @mock.patch('registrations.tasks.send_metric')
+    def test_generate_and_send_invalid_json(
+            self, mock_send_metric, mock_metric_generator):
+        """
+        If an external service returns invalid JSON to us, we should just skip
+        that specific metric, and not raise an exception.
+        """
+        mock_metric_generator.side_effect = ValueError()
+
+        repopulate_metrics.generate_and_send(
+            'amqp://foo', 'prefix', 'foo.bar',
+            datetime.utcfromtimestamp(300.0), datetime.utcfromtimestamp(500.0))
+
+        mock_metric_generator.assert_called_once_with(
+            'foo.bar', datetime.utcfromtimestamp(300),
+            datetime.utcfromtimestamp(500))
+        mock_send_metric.assert_not_called()
