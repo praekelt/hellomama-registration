@@ -360,7 +360,16 @@ class RepopulateMetrics(Task):
         """
         Generates the value for the specified metric, and sends it.
         """
-        value = MetricGenerator().generate_metric(metric_name, start, end)
+        try:
+            value = MetricGenerator().generate_metric(metric_name, start, end)
+        except requests.exceptions.RequestException:
+            # If we have an issue contacting an external service for this
+            # metric, just skip it.
+            return
+        except ValueError:
+            # If an external service doesn't return an valid JSON response for
+            # this metric, just skip it.
+            return
 
         timestamp = start + (end - start) / 2
         send_metric(amqp_url, prefix, metric_name, value, timestamp)
