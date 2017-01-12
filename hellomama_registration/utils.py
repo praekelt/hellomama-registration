@@ -6,6 +6,13 @@ from django.conf import settings
 from registrations.models import Source
 
 
+session = requests.Session()
+http = requests.adapters.HTTPAdapter(max_retries=5)
+https = requests.adapters.HTTPAdapter(max_retries=5)
+session.mount('http://', http)
+session.mount('https://', https)
+
+
 def get_today():
     return datetime.datetime.today()
 
@@ -68,12 +75,17 @@ def search_identities(params):
         'Authorization': 'Token %s' % settings.IDENTITY_STORE_TOKEN,
         'Content-Type': 'application/json'
     }
-    r = requests.get(url, params=params, headers=headers).json()
+    r = session.get(url, params=params, headers=headers)
+    r.raise_for_status()
+    r = r.json()
+
     while True:
-        for identity in r['results']:
+        for identity in r.get('results', []):
             yield identity
         if r.get('next'):
-            r = requests.get(r['next'], headers=headers).json()
+            r = session.get(r['next'], headers=headers)
+            r.raise_for_status()
+            r = r.json()
         else:
             break
 
