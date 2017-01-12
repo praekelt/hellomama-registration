@@ -323,14 +323,14 @@ class MetricGenerator(object):
             "created_at__gt": start,
             "created_at__lte": end,
         })
-        return len(list(result))
+        return sum(1 for r in result)
 
     def optout_reason_total_last(self, reason, start, end):
         result = utils.search_optouts({
             "reason": reason,
             "created_at__lte": end,
         })
-        return len(list(result))
+        return sum(1 for r in result)
 
     def optout_source_sum(self, source, start, end):
         result = utils.search_optouts({
@@ -338,14 +338,14 @@ class MetricGenerator(object):
             "created_at__gt": start,
             "created_at__lte": end,
         })
-        return len(list(result))
+        return sum(1 for r in result)
 
     def optout_source_total_last(self, source, start, end):
         result = utils.search_optouts({
             "request_source": source,
             "created_at__lte": end,
         })
-        return len(list(result))
+        return sum(1 for r in result)
 
 
 def send_metric(amqp_channel, prefix, name, value, timestamp):
