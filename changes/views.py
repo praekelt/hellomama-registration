@@ -71,21 +71,26 @@ class ReceiveIdentityStoreOptout(mixins.CreateModelMixin,
             optout_reason = data['optout_reason']
             optout_source = data['optout_source']
         except KeyError as e:
-            return JsonResponse({'reason': '"identity", "optout_type", '
-                                 '"optout_reason" and "optout_source" must be '
-                                 'specified.'
+            return JsonResponse({'reason': '"identity", "optout_reason" and '
+                                 '"optout_source" must be specified.'
                                  }, status=400)
 
-        registration = Registration.objects.get(mother_id=identity_id)
-        if registration.data.get('msg_receiver'):
-            fire_optout_receiver_type_metric(registration.data['msg_receiver'])
+        registrations = Registration.objects.filter(mother_id=identity_id).\
+            order_by('-created_at')
 
-        fire_optout_reason_metric(optout_reason)
+        for registration in registrations:
+            if registration.data.get('msg_receiver'):
+                fire_optout_receiver_type_metric(
+                    registration.data['msg_receiver'])
 
-        if registration.data.get('msg_type'):
-            fire_optout_message_type_metric(registration.data['msg_type'])
+            fire_optout_reason_metric(optout_reason)
 
-        fire_optout_source_metric(optout_source)
+            if registration.data.get('msg_type'):
+                fire_optout_message_type_metric(registration.data['msg_type'])
+
+            fire_optout_source_metric(optout_source)
+
+            break
 
         return JsonResponse({})
 
@@ -103,7 +108,7 @@ def fire_optout_reason_metric(reason):
 
     def search_optouts_reason():
         result = utils.search_optouts({"reason": reason})
-        return len(list(result))
+        return sum(1 for r in result)
 
     total_key = 'optout.reason.%s.total.last' % reason
     total = get_or_incr_cache(
@@ -128,7 +133,7 @@ def fire_optout_source_metric(source):
 
     def search_optouts_source():
         result = utils.search_optouts({"request_source": source})
-        return len(list(result))
+        return sum(1 for r in result)
 
     total_key = 'optout.source.%s.total.last' % source_short
     total = get_or_incr_cache(
@@ -151,9 +156,7 @@ def fire_optout_receiver_type_metric(msg_receiver):
     def search_optouts_receiver_type():
         result = utils.search_optouts()
 
-        identities = []
-        for data in result:
-            identities.append(data['identity'])
+        identities = set(data['identity'] for data in result)
 
         return Registration.objects.filter(
                     mother_id__in=identities,
@@ -180,9 +183,7 @@ def fire_optout_message_type_metric(msg_type):
     def search_optouts_message_type():
         result = utils.search_optouts()
 
-        identities = []
-        for data in result:
-            identities.append(data['identity'])
+        identities = set(data['identity'] for data in result)
 
         return Registration.objects.filter(
                     mother_id__in=identities,

@@ -2461,7 +2461,6 @@ class IdentityStoreOptoutViewTest(AuthenticatedAPITestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(utils.json_decode(response.content),
                          {'reason':
-                          '"identity", "optout_type", "optout_reason" and '
-                          '"optout_source" must '
-                          'be specified.'})
+                          '"identity", "optout_reason" and "optout_source" '
+                          'must be specified.'})
         self.assertEqual(len(responses.calls), 0)
