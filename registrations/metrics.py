@@ -277,9 +277,7 @@ class MetricGenerator(object):
             "created_at__lte": end,
         })
 
-        identities = []
-        for data in result:
-            identities.append(data['identity'])
+        identities = set(data['identity'] for data in result)
 
         return Registration.objects.filter(
                     mother_id__in=identities,
@@ -290,9 +288,7 @@ class MetricGenerator(object):
             "created_at__lte": end,
         })
 
-        identities = []
-        for data in result:
-            identities.append(data['identity'])
+        identities = set(data['identity'] for data in result)
 
         return Registration.objects.filter(
                     mother_id__in=identities,
@@ -304,9 +300,7 @@ class MetricGenerator(object):
             "created_at__lte": end,
         })
 
-        identities = []
-        for data in result:
-            identities.append(data['identity'])
+        identities = set(data['identity'] for data in result)
 
         return Registration.objects.filter(
                     mother_id__in=identities,
@@ -317,9 +311,7 @@ class MetricGenerator(object):
             "created_at__lte": end,
         })
 
-        identities = []
-        for data in result:
-            identities.append(data['identity'])
+        identities = set(data['identity'] for data in result)
 
         return Registration.objects.filter(
                     mother_id__in=identities,
