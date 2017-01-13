@@ -6,6 +6,7 @@ from django.core.management.base import BaseCommand, CommandError
 
 from seed_services_client import StageBasedMessagingApiClient
 
+from hellomama_registration import utils
 from registrations.models import Registration
 from registrations.tasks import validate_registration
 
@@ -79,6 +80,97 @@ class Command(BaseCommand):
                 self.log("Attempting to create them")
                 validate_registration(registration_id=registration.id)
             return
+
+        for receiver_id in receivers:
+            if receiver_id == registration.mother_id:
+                message_set = "mother"
+            else:
+                message_set = "household"
+            self.verify_subscription_requests(sub_requests, registration,
+                                              receiver_id, message_set, today,
+                                              apply_fix)
+
+    def verify_subscription_requests(
+            self, requests, registration, receiver_id, message_set,
+            today, apply_fix=False):
+        """
+        Verify a subscription request for a receiver.
+
+        :param requests QuerySet:
+            The subscription requests to be verified.
+        :param registration Registration:
+            The registration we're fixing
+        :param receiver_id str:
+            The UUID of the receiver we're wanting to fix the registration for
+        :param message_set str:
+            The message set we're verifying
+        :param today datetime:
+            The date we're using to calculate the sequence numbers
+        :param apply_fix bool:
+            Whether or not to apply the fix or just log it.
+        """
+
+        weeks_estimate = registration.estimate_current_preg_weeks(today=today)
+
+        # Get the info for the message set this identity should be on
+        if message_set == "mother":
+            voice_days, voice_times = registration.get_voice_days_and_times()
+            messageset_short_name = utils.get_messageset_short_name(
+                registration.stage, message_set, registration.data["msg_type"],
+                weeks_estimate, voice_days, voice_times
+            )
+        else:
+            messageset_short_name = utils.get_messageset_short_name(
+                registration.stage, 'household', registration.data["msg_type"],
+                weeks_estimate, "fri", "9_11"
+            )
+
+        message_set_info = utils.get_messageset_schedule_sequence(
+            messageset_short_name, weeks_estimate)
+        messageset_id, schedule_id, next_sequence_number = message_set_info
+
+        # Get the subscrition requests for this user on this messageset
+        sub_requests = requests.filter(identity=receiver_id,
+                                       messageset=messageset_id)
+
+        if not sub_requests.exists():
+            self.log('%s has no subscription requests for %s' % (
+                     receiver_id, messageset_short_name))
+            return
+
+        data = {
+            'next_sequence_number': next_sequence_number,
+            'messageset': messageset_id,
+            'schedule': schedule_id,
+        }
+
+        # Find differences between expected and actual subscription requests
+        for request in sub_requests:
+            expected, actual, is_different = self.sub_request_difference(
+                request, data)
+            expected_str = ', '.join(['%s: %s' % kv for kv in expected])
+            actual_str = ', '.join(['%s: %s' % kv for kv in actual])
+            if is_different:
+                self.log(
+                    '%s has "%s", should be "%s"' % (
+                        request.id, actual_str, expected_str))
+                if apply_fix:
+                    if sub_requests.filter(pk=request.pk).update(**data):
+                        self.log(
+                            'Updated %s, set "%s"' % (
+                                request.id,
+                                expected_str,
+                            ))
+            else:
+                self.log('%s has correct subscription request %s' % (
+                         registration.id, request.id))
+
+    def sub_request_difference(self, request, expected):
+        expected_copy = [(key, expected[key])
+                         for key in sorted(expected.keys())]
+        actual = [(key, getattr(request, key))
+                  for key in sorted(expected.keys())]
+        return (expected_copy, actual, expected_copy != actual)
 
     def validate_input(self, registration, sbm_url, sbm_token, today):
         if not registration.validated:
