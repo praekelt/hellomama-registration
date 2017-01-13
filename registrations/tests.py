@@ -2528,6 +2528,25 @@ class ManagementTaskTestCase(TestCase):
             match_querystring=True
         )
 
+        # mock household messageset lookup
+        query_string = '?short_name=prebirth.household.audio.10_42.fri.9_11'
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/%s' % query_string,
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 3,
+                    "short_name": 'prebirth.household.audio.10_42.fri.9_11',
+                    "default_schedule": 1
+                }]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+
         # mock mother schedule lookup
         responses.add(
             responses.GET,
@@ -2554,6 +2573,18 @@ class ManagementTaskTestCase(TestCase):
             'http://localhost:8006/api/v1/outbound/',
             json={"id": 1},
             status=200, content_type='application/json',
+        )
+
+        # mock father MSISDN lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8001/api/v1/identities/father00-73a2-4d89-b045-d52004c025fe/addresses/msisdn?default=True',  # noqa
+            json={
+                "count": 1, "next": None, "previous": None,
+                "results": [{"address": "+234124"}]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
         )
 
     def tearDown(self):
@@ -2591,13 +2622,14 @@ class ManagementTaskTestCase(TestCase):
         }
         return Source.objects.create(**data)
 
-    def mk_registration_at_week(self, source, week, today=None):
+    def mk_registration_at_week(self, source, week, today=None,
+                                dataset='hw_pre_mother'):
         # prepare registration data
         today = today or datetime.now()
         registration_data = {
             "stage": "prebirth",
             "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
-            "data": REG_DATA["hw_pre_mother"].copy(),
+            "data": REG_DATA[dataset].copy(),
             "source": source,
         }
         registration_data["data"].update({
@@ -2655,6 +2687,376 @@ class DummyDeliverer(object):
         self.calls.append((args, kwargs))
 
 dummy_deliverer = DummyDeliverer()
+
+
+class FixRegistrationSubscriptionsTest(ManagementTaskTestCase):
+
+    def setUp(self):
+        super(FixRegistrationSubscriptionsTest, self).setUp()
+        self.user1 = User.objects.create_user('un1', 'email@example.com', 'pw')
+        self.user2 = User.objects.create_user('un2', 'email@example.com', 'pw')
+
+    def tearDown(self):
+        super(FixRegistrationSubscriptionsTest, self).tearDown()
+        dummy_deliverer.reset()
+
+    def test_crash_on_invalid(self):
+        src1 = self.mk_source(self.user1)
+        reg1 = self.mk_registration_at_week(src1, week=25)
+
+        self.assertRaisesRegexp(
+            CommandError,
+            ('This registration is not valid. This command only works with '
+             'validated registrations'),
+            self.do_call_command, 'fix_registration_subscriptions',
+            reg1.id.hex)
+
+    def test_crash_on_postbirth(self):
+        src1 = self.mk_source(self.user1)
+        reg1 = self.mk_registration_at_week(src1, week=25)
+        reg1.stage = 'postbirth'
+        reg1.validated = True
+        reg1.save()
+
+        self.assertRaisesRegexp(
+            CommandError,
+            ('This command has not been confirmed to work with any stage '
+             'other than prebirth, this registration is: %s') % (reg1.stage,),
+            self.do_call_command, 'fix_registration_subscriptions',
+            reg1.id.hex)
+
+    def test_crash_on_old_pre_birth(self):
+        src1 = self.mk_source(self.user1)
+        reg1 = self.mk_registration_at_week(src1, week=60)
+        reg1.validated = True
+        reg1.save()
+
+        self.assertRaisesRegexp(
+            CommandError,
+            ('This pregnancy is %s weeks old and should no longer be on the '
+             'prebirth message sets' % reg1.data['preg_week']),
+            self.do_call_command, 'fix_registration_subscriptions',
+            reg1.id.hex)
+
+    def test_crash_without_sbm_url(self):
+        src1 = self.mk_source(self.user1)
+        reg1 = self.mk_registration_at_week(src1, week=25)
+        reg1.validated = True
+        reg1.save()
+
+        self.assertRaisesRegexp(
+            CommandError,
+            ('Please make sure either the STAGE_BASED_MESSAGING_URL '
+             'environment variable or --sbm-url is set.'),
+            call_command, 'repopulate_subscriptions', registration=reg1.id.hex)
+
+    def test_crash_without_sbm_token(self):
+        src1 = self.mk_source(self.user1)
+        reg1 = self.mk_registration_at_week(src1, week=25)
+        reg1.validated = True
+        reg1.save()
+
+        self.assertRaisesRegexp(
+            CommandError,
+            ('Please make sure either the STAGE_BASED_MESSAGING_TOKEN '
+             'environment variable or --sbm-token is set.'),
+            call_command, 'repopulate_subscriptions', registration=reg1.id.hex,
+            sbm_url="http://example.com")
+
+    @responses.activate
+    def test_fix_registration_without_errors(self):
+        src1 = self.mk_source(self.user1)
+
+        reg1 = self.mk_registration_at_week(src1, week=10)
+        reg1.validated = True
+        reg1.save()
+        sub1 = self.mk_subscription_request(reg1)
+
+        # This should be correct
+        sub1.next_sequence_number = 1
+        sub1.save()
+
+        results = [{
+            "id": "test_id",
+            "messageset": 1,
+            "active": True,
+            "next_sequence_number": 1,
+        }]
+        self.load_subscriptions(reg1.mother_id, count=1, results=results)
+
+        stdout, stderr = self.do_call_command(
+            'fix_registration_subscriptions', reg1.id.hex)
+
+        self.assertEqual(
+            stdout.getvalue().strip(),
+            '%s has correct subscription request %s\nNext sequence numbers '
+            'match. Taking no action' % (reg1.id, sub1.id))
+
+        # confirm calling with --fix doesn't make changes
+        stdout, stderr = self.do_call_command(
+            'fix_registration_subscriptions', reg1.id.hex, '--fix')
+        self.assertEqual(1, SubscriptionRequest.objects.all().count())
+
+    @responses.activate
+    @mock.patch("registrations.tasks.ValidateRegistration.run")
+    def test_fix_registration_without_requests_or_subscriptions(
+            self, mock_validation):
+        src1 = self.mk_source(self.user1)
+
+        reg1 = self.mk_registration_at_week(src1, week=10)
+        reg1.validated = True
+        reg1.save()
+
+        self.load_subscriptions(reg1.mother_id, count=0)
+
+        stdout, stderr = self.do_call_command(
+            'fix_registration_subscriptions', reg1.id.hex)
+
+        self.assertEqual(
+            stdout.getvalue().strip(),
+            'Registration %s has no subscriptions or subscription requests'
+            % reg1.id)
+
+        # confirm calling with --fix calls the validation task
+        stdout, stderr = self.do_call_command(
+            'fix_registration_subscriptions', reg1.id.hex, '--fix')
+        mock_validation.assert_called_once_with(registration_id=reg1.id)
+
+    @responses.activate
+    @override_settings(
+        HOOK_DELIVERER='registrations.tests.dummy_deliverer')
+    def test_fix_registration_with_correct_request_no_subscriptions(self):
+        src1 = self.mk_source(self.user1)
+
+        reg1 = self.mk_registration_at_week(src1, week=10)
+        reg1.validated = True
+        reg1.save()
+        sub1 = self.mk_subscription_request(reg1)
+
+        self.load_subscriptions(reg1.mother_id, count=0)
+
+        stdout, stderr = self.do_call_command(
+            'fix_registration_subscriptions', reg1.id.hex)
+
+        self.assertEqual(
+            stdout.getvalue().strip(),
+            ('%s has correct subscription request %s'
+             '\n'
+             'No subscription found for subscription request %s'
+             ) % (reg1.pk, sub1.pk, sub1.pk,))
+
+        # confirm calling with --fix triggers the subscription hook
+        hook1 = self.mk_hook('subscriptionrequest.added')
+        # Create an extra hook to make sure we're only firing for 1 not for the
+        # whole set
+        self.mk_hook('subscriptionrequest.removed')
+
+        stdout, stderr = self.do_call_command(
+            'fix_registration_subscriptions', reg1.id.hex, '--fix')
+
+        [request] = SubscriptionRequest.objects.all()
+        self.assertEqual(1, request.next_sequence_number)
+        [webhook_call] = dummy_deliverer.calls
+        args, kwargs = webhook_call
+        self.assertEqual(args[0], hook1.target)
+        self.assertEqual(args[1]['hook']['id'], hook1.pk)
+        self.assertEqual(kwargs['hook'], hook1)
+        self.assertEqual(kwargs['instance'], sub1)
+
+    @responses.activate
+    def test_fix_registration_with_correct_request_no_active_subscriptions(
+            self):
+        src1 = self.mk_source(self.user1)
+
+        reg1 = self.mk_registration_at_week(src1, week=10)
+        reg1.validated = True
+        reg1.save()
+        sub1 = self.mk_subscription_request(reg1)
+
+        results = [{
+            "id": "test_id",
+            "messageset": 1,
+            "active": False,
+            "next_sequence_number": 1,
+        }]
+        self.load_subscriptions(reg1.mother_id, count=1, results=results)
+
+        stdout, stderr = self.do_call_command(
+            'fix_registration_subscriptions', reg1.id.hex)
+
+        self.assertEqual(
+            stdout.getvalue().strip(),
+            ('%s has correct subscription request %s'
+             '\n'
+             'No active subscription found for subscription request %s. '
+             'Taking no action'
+             ) % (reg1.pk, sub1.pk, sub1.pk,))
+
+    @responses.activate
+    def test_fix_registration_with_correct_request_wrong_subscriptions(self):
+        src1 = self.mk_source(self.user1)
+
+        reg1 = self.mk_registration_at_week(src1, week=10)
+        reg1.validated = True
+        reg1.save()
+        sub1 = self.mk_subscription_request(reg1)
+
+        # This should be correct
+        sub1.next_sequence_number = 1
+        sub1.save()
+
+        results = [{
+            "id": "test_id",
+            "messageset": 1,
+            "active": True,
+            "next_sequence_number": 50,
+        }]
+        self.load_subscriptions(reg1.mother_id, count=1, results=results)
+
+        stdout, stderr = self.do_call_command(
+            'fix_registration_subscriptions', reg1.id.hex)
+
+        self.assertEqual(
+            stdout.getvalue().strip(),
+            ('%s has correct subscription request %s'
+             '\n'
+             'Subscription %s has next_sequence_number=%s, should be %s'
+             ) % (reg1.pk, sub1.pk, 'test_id', '50',
+                  sub1.next_sequence_number,))
+
+        # confirm calling with --fix updates the subscription
+        responses.add(
+            responses.PATCH,
+            'http://example.com/subscriptions/%s/' % ('test_id',),
+            json={
+                "id": "test_id",
+                "messageset": 1,
+                "active": True,
+                "next_sequence_number": 1,
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        stdout, stderr = self.do_call_command(
+            'fix_registration_subscriptions', reg1.id.hex, '--fix')
+        call = responses.calls[-1]
+        self.assertEqual(call.request.url,
+                         'http://example.com/subscriptions/test_id/')
+        self.assertEqual(call.request.body, '{"next_sequence_number": 1}')
+
+    @responses.activate
+    @override_settings(
+        HOOK_DELIVERER='registrations.tests.dummy_deliverer')
+    def test_fix_registration_with_wrong_request_no_subscriptions(self):
+        """
+        The subscription request should be fixed and the hook fired
+        """
+        src1 = self.mk_source(self.user1)
+
+        reg1 = self.mk_registration_at_week(src1, week=25)
+        reg1.validated = True
+        reg1.save()
+        sub1 = self.mk_subscription_request(reg1)
+
+        # This is obviously wrong, should be 25
+        sub1.next_sequence_number = 1
+        sub1.save()
+
+        self.load_subscriptions(reg1.mother_id, count=0)
+
+        stdout, stderr = self.do_call_command(
+            'fix_registration_subscriptions', reg1.id.hex)
+
+        self.assertEqual(
+            stdout.getvalue().strip(),
+            ('%s has "messageset: 1, next_sequence_number: 1, schedule: 1", '
+             'should be "messageset: 1, next_sequence_number: 45, schedule: 1"'
+             '\n'
+             'No subscription found for subscription request %s'
+             ) % (sub1.pk, sub1.pk,))
+
+        # confirm calling with --fix fixes everything
+        hook1 = self.mk_hook('subscriptionrequest.added')
+        # Create an extra hook to make sure we're only firing for 1 not for the
+        # whole set
+        self.mk_hook('subscriptionrequest.removed')
+
+        stdout, stderr = self.do_call_command(
+            'fix_registration_subscriptions', reg1.id.hex, '--fix')
+
+        [request] = SubscriptionRequest.objects.all()
+        self.assertEqual(45, request.next_sequence_number)
+        [webhook_call] = dummy_deliverer.calls
+        args, kwargs = webhook_call
+        self.assertEqual(args[0], hook1.target)
+        self.assertEqual(args[1]['hook']['id'], hook1.pk)
+        self.assertEqual(kwargs['hook'], hook1)
+        self.assertEqual(kwargs['instance'], sub1)
+
+    @responses.activate
+    @override_settings(
+        HOOK_DELIVERER='registrations.tests.dummy_deliverer')
+    def test_fix_registration_household_request(self):
+        """
+        The father subscription request is wrong and the mother and father
+        subscription requests don't have subscriptions. The father subscription
+        request should be fixed and the hook fired for both.
+        """
+        src1 = self.mk_source(self.user1)
+
+        reg1 = self.mk_registration_at_week(src1, week=25,
+                                            dataset='hw_pre_father')
+        reg1.validated = True
+        reg1.save()
+        sub2 = self.mk_subscription_request(reg1)
+        sub1 = SubscriptionRequest.objects.filter(
+            identity=reg1.mother_id).last()
+
+        # This is obviously wrong, should be 45
+        sub2.next_sequence_number = 1
+        sub2.save()
+
+        self.load_subscriptions(reg1.data['receiver_id'], count=0)
+        self.load_subscriptions(reg1.mother_id, count=0)
+
+        stdout, stderr = self.do_call_command(
+            'fix_registration_subscriptions', reg1.id.hex)
+
+        self.assertEqual(
+            stdout.getvalue().strip(),
+            ('%s has "messageset: 3, next_sequence_number: 1, schedule: 1", '
+             'should be "messageset: 3, next_sequence_number: 45, schedule: 1"'
+             '\n'
+             'No subscription found for subscription request %s\n'
+             '%s has correct subscription request %s\n'
+             'No subscription found for subscription request %s'
+             ) % (sub2.pk, sub2.pk, reg1.id, sub1.pk, sub1.pk))
+
+        # confirm calling with --fix fixes everything
+        hook1 = self.mk_hook('subscriptionrequest.added')
+
+        stdout, stderr = self.do_call_command(
+            'fix_registration_subscriptions', reg1.id.hex, '--fix')
+
+        # confirm father subscription request fixed
+        [request] = SubscriptionRequest.objects.filter(
+            identity=reg1.data['receiver_id'])
+        self.assertEqual(45, request.next_sequence_number)
+
+        # confirm hook fired twice with correct data
+        [webhook_call1, webhook_call2] = dummy_deliverer.calls
+        args, kwargs = webhook_call1
+        self.assertEqual(args[0], hook1.target)
+        self.assertEqual(args[1]['hook']['id'], hook1.pk)
+        self.assertEqual(kwargs['hook'], hook1)
+        self.assertEqual(kwargs['instance'], sub2)
+        self.assertEqual(kwargs['instance'].next_sequence_number, 45)
+        args, kwargs = webhook_call2
+        self.assertEqual(args[0], hook1.target)
+        self.assertEqual(args[1]['hook']['id'], hook1.pk)
+        self.assertEqual(kwargs['hook'], hook1)
+        self.assertEqual(kwargs['instance'], sub1)
+        self.assertEqual(kwargs['instance'].next_sequence_number, 45)
 
 
 class TestRepopulateMetricsTask(TestCase):
