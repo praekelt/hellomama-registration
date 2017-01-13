@@ -3046,18 +3046,20 @@ class FixRegistrationSubscriptionsTest(ManagementTaskTestCase):
         self.assertEqual(45, request.next_sequence_number)
 
         # confirm hook fired twice with correct data
+        expected_subs = [sub1, sub2]
         [webhook_call1, webhook_call2] = dummy_deliverer.calls
         args, kwargs = webhook_call1
         self.assertEqual(args[0], hook1.target)
         self.assertEqual(args[1]['hook']['id'], hook1.pk)
         self.assertEqual(kwargs['hook'], hook1)
-        self.assertEqual(kwargs['instance'], sub2)
+        self.assertIn(kwargs['instance'], expected_subs)
         self.assertEqual(kwargs['instance'].next_sequence_number, 45)
+        expected_subs.remove(kwargs['instance'])  # We don't expect it again
         args, kwargs = webhook_call2
         self.assertEqual(args[0], hook1.target)
         self.assertEqual(args[1]['hook']['id'], hook1.pk)
         self.assertEqual(kwargs['hook'], hook1)
-        self.assertEqual(kwargs['instance'], sub1)
+        self.assertIn(kwargs['instance'], expected_subs)
         self.assertEqual(kwargs['instance'].next_sequence_number, 45)
 
 
