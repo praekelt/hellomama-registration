@@ -4,7 +4,8 @@ from datetime import datetime
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models.signals import post_save
-from rest_hooks.models import model_saved
+from rest_hooks.models import Hook, model_saved
+from rest_hooks.signals import raw_hook_event
 
 from seed_services_client import StageBasedMessagingApiClient
 
@@ -91,6 +92,12 @@ class Command(BaseCommand):
             self.verify_subscription_requests(sub_requests, registration,
                                               receiver_id, message_set, today,
                                               apply_fix)
+            # Update subscription requests from DB
+            requests = registration.get_subscription_requests().filter(
+                identity=receiver_id)
+            for request in requests:
+                self.verify_subscription(client, request, subscriptions,
+                                         apply_fix)
 
     def verify_subscription_requests(
             self, requests, registration, receiver_id, message_set,
@@ -236,6 +243,54 @@ class Command(BaseCommand):
         actual = [(key, getattr(request, key))
                   for key in sorted(expected.keys())]
         return (expected_copy, actual, expected_copy != actual)
+
+    def verify_subscription(self, client, sub_request, subscriptions,
+                            apply_fix=False):
+        """
+        Verify a list of subscriptions based on a given subscription request.
+
+        :param sbm_client StageBasedMessagingApiClient:
+            The client to the stage based messaging service API
+        :param sub_request SubscriptionRequest:
+            The subscription request to use for the verification
+        :param subscriptions list:
+            The subscriptions to verify
+        :param apply_fix bool:
+            Whether or not to apply the fix or just log it.
+        """
+        msgset_subscription = {}
+        if subscriptions:
+            for sub in subscriptions[sub_request.identity]:
+                if sub_request.messageset == sub["messageset"]:
+                    msgset_subscription = sub
+                    # Prefer active subscriptions
+                    if sub["active"]:
+                        break
+        if not msgset_subscription:
+            self.log('No subscription found for subscription request %s' %
+                     (sub_request.id))
+            if apply_fix:
+                self.fire_subscription_hooks(sub_request)
+            return
+
+    def fire_subscription_hooks(self, request):
+        """
+        Triggers the hooks for when a subscription request is added.
+        This shoud lead to a subscription being created in the normal way.
+        """
+        hooks = Hook.objects.filter(event="subscriptionrequest.added")
+        if not hooks.exists():
+            self.log('Cannot find any hooks for creating a new subscription '
+                     'request')
+
+        for hook in hooks:
+            raw_hook_event.send(
+                sender=request,
+                event_name=hook.event,
+                payload=request.serialize_hook(hook)['data'],
+                instance=request,
+                user=hook.user)
+            self.log('Firing hook %s for %s.' % (hook, request,))
 
     def validate_input(self, registration, sbm_url, sbm_token, today):
         if not registration.validated:
