@@ -273,6 +273,30 @@ class Command(BaseCommand):
                 self.fire_subscription_hooks(sub_request)
             return
 
+        # Don't do anything if there aren't active subscriptions
+        if not msgset_subscription["active"]:
+            self.log('No active subscription found for subscription request '
+                     '%s. Taking no action' % (sub_request.id))
+            return
+
+        # Don't do anything if the subscription is up to date
+        if sub_request.next_sequence_number == \
+                msgset_subscription["next_sequence_number"]:
+            self.log('Next sequence numbers match. Taking no action')
+            return
+
+        self.log('Subscription %s has next_sequence_number=%s, should be %s' %
+                 (msgset_subscription['id'],
+                  msgset_subscription["next_sequence_number"],
+                  sub_request.next_sequence_number))
+        if apply_fix:
+            client.update_subscription(
+                msgset_subscription['id'],
+                {'next_sequence_number': sub_request.next_sequence_number})
+            self.log('Updated subscription %s. Set next_sequence_number to %s'
+                     % (msgset_subscription['id'],
+                        sub_request.next_sequence_number))
+
     def fire_subscription_hooks(self, request):
         """
         Triggers the hooks for when a subscription request is added.
