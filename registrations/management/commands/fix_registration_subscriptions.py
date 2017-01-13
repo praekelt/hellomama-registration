@@ -3,7 +3,11 @@ from datetime import datetime
 
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
+
+from seed_services_client import StageBasedMessagingApiClient
+
 from registrations.models import Registration
+from registrations.tasks import validate_registration
 
 
 from ._utils import validate_and_return_url
@@ -48,6 +52,33 @@ class Command(BaseCommand):
         today = kwargs['today']
 
         self.validate_input(registration, sbm_url, sbm_token, today)
+
+        client = StageBasedMessagingApiClient(sbm_token, sbm_url)
+
+        # Get subscription requests for identities
+        sub_requests = registration.get_subscription_requests()
+        receivers = registration.get_receiver_ids()
+        subscriptions = {}
+
+        # Get subscriptions for identities
+        for receiver_id in receivers:
+            sub_response = client.get_subscriptions({
+                'identity': receiver_id,
+            })
+            if sub_response['count']:
+                subscriptions[receiver_id] = sub_response['results']
+
+        """
+        If there are no requests or subscriptions then take them through the
+        normal process to create these.
+        """
+        if not sub_requests.exists() and not subscriptions:
+            self.log("Registration %s has no subscriptions or subscription "
+                     "requests" % (registration.id))
+            if apply_fix:
+                self.log("Attempting to create them")
+                validate_registration(registration_id=registration.id)
+            return
 
     def validate_input(self, registration, sbm_url, sbm_token, today):
         if not registration.validated:
