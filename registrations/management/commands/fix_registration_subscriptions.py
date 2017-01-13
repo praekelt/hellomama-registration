@@ -3,11 +3,13 @@ from datetime import datetime
 
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
+from django.db.models.signals import post_save
+from rest_hooks.models import model_saved
 
 from seed_services_client import StageBasedMessagingApiClient
 
 from hellomama_registration import utils
-from registrations.models import Registration
+from registrations.models import Registration, SubscriptionRequest
 from registrations.tasks import validate_registration
 
 
@@ -136,6 +138,10 @@ class Command(BaseCommand):
         if not sub_requests.exists():
             self.log('%s has no subscription requests for %s' % (
                      receiver_id, messageset_short_name))
+            if apply_fix:
+                self.create_subscription_request(
+                    registration, receiver_id, messageset_id, schedule_id,
+                    next_sequence_number)
             return
 
         data = {
@@ -164,6 +170,65 @@ class Command(BaseCommand):
             else:
                 self.log('%s has correct subscription request %s' % (
                          registration.id, request.id))
+
+    def create_subscription_request(self, registration, receiver_id, msgset_id,
+                                    msgset_schedule, next_sequence_number):
+        """
+        Disconnects hook listeners and creates a subscription request with a
+        welcome message. Reconnects hook listeners afterwards.
+
+        :param registration Registration:
+            The registration we're fixing
+        :param receiver_id str:
+            The UUID of the receiver we're wanting to fix the registration for
+        :param msgset_id int:
+            The id of the message set we're creating a subscription request for
+        :param msgset_schedule int:
+            The id of the schedule for the message set
+        :param next_sequence_number int:
+            The sequence number of the next message that should be sent
+        """
+        self.log('Attempting to create subscription request')
+        # We don't want this to automatically create a subscription
+        post_save.disconnect(receiver=model_saved,
+                             dispatch_uid='instance-saved-hook')
+
+        sub = {
+            "identity": receiver_id,
+            "messageset": msgset_id,
+            "next_sequence_number": next_sequence_number,
+            "lang": registration.data["language"],
+            "schedule": msgset_schedule,
+            "metadata": {}
+        }
+
+        # Add mother welcome message. This is the same as is done in the task
+        if receiver_id == registration.mother_id:
+            if 'voice_days' in registration.data and \
+                    registration.data["voice_days"] != "":
+                sub["metadata"]["prepend_next_delivery"] = \
+                    "%s/static/audio/registration/%s/welcome_mother.mp3" % (
+                    settings.PUBLIC_HOST,
+                    registration.data["language"])
+            else:
+                if registration.data["msg_receiver"] in [
+                        "father_only", "friend_only", "family_only"]:
+                    to_addr = utils.get_identity_address(
+                        registration.data["receiver_id"])
+                else:
+                    to_addr = utils.get_identity_address(
+                        registration.mother_id)
+                payload = {
+                    "to_addr": to_addr,
+                    "content": settings.MOTHER_WELCOME_TEXT_NG_ENG,
+                    "metadata": {}
+                }
+                utils.post_message(payload)
+
+        request = SubscriptionRequest.objects.create(**sub)
+        post_save.connect(receiver=model_saved,
+                          dispatch_uid='instance-saved-hook')
+        return request
 
     def sub_request_difference(self, request, expected):
         expected_copy = [(key, expected[key])
