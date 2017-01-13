@@ -3022,15 +3022,17 @@ class FixRegistrationSubscriptionsTest(ManagementTaskTestCase):
         stdout, stderr = self.do_call_command(
             'fix_registration_subscriptions', reg1.id.hex)
 
-        self.assertEqual(
-            stdout.getvalue().strip(),
+        self.assertIn(
             ('%s has "messageset: 3, next_sequence_number: 1, schedule: 1", '
              'should be "messageset: 3, next_sequence_number: 45, schedule: 1"'
-             '\n'
-             'No subscription found for subscription request %s\n'
-             '%s has correct subscription request %s\n'
+             '\nNo subscription found for subscription request %s\n')
+            % (sub2.pk, sub2.pk),
+            stdout.getvalue().strip())
+        self.assertIn(
+            ('%s has correct subscription request %s\n'
              'No subscription found for subscription request %s'
-             ) % (sub2.pk, sub2.pk, reg1.id, sub1.pk, sub1.pk))
+             ) % (reg1.id, sub1.pk, sub1.pk),
+            stdout.getvalue().strip())
 
         # confirm calling with --fix fixes everything
         hook1 = self.mk_hook('subscriptionrequest.added')
