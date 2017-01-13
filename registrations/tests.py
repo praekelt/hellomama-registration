@@ -3025,7 +3025,7 @@ class FixRegistrationSubscriptionsTest(ManagementTaskTestCase):
         self.assertIn(
             ('%s has "messageset: 3, next_sequence_number: 1, schedule: 1", '
              'should be "messageset: 3, next_sequence_number: 45, schedule: 1"'
-             '\nNo subscription found for subscription request %s\n')
+             '\nNo subscription found for subscription request %s')
             % (sub2.pk, sub2.pk),
             stdout.getvalue().strip())
         self.assertIn(
