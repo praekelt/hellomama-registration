@@ -19,7 +19,8 @@ from ._utils import validate_and_return_url
 
 class Command(BaseCommand):
     help = ("Creates or updates all Subscription Requests and Subscriptions "
-            "for a registration")
+            "for a registration. Note: Identities with multiple subscriptions "
+            "to the same message set will only have one subscription changed.")
 
     def add_arguments(self, parser):
         parser.add_argument(
