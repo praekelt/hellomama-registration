@@ -3097,6 +3097,40 @@ class FixRegistrationSubscriptionsTest(ManagementTaskTestCase):
         self.assertIn(kwargs['instance'], expected_subs)
         self.assertEqual(kwargs['instance'].next_sequence_number, 45)
 
+    @responses.activate
+    def test_fix_registration_only_relevant_subscriptions(self):
+        """
+        Only the relevant subscriptions should be fixed
+        """
+        src1 = self.mk_source(self.user1)
+
+        reg1 = self.mk_registration_at_week(src1, week=25)
+        reg1.validated = True
+        reg1.save()
+        sub1 = self.mk_subscription_request(reg1)
+
+        # This is obviously wrong, should be 25
+        sub1.next_sequence_number = 1
+        sub1.save()
+
+        sub2 = SubscriptionRequest.objects.create(
+            identity=reg1.mother_id, messageset=5, next_sequence_number=3,
+            lang=reg1.data['language'], schedule=1)
+
+        self.load_subscriptions(reg1.mother_id, count=0)
+
+        stdout, stderr = self.do_call_command(
+            'fix_registration_subscriptions', reg1.id.hex)
+
+        self.assertIn(sub2, reg1.get_subscription_requests())
+        self.assertEqual(
+            stdout.getvalue().strip(),
+            ('%s has "messageset: 1, next_sequence_number: 1, schedule: 1", '
+             'should be "messageset: 1, next_sequence_number: 45, schedule: 1"'
+             '\n'
+             'No subscription found for subscription request %s'
+             ) % (sub1.pk, sub1.pk,))
+
 
 class TestRepopulateMetricsTask(TestCase):
     @mock.patch('registrations.tasks.pika')
