@@ -233,7 +233,7 @@ LANGUAGES = ["eng_NG", "hau_NG", "ibo_NG", "yor_NG", "pcm_NG"]
 STATES = ["ebonyi", "cross_river", "abuja"]
 ROLES = ["oic", "cv", "midwife", "chew", "mama"]
 OPTOUT_REASONS = [
-    "miscarriage", "stillbirth", "babyloss", "not_useful", "other"]
+    "miscarriage", "stillborn", "baby_death", "not_useful", "other"]
 OPTOUT_SOURCES = ["sms", "ussd", "voice"]
 
 METRICS_REALTIME = [
