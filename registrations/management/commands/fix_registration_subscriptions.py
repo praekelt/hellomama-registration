@@ -260,13 +260,12 @@ class Command(BaseCommand):
         """
         msgset_subscription = {}
         if subscriptions:
-            if sub_request.identity in subscriptions:
-                for sub in subscriptions[sub_request.identity]:
-                    if sub_request.messageset == sub["messageset"]:
-                        msgset_subscription = sub
-                        # Prefer active subscriptions
-                        if sub["active"]:
-                            break
+            for sub in subscriptions.get(sub_request.identity, {}):
+                if sub_request.messageset == sub["messageset"]:
+                    msgset_subscription = sub
+                    # Prefer active subscriptions
+                    if sub["active"]:
+                        break
         if not msgset_subscription:
             self.log('No subscription found for subscription request %s' %
                      (sub_request.id))
