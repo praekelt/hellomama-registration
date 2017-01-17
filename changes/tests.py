@@ -198,7 +198,7 @@ class AuthenticatedAPITestCase(APITestCase):
                 "msg_receiver": "friend_only",
                 # data added during validation
                 "reg_type": "hw_pre",
-                "preg_week": "11"
+                "preg_week": "11",
             },
             "source": self.make_source_adminuser()
         }
@@ -2355,7 +2355,31 @@ class IdentityStoreOptoutViewTest(AuthenticatedAPITestCase):
                 'optout_type': "forget",
                 'optout_reason': "miscarriage",
                 'optout_source': "ussd_public",
-            }, ]
+            }]
+        }
+        return (200, headers, json.dumps(resp))
+
+    def optout_search_callback_other(self, request):
+        headers = {'Content-Type': "application/json"}
+        resp = {
+            "count": 1,
+            "next": None,
+            "previous": None,
+            "results": [{
+                'identity': "629eaf3c-04e5-1111-8a27-3ab3b811326a",
+                'details': {
+                    'name': "testing",
+                    'addresses': {
+                        'msisdn': {
+                            '+1234': {}
+                        },
+                    },
+                    'language': "eng_NG",
+                },
+                'optout_type': "forget",
+                'optout_reason': "other",
+                'optout_source': "ivr_public",
+            }]
         }
         return (200, headers, json.dumps(resp))
 
@@ -2434,6 +2458,84 @@ class IdentityStoreOptoutViewTest(AuthenticatedAPITestCase):
         })
         self.assertEqual(json.loads(responses.calls[11].request.body), {
             "optout.source.ussd.total.last": 2.0
+        })
+
+    @responses.activate
+    def test_identity_optout_friend_only(self):
+
+        friend_registration = self.make_registration_friend_only()
+        friend_registration.data['receiver_id'] = '629eaf3c-04e5-1111-8a27-3ab3b811326a'  # noqa
+        friend_registration.data['msg_type'] = 'audio'
+        friend_registration.mother_id = '846877e6-afaa-1111-1111-09f61ad4de99'
+        friend_registration.save()
+
+        responses.add(responses.POST,
+                      "http://metrics-url/metrics/",
+                      json={"foo": "bar"},
+                      status=200, content_type='application/json')
+
+        url = 'http://localhost:8001/api/v1/optouts/search/?' \
+              'reason=other'
+        responses.add_callback(
+            responses.GET, url, callback=self.optout_search_callback_other,
+            match_querystring=True, content_type="application/json")
+
+        url = 'http://localhost:8001/api/v1/optouts/search/'
+        responses.add_callback(
+            responses.GET, url, callback=self.optout_search_callback_other,
+            match_querystring=True, content_type="application/json")
+
+        url = 'http://localhost:8001/api/v1/optouts/search/?' \
+              'request_source=ivr_public'
+        responses.add_callback(
+            responses.GET, url, callback=self.optout_search_callback_other,
+            match_querystring=True, content_type="application/json")
+
+        request = {
+            'identity': "629eaf3c-04e5-1111-8a27-3ab3b811326a",
+            'details': {
+                'name': "testing",
+                'addresses': {
+                    'msisdn': {
+                        '+1234': {}
+                    },
+                },
+                'language': "eng_NG",
+            },
+            'optout_type': "forget",
+            'optout_reason': "other",
+            'optout_source': "ivr_public",
+        }
+        response = self.adminclient.post('/api/v1/optout/',
+                                         json.dumps(request),
+                                         content_type='application/json')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(responses.calls), 12)
+
+        self.assertEqual(json.loads(responses.calls[0].request.body), {
+            "optout.receiver_type.friend_only.sum": 1.0
+        })
+        self.assertEqual(json.loads(responses.calls[2].request.body), {
+            "optout.receiver_type.friend_only.total.last": 1.0
+        })
+        self.assertEqual(json.loads(responses.calls[3].request.body), {
+            "optout.reason.other.sum": 1.0
+        })
+        self.assertEqual(json.loads(responses.calls[5].request.body), {
+            "optout.reason.other.total.last": 1.0
+        })
+        self.assertEqual(json.loads(responses.calls[6].request.body), {
+            "optout.msg_type.audio.sum": 1.0
+        })
+        self.assertEqual(json.loads(responses.calls[8].request.body), {
+            "optout.msg_type.audio.total.last": 1.0
+        })
+        self.assertEqual(json.loads(responses.calls[9].request.body), {
+            "optout.source.ivr.sum": 1.0
+        })
+        self.assertEqual(json.loads(responses.calls[11].request.body), {
+            "optout.source.ivr.total.last": 1.0
         })
 
     @responses.activate
