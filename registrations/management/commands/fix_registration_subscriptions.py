@@ -90,13 +90,10 @@ class Command(BaseCommand):
                 message_set = "mother"
             else:
                 message_set = "household"
-            self.verify_subscription_requests(sub_requests, registration,
-                                              receiver_id, message_set, today,
-                                              apply_fix)
-            # Update subscription requests from DB
-            requests = registration.get_subscription_requests().filter(
-                identity=receiver_id)
-            for request in requests:
+            relevant_requests = self.verify_subscription_requests(
+                sub_requests, registration, receiver_id, message_set, today,
+                apply_fix)
+            for request in relevant_requests:
                 self.verify_subscription(client, request, subscriptions,
                                          apply_fix)
 
@@ -150,7 +147,6 @@ class Command(BaseCommand):
                 self.create_subscription_request(
                     registration, receiver_id, messageset_id, schedule_id,
                     next_sequence_number)
-            return
 
         data = {
             'next_sequence_number': next_sequence_number,
@@ -178,6 +174,9 @@ class Command(BaseCommand):
             else:
                 self.log('%s has correct subscription request %s' % (
                          registration.id, request.id))
+        # Return the updated subscription requests
+        return registration.get_subscription_requests().filter(
+            identity=receiver_id, messageset=messageset_id)
 
     def create_subscription_request(self, registration, receiver_id, msgset_id,
                                     msgset_schedule, next_sequence_number):
@@ -261,7 +260,7 @@ class Command(BaseCommand):
         """
         msgset_subscription = {}
         if subscriptions:
-            for sub in subscriptions[sub_request.identity]:
+            for sub in subscriptions.get(sub_request.identity, {}):
                 if sub_request.messageset == sub["messageset"]:
                     msgset_subscription = sub
                     # Prefer active subscriptions
