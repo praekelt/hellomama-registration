@@ -42,13 +42,14 @@ class Command(BaseCommand):
 
         sbm_client = StageBasedMessagingApiClient(sbm_token, sbm_url)
 
-        sub_requests = SubscriptionRequest.objects.all()
+        sub_requests = SubscriptionRequest.objects.all().iterator()
 
         updated = 0
         for sub_request in sub_requests:
             subscriptions = sbm_client.get_subscriptions({
                 'identity': sub_request.identity,
-                'created_at__gt': sub_request.created_at
+                'created_at__gt': sub_request.created_at,
+                'messageset': sub_request.messageset,
             })
 
             first = None
