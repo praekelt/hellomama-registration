@@ -199,7 +199,6 @@ class AuthenticatedAPITestCase(APITestCase):
                 # data added during validation
                 "reg_type": "hw_pre",
                 "preg_week": "11",
-                "msg_receiver": "friend_only",
             },
             "source": self.make_source_adminuser()
         }
