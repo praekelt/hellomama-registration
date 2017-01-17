@@ -6,6 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from .serializers import ChangeSerializer
 from django.http import JsonResponse
 from django.conf import settings
+from django.db.models import Q
 from hellomama_registration import utils
 
 import six
@@ -77,6 +78,10 @@ class ReceiveIdentityStoreOptout(mixins.CreateModelMixin,
 
         registrations = Registration.objects.filter(mother_id=identity_id).\
             order_by('-created_at')
+
+        if not registrations.exists():
+            registrations = Registration.objects.filter(
+                data__receiver_id=identity_id).order_by('-created_at')
 
         for registration in registrations:
             if registration.data.get('msg_receiver'):
@@ -159,8 +164,12 @@ def fire_optout_receiver_type_metric(msg_receiver):
         identities = set(data['identity'] for data in result)
 
         return Registration.objects.filter(
-                    mother_id__in=identities,
-                    data__msg_receiver=msg_receiver).count()
+            Q(
+                mother_id__in=identities,
+                data__msg_receiver=msg_receiver) |
+            Q(
+                data__receiver_id__in=identities,
+                data__msg_receiver=msg_receiver)).count()
 
     total_key = 'optout.receiver_type.%s.total.last' % msg_receiver
     total = get_or_incr_cache(
@@ -186,8 +195,12 @@ def fire_optout_message_type_metric(msg_type):
         identities = set(data['identity'] for data in result)
 
         return Registration.objects.filter(
-                    mother_id__in=identities,
-                    data__msg_type=msg_type).count()
+            Q(
+                mother_id__in=identities,
+                data__msg_type=msg_type) |
+            Q(
+                data__receiver_id__in=identities,
+                data__msg_type=msg_type)).count()
 
     total_key = 'optout.msg_type.%s.total.last' % msg_type
     total = get_or_incr_cache(
