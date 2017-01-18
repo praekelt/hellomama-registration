@@ -73,6 +73,13 @@ class Command(BaseCommand):
             if sub_response['count']:
                 subscriptions[receiver_id] = sub_response['results']
 
+        # Make sure the registration has the data for the correct stage
+        weeks = registration.estimate_current_preg_weeks(today=today)
+        if weeks > settings.PREBIRTH_MAX_WEEKS:
+            registration = self.update_registration_to_postbirth(registration)
+            if apply_fix:
+                registration.save()
+
         """
         If there are no requests or subscriptions then take them through the
         normal process to create these.
@@ -315,6 +322,18 @@ class Command(BaseCommand):
                 instance=request,
                 user=hook.user)
             self.log('Firing hook %s for %s.' % (hook, request,))
+
+    def update_registration_to_postbirth(self, registration):
+        if 'last_period_date' in registration.data:
+            last_period_date = datetime.datetime.strptime(
+                registration.data.get('last_period_date'), '%Y%m%d')
+
+            # Estimate the date of birth as lmp + PREBIRTH_MAX_WEEKS
+            registration.data['baby_dob'] = (
+                last_period_date + datetime.timedelta(
+                    weeks=settings.PREBIRTH_MAX_WEEKS)).strftime('%Y%m%d')
+            registration.stage = "postbirth"
+        return registration
 
     def validate_input(self, registration, sbm_url, sbm_token, today):
         if not registration.validated:
