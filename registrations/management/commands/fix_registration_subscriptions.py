@@ -329,12 +329,11 @@ class Command(BaseCommand):
                 'other than prebirth, this registration is: %s' % (
                     registration.stage))
 
-        # TODO: Handle conversion to post-birth message sets
         weeks = registration.estimate_current_preg_weeks(today=today)
-        if weeks > settings.PREBIRTH_MAX_WEEKS:
+        if weeks > settings.PREBIRTH_MAX_WEEKS + settings.POSTBIRTH_MAX_WEEKS:
             raise CommandError(
                 'This pregnancy is %s weeks old and should no longer be on '
-                'the prebirth message sets' % (weeks))
+                'any of our message sets' % (weeks))
 
         if not sbm_url:
             raise CommandError(
