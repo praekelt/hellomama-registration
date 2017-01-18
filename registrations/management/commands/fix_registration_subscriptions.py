@@ -322,13 +322,6 @@ class Command(BaseCommand):
                 'This registration is not valid. This command only works with '
                 'validated registrations')
 
-        # TODO: Handle fixing of post-birth message sets
-        if registration.stage != 'prebirth':
-            raise CommandError(
-                'This command has not been confirmed to work with any stage '
-                'other than prebirth, this registration is: %s' % (
-                    registration.stage))
-
         weeks = registration.estimate_current_preg_weeks(today=today)
         if weeks > settings.PREBIRTH_MAX_WEEKS + settings.POSTBIRTH_MAX_WEEKS:
             raise CommandError(
