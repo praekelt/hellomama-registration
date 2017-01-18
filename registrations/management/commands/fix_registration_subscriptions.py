@@ -1,5 +1,5 @@
 from os import environ
-from datetime import datetime
+import datetime
 
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
@@ -32,8 +32,8 @@ class Command(BaseCommand):
             help=("Attempt to automatically fix the subscriptions and "
                   "requests if they turn out to be wrong"))
         parser.add_argument(
-            "--today", dest="today", default=datetime.now(),
-            type=lambda today: datetime.strptime(today, '%Y%m%d'),
+            "--today", dest="today", default=datetime.datetime.now(),
+            type=lambda today: datetime.datetime.strptime(today, '%Y%m%d'),
             help=("Set the date for 'today' from which to calculate the "
                   "next_sequence_number value. By default it will use "
                   "datetime.now() (format YYYYMMDD)")
