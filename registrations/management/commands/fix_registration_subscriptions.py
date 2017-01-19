@@ -1,5 +1,5 @@
 from os import environ
-from datetime import datetime
+import datetime
 
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
@@ -32,8 +32,8 @@ class Command(BaseCommand):
             help=("Attempt to automatically fix the subscriptions and "
                   "requests if they turn out to be wrong"))
         parser.add_argument(
-            "--today", dest="today", default=datetime.now(),
-            type=lambda today: datetime.strptime(today, '%Y%m%d'),
+            "--today", dest="today", default=datetime.datetime.now(),
+            type=lambda today: datetime.datetime.strptime(today, '%Y%m%d'),
             help=("Set the date for 'today' from which to calculate the "
                   "next_sequence_number value. By default it will use "
                   "datetime.now() (format YYYYMMDD)")
@@ -72,6 +72,27 @@ class Command(BaseCommand):
             })
             if sub_response['count']:
                 subscriptions[receiver_id] = sub_response['results']
+
+        # Make sure the registration has the data for the correct stage
+        if registration.stage == 'prebirth':
+            weeks = registration.estimate_current_preg_weeks(today=today)
+            if weeks > settings.PREBIRTH_MAX_WEEKS + \
+                    settings.POSTBIRTH_MAX_WEEKS:
+                raise CommandError(
+                    'This pregnancy is %s weeks old and should no longer be '
+                    'on any of our message sets' % (weeks))
+            elif weeks > settings.PREBIRTH_MAX_WEEKS:
+                registration = self.update_registration_to_postbirth(
+                    registration)
+                if apply_fix:
+                    registration.save()
+        else:
+            weeks = utils.calc_baby_age(
+                today=today, baby_dob=registration.data['baby_dob'])
+            if weeks > settings.POSTBIRTH_MAX_WEEKS:
+                raise CommandError(
+                    'This baby is %s weeks old and should no longer be '
+                    'on any of our message sets' % (weeks))
 
         """
         If there are no requests or subscriptions then take them through the
@@ -117,7 +138,12 @@ class Command(BaseCommand):
             Whether or not to apply the fix or just log it.
         """
 
-        weeks_estimate = registration.estimate_current_preg_weeks(today=today)
+        if registration.stage == 'prebirth':
+            weeks_estimate = registration.estimate_current_preg_weeks(
+                today=today)
+        else:
+            weeks_estimate = utils.calc_baby_age(
+                today=today, baby_dob=registration.data['baby_dob'])
 
         # Get the info for the message set this identity should be on
         if message_set == "mother":
@@ -147,6 +173,13 @@ class Command(BaseCommand):
                 self.create_subscription_request(
                     registration, receiver_id, messageset_id, schedule_id,
                     next_sequence_number)
+            else:
+                # return temp subscription request for checking subscriptions
+                return [SubscriptionRequest(
+                    identity=receiver_id, messageset=messageset_id,
+                    next_sequence_number=next_sequence_number,
+                    lang=registration.data["language"], schedule=schedule_id,
+                    metadata={})]
 
         data = {
             'next_sequence_number': next_sequence_number,
@@ -316,25 +349,23 @@ class Command(BaseCommand):
                 user=hook.user)
             self.log('Firing hook %s for %s.' % (hook, request,))
 
+    def update_registration_to_postbirth(self, registration):
+        if 'last_period_date' in registration.data:
+            last_period_date = datetime.datetime.strptime(
+                registration.data.get('last_period_date'), '%Y%m%d')
+
+            # Estimate the date of birth as lmp + PREBIRTH_MAX_WEEKS
+            registration.data['baby_dob'] = (
+                last_period_date + datetime.timedelta(
+                    weeks=settings.PREBIRTH_MAX_WEEKS)).strftime('%Y%m%d')
+            registration.stage = "postbirth"
+        return registration
+
     def validate_input(self, registration, sbm_url, sbm_token, today):
         if not registration.validated:
             raise CommandError(
                 'This registration is not valid. This command only works with '
                 'validated registrations')
-
-        # TODO: Handle fixing of post-birth message sets
-        if registration.stage != 'prebirth':
-            raise CommandError(
-                'This command has not been confirmed to work with any stage '
-                'other than prebirth, this registration is: %s' % (
-                    registration.stage))
-
-        # TODO: Handle conversion to post-birth message sets
-        weeks = registration.estimate_current_preg_weeks(today=today)
-        if weeks > settings.PREBIRTH_MAX_WEEKS:
-            raise CommandError(
-                'This pregnancy is %s weeks old and should no longer be on '
-                'the prebirth message sets' % (weeks))
 
         if not sbm_url:
             raise CommandError(

@@ -2582,6 +2582,25 @@ class ManagementTaskTestCase(TestCase):
             match_querystring=True
         )
 
+        # mock postbirth mother messageset lookup
+        query_string = '?short_name=postbirth.mother.text.0_12'
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/%s' % query_string,
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 1,
+                    "short_name": 'postbirth.mother.text.0_12',
+                    "default_schedule": 1
+                }]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+
         # mock mother schedule lookup
         responses.add(
             responses.GET,
@@ -2743,33 +2762,6 @@ class FixRegistrationSubscriptionsTest(ManagementTaskTestCase):
             CommandError,
             ('This registration is not valid. This command only works with '
              'validated registrations'),
-            self.do_call_command, 'fix_registration_subscriptions',
-            reg1.id.hex)
-
-    def test_crash_on_postbirth(self):
-        src1 = self.mk_source(self.user1)
-        reg1 = self.mk_registration_at_week(src1, week=25)
-        reg1.stage = 'postbirth'
-        reg1.validated = True
-        reg1.save()
-
-        self.assertRaisesRegexp(
-            CommandError,
-            ('This command has not been confirmed to work with any stage '
-             'other than prebirth, this registration is: %s') % (reg1.stage,),
-            self.do_call_command, 'fix_registration_subscriptions',
-            reg1.id.hex)
-
-    def test_crash_on_old_pre_birth(self):
-        src1 = self.mk_source(self.user1)
-        reg1 = self.mk_registration_at_week(src1, week=60)
-        reg1.validated = True
-        reg1.save()
-
-        self.assertRaisesRegexp(
-            CommandError,
-            ('This pregnancy is %s weeks old and should no longer be on the '
-             'prebirth message sets' % reg1.data['preg_week']),
             self.do_call_command, 'fix_registration_subscriptions',
             reg1.id.hex)
 
@@ -3130,6 +3122,98 @@ class FixRegistrationSubscriptionsTest(ManagementTaskTestCase):
              '\n'
              'No subscription found for subscription request %s'
              ) % (sub1.pk, sub1.pk,))
+
+    @responses.activate
+    @mock.patch("registrations.tasks.ValidateRegistration.run")
+    def test_fix_old_pre_birth(self, mock_validation):
+        src1 = self.mk_source(self.user1)
+        reg1 = self.mk_registration_at_week(src1, week=60)
+        reg1.validated = True
+        reg1.save()
+
+        self.load_subscriptions(reg1.mother_id, count=0)
+
+        stdout, stderr = self.do_call_command(
+            'fix_registration_subscriptions', reg1.id.hex)
+
+        self.assertEqual(
+            stdout.getvalue().strip(),
+            'Registration %s has no subscriptions or subscription requests'
+            % reg1.id)
+
+        # confirm registration didn't change because --fix isn't set
+        reg1.refresh_from_db
+        self.assertNotIn('baby_dob', reg1.data)
+
+        # confirm calling with --fix calls the validation task
+        stdout, stderr = self.do_call_command(
+            'fix_registration_subscriptions', reg1.id.hex, '--fix')
+        mock_validation.assert_called_once_with(registration_id=reg1.id)
+        reg1.refresh_from_db()
+        self.assertEqual(reg1.stage, 'postbirth')
+        self.assertIn('baby_dob', reg1.data)
+        est_dob = datetime.now() - timedelta(
+            weeks=(60-settings.PREBIRTH_MAX_WEEKS))
+        self.assertEqual(reg1.data['baby_dob'], est_dob.strftime('%Y%m%d'))
+
+    @responses.activate
+    def test_fix_postbirth(self):
+        post_save.connect(receiver=model_saved,
+                          dispatch_uid='instance-saved-hook')
+        src1 = self.mk_source(self.user1)
+        data = {
+            "stage": "postbirth",
+            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
+            "data": REG_DATA['hw_post'],
+            "source": src1
+        }
+        reg1 = Registration.objects.create(**data)
+        reg1.data['receiver_id'] = reg1.mother_id
+        reg1.data['baby_dob'] = "20170101"
+        reg1.validated = True
+        reg1.save()
+
+        results = [{
+            "id": "test_id",
+            "messageset": 1,
+            "active": True,
+            "next_sequence_number": 5,
+        }]
+        self.load_subscriptions(reg1.mother_id, count=1, results=results)
+
+        stdout, stderr = self.do_call_command(
+            'fix_registration_subscriptions', reg1.id.hex)
+
+        # Confirm no subscription requests were created
+        self.assertEqual(SubscriptionRequest.objects.all().count(), 0)
+        self.assertEqual(
+            stdout.getvalue().strip(),
+            '%s has no subscription requests for postbirth.mother.text.0_12\n'
+            'Subscription test_id has next_sequence_number=5, should be 6'
+            % reg1.mother_id)
+
+        # confirm calling with --fix fixes things
+        responses.add(
+            responses.PATCH,
+            'http://example.com/subscriptions/%s/' % ('test_id',),
+            json={
+                "id": "test_id",
+                "messageset": 1,
+                "active": True,
+                "next_sequence_number": 6,
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        stdout, stderr = self.do_call_command(
+            'fix_registration_subscriptions', reg1.id.hex, '--fix')
+        self.assertEqual(SubscriptionRequest.objects.all().count(), 1)
+        call = responses.calls[-1]
+        self.assertEqual(call.request.url,
+                         'http://example.com/subscriptions/test_id/')
+        self.assertEqual(call.request.body, '{"next_sequence_number": 6}')
+        post_save.disconnect(receiver=model_saved,
+                             dispatch_uid='instance-saved-hook')
 
 
 class TestRepopulateMetricsTask(TestCase):
