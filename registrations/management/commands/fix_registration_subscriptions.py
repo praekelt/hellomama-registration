@@ -173,6 +173,13 @@ class Command(BaseCommand):
                 self.create_subscription_request(
                     registration, receiver_id, messageset_id, schedule_id,
                     next_sequence_number)
+            else:
+                # return temp subscription request for checking subscriptions
+                return [SubscriptionRequest(
+                    identity=receiver_id, messageset=messageset_id,
+                    next_sequence_number=next_sequence_number,
+                    lang=registration.data["language"], schedule=schedule_id,
+                    metadata={})]
 
         data = {
             'next_sequence_number': next_sequence_number,
