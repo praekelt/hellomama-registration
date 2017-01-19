@@ -74,11 +74,25 @@ class Command(BaseCommand):
                 subscriptions[receiver_id] = sub_response['results']
 
         # Make sure the registration has the data for the correct stage
-        weeks = registration.estimate_current_preg_weeks(today=today)
-        if weeks > settings.PREBIRTH_MAX_WEEKS:
-            registration = self.update_registration_to_postbirth(registration)
-            if apply_fix:
-                registration.save()
+        if registration.stage == 'prebirth':
+            weeks = registration.estimate_current_preg_weeks(today=today)
+            if weeks > settings.PREBIRTH_MAX_WEEKS + \
+                    settings.POSTBIRTH_MAX_WEEKS:
+                raise CommandError(
+                    'This pregnancy is %s weeks old and should no longer be '
+                    'on any of our message sets' % (weeks))
+            elif weeks > settings.PREBIRTH_MAX_WEEKS:
+                registration = self.update_registration_to_postbirth(
+                    registration)
+                if apply_fix:
+                    registration.save()
+        else:
+            weeks = utils.calc_baby_age(
+                today=today, baby_dob=registration.data['baby_dob'])
+            if weeks > settings.POSTBIRTH_MAX_WEEKS:
+                raise CommandError(
+                    'This baby is %s weeks old and should no longer be '
+                    'on any of our message sets' % (weeks))
 
         """
         If there are no requests or subscriptions then take them through the
@@ -124,7 +138,12 @@ class Command(BaseCommand):
             Whether or not to apply the fix or just log it.
         """
 
-        weeks_estimate = registration.estimate_current_preg_weeks(today=today)
+        if registration.stage == 'prebirth':
+            weeks_estimate = registration.estimate_current_preg_weeks(
+                today=today)
+        else:
+            weeks_estimate = utils.calc_baby_age(
+                today=today, baby_dob=registration.data['baby_dob'])
 
         # Get the info for the message set this identity should be on
         if message_set == "mother":
@@ -340,12 +359,6 @@ class Command(BaseCommand):
             raise CommandError(
                 'This registration is not valid. This command only works with '
                 'validated registrations')
-
-        weeks = registration.estimate_current_preg_weeks(today=today)
-        if weeks > settings.PREBIRTH_MAX_WEEKS + settings.POSTBIRTH_MAX_WEEKS:
-            raise CommandError(
-                'This pregnancy is %s weeks old and should no longer be on '
-                'any of our message sets' % (weeks))
 
         if not sbm_url:
             raise CommandError(
