@@ -3182,7 +3182,8 @@ class FixRegistrationSubscriptionsTest(ManagementTaskTestCase):
         self.load_subscriptions(reg1.mother_id, count=1, results=results)
 
         stdout, stderr = self.do_call_command(
-            'fix_registration_subscriptions', reg1.id.hex)
+            'fix_registration_subscriptions', reg1.id.hex, '--today',
+            '20170115')
 
         # Confirm no subscription requests were created
         self.assertEqual(SubscriptionRequest.objects.all().count(), 0)
@@ -3206,7 +3207,8 @@ class FixRegistrationSubscriptionsTest(ManagementTaskTestCase):
             match_querystring=True
         )
         stdout, stderr = self.do_call_command(
-            'fix_registration_subscriptions', reg1.id.hex, '--fix')
+            'fix_registration_subscriptions', reg1.id.hex, '--fix', '--today',
+            '20170115')
         self.assertEqual(SubscriptionRequest.objects.all().count(), 1)
         call = responses.calls[-1]
         self.assertEqual(call.request.url,
