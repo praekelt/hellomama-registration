@@ -1665,7 +1665,6 @@ class TestChangeBaby(AuthenticatedAPITestCase):
     def test_friend_only_change_baby(self):
         # Setup
         # make registration
-        self.make_registration_mother_only()
         self.make_registration_friend_only()
         # make change object
         change_data = {
