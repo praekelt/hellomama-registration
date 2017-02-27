@@ -452,8 +452,8 @@ class Command(BaseCommand):
 
         outbounds = self.get_outbounds(
             ms_client,
-            created_after=start_date.isoformat(),
-            created_before=end_date.isoformat()
+            after=start_date.isoformat(),
+            before=end_date.isoformat()
         )
 
         data = collections.defaultdict(dict)
@@ -488,8 +488,8 @@ class Command(BaseCommand):
 
         outbounds = self.get_outbounds(
             ms_client,
-            created_after=start_date.isoformat(),
-            created_before=end_date.isoformat()
+            after=start_date.isoformat(),
+            before=end_date.isoformat()
         )
 
         data = collections.defaultdict(int)
