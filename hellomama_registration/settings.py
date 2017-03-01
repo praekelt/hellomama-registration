@@ -58,10 +58,10 @@ INSTALLED_APPS = (
     # documentation
     'rest_framework_docs',
     # us
-    'hellomama_registration',
     'registrations',
     'changes',
-    'uniqueids'
+    'uniqueids',
+    'reports'
 
 )
 
