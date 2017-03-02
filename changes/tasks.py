@@ -25,8 +25,8 @@ class ImplementAction(Task):
 
         stage = 'postbirth'
         weeks = 0
-        voice_days = mother["details"]["preferred_msg_days"]
-        voice_times = mother["details"]["preferred_msg_times"]
+        voice_days = mother["details"].get("preferred_msg_days")
+        voice_times = mother["details"].get("preferred_msg_times")
 
         mother_short_name = utils.get_messageset_short_name(
             stage, 'mother', mother["details"]["preferred_msg_type"],
@@ -77,8 +77,8 @@ class ImplementAction(Task):
 
         stage = 'miscarriage'
         weeks = 0
-        voice_days = mother["details"]["preferred_msg_days"]
-        voice_times = mother["details"]["preferred_msg_times"]
+        voice_days = mother["details"].get("preferred_msg_days")
+        voice_times = mother["details"].get("preferred_msg_times")
 
         mother_short_name = utils.get_messageset_short_name(
             stage, 'mother', mother["details"]["preferred_msg_type"],
