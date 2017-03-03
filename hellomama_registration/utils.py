@@ -160,7 +160,7 @@ def get_subscriptions(identity):
     """ Gets the active subscriptions for an identity
     """
     url = "%s/%s/" % (settings.STAGE_BASED_MESSAGING_URL, "subscriptions")
-    params = {'id': identity, 'active': True}
+    params = {'identity': identity, 'active': True}
     headers = {
         'Authorization': 'Token %s' % settings.STAGE_BASED_MESSAGING_TOKEN,
         'Content-Type': 'application/json'
