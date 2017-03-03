@@ -462,7 +462,7 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
         change = Change.objects.create(**change_data)
         # mock get subscription request
         subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
-        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
@@ -564,7 +564,7 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
         change = Change.objects.create(**change_data)
         # mock get subscription request
         subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
-        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
@@ -664,7 +664,7 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
         change = Change.objects.create(**change_data)
         # mock get subscription request
         subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
-        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
@@ -764,7 +764,7 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
         change = Change.objects.create(**change_data)
         # mock get subscription request
         subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
-        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
@@ -864,7 +864,7 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
         change = Change.objects.create(**change_data)
         # mock get current subscription request
         subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
-        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
@@ -964,7 +964,7 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
         change = Change.objects.create(**change_data)
         # mock get current subscription request
         subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
-        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
@@ -1064,7 +1064,7 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
         change = Change.objects.create(**change_data)
         # mock get subscription request
         subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
-        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
@@ -1164,7 +1164,7 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
         change = Change.objects.create(**change_data)
         # mock get subscription request
         subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
-        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
@@ -1264,7 +1264,7 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
         change = Change.objects.create(**change_data)
         # mock get subscription request
         subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
-        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
@@ -1364,7 +1364,7 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
         change = Change.objects.create(**change_data)
         # mock get current subscription request
         subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
-        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
@@ -1466,7 +1466,7 @@ class TestChangeBaby(AuthenticatedAPITestCase):
         change = Change.objects.create(**change_data)
         # mock get subscription request
         subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
-        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
@@ -1571,7 +1571,7 @@ class TestChangeBaby(AuthenticatedAPITestCase):
         change = Change.objects.create(**change_data)
         # mock get subscription request
         subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
-        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
@@ -1676,7 +1676,7 @@ class TestChangeBaby(AuthenticatedAPITestCase):
         change = Change.objects.create(**change_data)
         # mock get subscription request
         subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
-        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
@@ -1816,7 +1816,7 @@ class TestChangeBaby(AuthenticatedAPITestCase):
         change = Change.objects.create(**change_data)
         # mock get subscription request
         subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
-        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
@@ -1925,7 +1925,7 @@ class TestChangeLanguage(AuthenticatedAPITestCase):
         change = Change.objects.create(**change_data)
         # mock get subscription request
         subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
-        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
@@ -1976,7 +1976,7 @@ class TestChangeLanguage(AuthenticatedAPITestCase):
         change = Change.objects.create(**change_data)
         # mock mother get subscription request
         subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
-        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
@@ -2003,7 +2003,7 @@ class TestChangeLanguage(AuthenticatedAPITestCase):
         )
         # mock household get subscription request
         subscription_id = "ece53dbd-962f-4b9a-8546-759b059a2ae1"
-        query_string = '?active=True&id=%s' % change_data["data"][
+        query_string = '?active=True&identity=%s' % change_data["data"][
             "household_id"]
         responses.add(
             responses.GET,
@@ -2058,7 +2058,7 @@ class TestChangeUnsubscribeHousehold(AuthenticatedAPITestCase):
         change = Change.objects.create(**change_data)
         # mock get subscription request
         subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
-        query_string = '?active=True&id=%s' % change_data["data"][
+        query_string = '?active=True&identity=%s' % change_data["data"][
             "household_id"]
         responses.add(
             responses.GET,
@@ -2112,7 +2112,7 @@ class TestChangeUnsubscribeMother(AuthenticatedAPITestCase):
         change = Change.objects.create(**change_data)
         # mock get subscription request
         subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
-        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
@@ -2164,7 +2164,7 @@ class TestChangeLoss(AuthenticatedAPITestCase):
         change = Change.objects.create(**change_data)
         # mock get subscription request
         subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
-        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
@@ -2269,7 +2269,7 @@ class TestChangeLoss(AuthenticatedAPITestCase):
         change = Change.objects.create(**change_data)
         # mock get subscription request
         subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
-        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
@@ -2374,7 +2374,7 @@ class TestChangeLoss(AuthenticatedAPITestCase):
         change = Change.objects.create(**change_data)
         # mock mother get subscription request
         subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
-        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
@@ -2453,7 +2453,7 @@ class TestChangeLoss(AuthenticatedAPITestCase):
         )
         # mock friend get subscription request
         subscription_id = "ece53dbd-962f-4b9a-8546-759b059a2ae1"
-        query_string = '?active=True&id=%s' % (
+        query_string = '?active=True&identity=%s' % (
             "629eaf3c-04e5-4404-8a27-3ab3b811326a")
         responses.add(
             responses.GET,
@@ -2507,7 +2507,7 @@ class TestChangeLoss(AuthenticatedAPITestCase):
         change = Change.objects.create(**change_data)
         # mock get subscription request
         subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
-        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
