@@ -60,7 +60,8 @@ INSTALLED_APPS = (
     # us
     'registrations',
     'changes',
-    'uniqueids'
+    'uniqueids',
+    'reports'
 
 )
 
