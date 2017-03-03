@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
-from django.core.validators import URLValidator, EmailValidator
+from django.core.validators import EmailValidator
 from django.utils import timezone
 
 from reports.tasks import generate_report
@@ -69,45 +69,11 @@ class Command(BaseCommand):
             default='Seed Control Interface Generated Report',
             help='The subject of the email',
         )
-        parser.add_argument(
-            '--identity-store-url', type=mk_validator(URLValidator),
-            default=settings.IDENTITY_STORE_URL)
-        parser.add_argument(
-            '--identity-store-token', type=str,
-            default=settings.IDENTITY_STORE_TOKEN)
-        parser.add_argument(
-            '--sbm-url', type=mk_validator(URLValidator))
-        parser.add_argument(
-            '--sbm-token', type=str)
-        parser.add_argument(
-            '--ms-url', type=mk_validator(URLValidator))
-        parser.add_argument(
-            '--ms-token', type=str)
 
     def handle(self, *args, **kwargs):
-        sbm_token = kwargs['sbm_token']
-        sbm_url = kwargs['sbm_url']
-        ms_token = kwargs['ms_token']
-        ms_url = kwargs['ms_url']
         start_date = kwargs['start']
         end_date = kwargs['end']
         output_file = kwargs['output_file']
-
-        if not sbm_url:
-            raise CommandError(
-                'Please make sure the --sbm-url is set.')
-
-        if not sbm_token:
-            raise CommandError(
-                'Please make sure the --sbm-token is set.')
-
-        if not ms_url:
-            raise CommandError(
-                'Please make sure the --ms-url is set.')
-
-        if not ms_token:
-            raise CommandError(
-                'Please make sure the --ms-token is set.')
 
         if not output_file:
             raise CommandError(
@@ -118,12 +84,6 @@ class Command(BaseCommand):
 
         generate_report.apply_async(kwargs={
             'output_file': output_file,
-            'id_store_token': kwargs['identity_store_token'],
-            'id_store_url': kwargs['identity_store_url'],
-            'sbm_token': sbm_token,
-            'sbm_url': sbm_url,
-            'ms_token': ms_token,
-            'ms_url': ms_url,
             'start_date': kwargs['start'],
             'end_date': end_date,
             'email_recipients': kwargs['email_to'],

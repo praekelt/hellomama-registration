@@ -26,7 +26,11 @@ from .tasks import generate_report
 
 @override_settings(
     IDENTITY_STORE_URL='http://idstore.example.com/',
-    IDENTITY_STORE_TOKEN='idstoretoken')
+    IDENTITY_STORE_TOKEN='idstoretoken',
+    MESSAGE_SENDER_URL='http://ms.example.com/',
+    MESSAGE_SENDER_TOKEN='mstoken',
+    STAGE_BASED_MESSAGING_URL='http://sbm.example.com/',
+    STAGE_BASED_MESSAGING_TOKEN='sbmtoken')
 class GenerateReportTest(TestCase):
     def setUp(self):
         def has_listeners(class_name):
@@ -359,19 +363,13 @@ class GenerateReportTest(TestCase):
         tmp_file = self.mk_tempfile()
 
         generate_report.apply_async(kwargs={
-            'id_store_token': settings.IDENTITY_STORE_TOKEN,
-            'id_store_url': settings.IDENTITY_STORE_URL,
             'start_date': self.midnight(datetime.strptime('2016-01-01',
                                                           '%Y-%m-%d')),
             'end_date': self.midnight(datetime.strptime('2016-02-01',
                                                         '%Y-%m-%d')),
             'output_file': tmp_file.name,
             'email_recipients': ['foo@example.com'],
-            'email_subject': 'The Email Subject',
-            'sbm_url': 'http://sbm.example.com/',
-            'sbm_token': 'sbmtoken',
-            'ms_url': 'http://ms.example.com/',
-            'ms_token': 'mstoken'})
+            'email_subject': 'The Email Subject'})
 
         return tmp_file
 

@@ -79,18 +79,21 @@ class GenerateReport(Task):
     disk and email it to specified recipients
     """
 
-    def run(self, output_file, id_store_token, id_store_url, sbm_token,
-            sbm_url, ms_token, ms_url, start_date, end_date,
-            email_recipients=[], email_sender=settings.DEFAULT_FROM_EMAIL,
+    def run(self, output_file, start_date, end_date, email_recipients=[],
+            email_sender=settings.DEFAULT_FROM_EMAIL,
             email_subject='Seed Control Interface Generated Report',
             **kwargs):
 
         self.identity_cache = {}
         self.messageset_cache = {}
 
-        ids_client = IdentityStoreApiClient(id_store_token, id_store_url)
-        sbm_client = StageBasedMessagingApiClient(sbm_token, sbm_url)
-        ms_client = MessageSenderApiClient(ms_token, ms_url)
+        ids_client = IdentityStoreApiClient(settings.IDENTITY_STORE_TOKEN,
+                                            settings.IDENTITY_STORE_URL)
+        sbm_client = StageBasedMessagingApiClient(
+            settings.STAGE_BASED_MESSAGING_TOKEN,
+            settings.STAGE_BASED_MESSAGING_URL)
+        ms_client = MessageSenderApiClient(settings.MESSAGE_SENDER_TOKEN,
+                                           settings.MESSAGE_SENDER_URL)
 
         workbook = self.workbook_class()
         sheet = workbook.add_sheet('Registrations by date', 0)
