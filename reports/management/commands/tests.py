@@ -4,11 +4,6 @@ try:
 except ImportError:
     from unittest import mock
 
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
-
 from datetime import datetime
 from django.conf import settings
 from django.core import management
@@ -28,7 +23,8 @@ class ManagementCommandsTests(TestCase):
 
     def test_command_requires_output_file(self):
         with self.assertRaises(management.CommandError) as ce:
-            management.call_command('generate_reports',
+            management.call_command(
+                'generate_reports',
                 '--start', '2016-01-01', '--end', '2016-02-01',
                 '--email-to', 'foo@example.com',
                 '--email-subject', 'The Email Subject')
@@ -38,7 +34,8 @@ class ManagementCommandsTests(TestCase):
     @mock.patch("reports.tasks.generate_report.apply_async")
     def test_command_successful(self, mock_generation):
         tmp_file = self.mk_tempfile()
-        management.call_command('generate_reports',
+        management.call_command(
+            'generate_reports',
             '--start', '2016-01-01', '--end', '2016-02-01',
             '--output-file', tmp_file.name,
             '--email-to', 'foo@example.com',
