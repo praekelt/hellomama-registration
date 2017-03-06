@@ -83,7 +83,7 @@ class Command(BaseCommand):
             end_date = one_month_after(start_date)
 
         generate_report(output_file=output_file,
-                            start_date=kwargs['start'], end_date=end_date,
-                            email_recipients=kwargs['email_to'],
-                            email_sender=kwargs['email_from'],
-                            email_subject=kwargs['email_subject'])
+                        start_date=kwargs['start'], end_date=end_date,
+                        email_recipients=kwargs['email_to'],
+                        email_sender=kwargs['email_from'],
+                        email_subject=kwargs['email_subject'])
