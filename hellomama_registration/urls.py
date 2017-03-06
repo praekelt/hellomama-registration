@@ -20,4 +20,5 @@ urlpatterns = patterns(
     url(r'^', include('registrations.urls')),
     url(r'^', include('changes.urls')),
     url(r'^', include('uniqueids.urls')),
+    url(r'^', include('reports.urls')),
 )
