@@ -31,7 +31,7 @@ class ManagementCommandsTests(TestCase):
         self.assertEqual(
             str(ce.exception), "Please specify --output-file.")
 
-    @mock.patch("reports.tasks.generate_report.apply_async")
+    @mock.patch("reports.tasks.generate_report.run")
     def test_command_successful(self, mock_generation):
         tmp_file = self.mk_tempfile()
         management.call_command(
@@ -40,12 +40,12 @@ class ManagementCommandsTests(TestCase):
             '--output-file', tmp_file.name,
             '--email-to', 'foo@example.com',
             '--email-subject', 'The Email Subject')
-        mock_generation.assert_called_once_with(kwargs={
-            'output_file': tmp_file.name,
-            'start_date': self.midnight(datetime.strptime('2016-01-01',
-                                                          '%Y-%m-%d')),
-            'end_date': self.midnight(datetime.strptime('2016-02-01',
-                                                        '%Y-%m-%d')),
-            'email_recipients': ['foo@example.com'],
-            'email_sender': settings.DEFAULT_FROM_EMAIL,
-            'email_subject': 'The Email Subject'})
+        mock_generation.assert_called_once_with(
+            output_file=tmp_file.name,
+            start_date=self.midnight(datetime.strptime('2016-01-01',
+                                                       '%Y-%m-%d')),
+            end_date=self.midnight(datetime.strptime('2016-02-01',
+                                                     '%Y-%m-%d')),
+            email_recipients=['foo@example.com'],
+            email_sender=settings.DEFAULT_FROM_EMAIL,
+            email_subject='The Email Subject')

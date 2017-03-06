@@ -82,11 +82,8 @@ class Command(BaseCommand):
         if end_date is None:
             end_date = one_month_after(start_date)
 
-        generate_report.apply_async(kwargs={
-            'output_file': output_file,
-            'start_date': kwargs['start'],
-            'end_date': end_date,
-            'email_recipients': kwargs['email_to'],
-            'email_sender': kwargs['email_from'],
-            'email_subject': kwargs['email_subject']
-        })
+        generate_report(output_file=output_file,
+                            start_date=kwargs['start'], end_date=end_date,
+                            email_recipients=kwargs['email_to'],
+                            email_sender=kwargs['email_from'],
+                            email_subject=kwargs['email_subject'])
