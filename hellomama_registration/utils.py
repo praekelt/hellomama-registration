@@ -174,7 +174,7 @@ def patch_subscription(subscription, data):
     """
     url = "%s/%s/%s/" % (settings.STAGE_BASED_MESSAGING_URL,
                          "subscriptions", subscription["id"])
-    data = data
+    data = json.dumps(data)
     headers = {
         'Authorization':
         'Token %s' % settings.STAGE_BASED_MESSAGING_TOKEN,
