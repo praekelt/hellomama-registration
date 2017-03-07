@@ -19,12 +19,14 @@ class ImplementAction(Task):
         # Get mother's identity
         mother = utils.get_identity(change.mother_id)
         # Get mother's registration
-        registration = Registration.objects.get(mother_id=change.mother_id)
+        registrations = Registration.objects.\
+            filter(mother_id=change.mother_id, stage='prebirth').\
+            order_by('-created_at')
 
         stage = 'postbirth'
         weeks = 0
-        voice_days = mother["details"]["preferred_msg_days"]
-        voice_times = mother["details"]["preferred_msg_times"]
+        voice_days = mother["details"].get("preferred_msg_days")
+        voice_times = mother["details"].get("preferred_msg_times")
 
         mother_short_name = utils.get_messageset_short_name(
             stage, 'mother', mother["details"]["preferred_msg_type"],
@@ -44,21 +46,23 @@ class ImplementAction(Task):
         SubscriptionRequest.objects.create(**mother_sub)
 
         # Make household subscription if required
-        if registration.data["msg_receiver"] != 'mother_only':
-            household_short_name = utils.get_messageset_short_name(
-                stage, 'household', mother["details"]["preferred_msg_type"],
-                weeks, "fri", "9_11")
-            household_msgset_id, household_msgset_schedule, seq_number =\
-                utils.get_messageset_schedule_sequence(
-                    household_short_name, weeks)
-            household_sub = {
-                "identity": mother["details"]["linked_to"],
-                "messageset": household_msgset_id,
-                "next_sequence_number": seq_number,
-                "lang": mother["details"]["preferred_language"],
-                "schedule": household_msgset_schedule
-            }
-            SubscriptionRequest.objects.create(**household_sub)
+        for registration in registrations:
+            if registration.data["msg_receiver"] != 'mother_only':
+                household_short_name = utils.get_messageset_short_name(
+                    stage, 'household', mother["details"]
+                    ["preferred_msg_type"], weeks, "fri", "9_11")
+                household_msgset_id, household_msgset_schedule, seq_number =\
+                    utils.get_messageset_schedule_sequence(
+                        household_short_name, weeks)
+                household_sub = {
+                    "identity": mother["details"]["linked_to"],
+                    "messageset": household_msgset_id,
+                    "next_sequence_number": seq_number,
+                    "lang": mother["details"]["preferred_language"],
+                    "schedule": household_msgset_schedule
+                }
+                SubscriptionRequest.objects.create(**household_sub)
+            break
 
         return "Change baby completed"
 
@@ -73,8 +77,8 @@ class ImplementAction(Task):
 
         stage = 'miscarriage'
         weeks = 0
-        voice_days = mother["details"]["preferred_msg_days"]
-        voice_times = mother["details"]["preferred_msg_times"]
+        voice_days = mother["details"].get("preferred_msg_days")
+        voice_times = mother["details"].get("preferred_msg_times")
 
         mother_short_name = utils.get_messageset_short_name(
             stage, 'mother', mother["details"]["preferred_msg_type"],
@@ -94,14 +98,18 @@ class ImplementAction(Task):
         SubscriptionRequest.objects.create(**mother_sub)
 
         # Get mother's registration
-        registration = Registration.objects.get(mother_id=change.mother_id)
-        if registration.data["msg_receiver"] != 'mother_only':
-            # Get household's current subscriptions
-            subscriptions = utils.get_subscriptions(
-                mother["details"]["linked_to"])
-            # Deactivate subscriptions
-            for subscription in subscriptions:
-                utils.deactivate_subscription(subscription)
+        registrations = Registration.objects.\
+            filter(mother_id=change.mother_id, stage='prebirth').\
+            order_by('-created_at')
+        for registration in registrations:
+            if registration.data["msg_receiver"] != 'mother_only':
+                # Get household's current subscriptions
+                subscriptions = utils.get_subscriptions(
+                    mother["details"]["linked_to"])
+                # Deactivate subscriptions
+                for subscription in subscriptions:
+                    utils.deactivate_subscription(subscription)
+            break
 
         return "Change loss completed"
 

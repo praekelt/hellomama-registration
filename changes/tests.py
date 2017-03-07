@@ -462,7 +462,7 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
         change = Change.objects.create(**change_data)
         # mock get subscription request
         subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
-        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
@@ -564,7 +564,7 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
         change = Change.objects.create(**change_data)
         # mock get subscription request
         subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
-        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
@@ -664,7 +664,7 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
         change = Change.objects.create(**change_data)
         # mock get subscription request
         subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
-        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
@@ -764,7 +764,7 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
         change = Change.objects.create(**change_data)
         # mock get subscription request
         subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
-        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
@@ -864,7 +864,7 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
         change = Change.objects.create(**change_data)
         # mock get current subscription request
         subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
-        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
@@ -964,7 +964,7 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
         change = Change.objects.create(**change_data)
         # mock get current subscription request
         subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
-        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
@@ -1064,7 +1064,7 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
         change = Change.objects.create(**change_data)
         # mock get subscription request
         subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
-        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
@@ -1164,7 +1164,7 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
         change = Change.objects.create(**change_data)
         # mock get subscription request
         subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
-        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
@@ -1264,7 +1264,7 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
         change = Change.objects.create(**change_data)
         # mock get subscription request
         subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
-        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
@@ -1364,7 +1364,7 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
         change = Change.objects.create(**change_data)
         # mock get current subscription request
         subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
-        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
@@ -1451,6 +1451,112 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
 class TestChangeBaby(AuthenticatedAPITestCase):
 
     @responses.activate
+    def test_change_baby_multiple_registrations(self):
+        # Setup
+        # make registration
+        self.make_registration_mother_only()
+        self.make_registration_mother_only()
+        # make change object
+        change_data = {
+            "mother_id": "846877e6-afaa-43de-acb1-09f61ad4de99",
+            "action": "change_baby",
+            "data": {},
+            "source": self.make_source_adminuser()
+        }
+        change = Change.objects.create(**change_data)
+        # mock get subscription request
+        subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": subscription_id,
+                    "identity": change_data["mother_id"],
+                    "active": True,
+                    "lang": "eng_NG"
+                }],
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock patch subscription request
+        responses.add(
+            responses.PATCH,
+            'http://localhost:8005/api/v1/subscriptions/%s/' % subscription_id,
+            json={"active": False},
+            status=200, content_type='application/json',
+        )
+        # mock identity lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8001/api/v1/identities/%s/' % change_data[
+                "mother_id"],
+            json={
+                "id": change_data["mother_id"],
+                "version": 1,
+                "details": {
+                    "default_addr_type": "msisdn",
+                    "addresses": {
+                        "msisdn": {
+                            "+2345059992222": {}
+                        }
+                    },
+                    "receiver_role": "mother",
+                    "linked_to": None,
+                    "preferred_msg_type": "audio",
+                    "preferred_msg_days": "mon_wed",
+                    "preferred_msg_times": "9_11",
+                    "preferred_language": "hau_NG"
+                },
+                "created_at": "2015-07-10T06:13:29.693272Z",
+                "updated_at": "2015-07-10T06:13:29.693298Z"
+            },
+            status=200, content_type='application/json',
+        )
+        # mock mother messageset lookup
+        query_string = '?short_name=postbirth.mother.audio.0_12.mon_wed.9_11'
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/%s' % query_string,
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 2,
+                    "short_name": 'postbirth.mother.audio.0_12.mon_wed.9_11',
+                    "default_schedule": 4
+                }]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock mother schedule lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/schedule/4/',
+            json={"id": 4, "day_of_week": "1,3"},
+            status=200, content_type='application/json',
+        )
+
+        # Execute
+        result = implement_action.apply_async(args=[change.id])
+
+        # Check
+        self.assertEqual(result.get(), "Change baby completed")
+        d = SubscriptionRequest.objects.last()
+        self.assertEqual(d.identity, "846877e6-afaa-43de-acb1-09f61ad4de99")
+        self.assertEqual(d.messageset, 2)
+        self.assertEqual(d.next_sequence_number, 1)
+        self.assertEqual(d.lang, "hau_NG")
+        self.assertEqual(d.schedule, 4)
+
+    @responses.activate
     def test_mother_only_change_baby(self):
         # Setup
         # make registration
@@ -1465,7 +1571,7 @@ class TestChangeBaby(AuthenticatedAPITestCase):
         change = Change.objects.create(**change_data)
         # mock get subscription request
         subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
-        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
@@ -1570,7 +1676,7 @@ class TestChangeBaby(AuthenticatedAPITestCase):
         change = Change.objects.create(**change_data)
         # mock get subscription request
         subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
-        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
@@ -1695,6 +1801,109 @@ class TestChangeBaby(AuthenticatedAPITestCase):
         self.assertEqual(d_hh.lang, "hau_NG")
         self.assertEqual(d_hh.schedule, 3)
 
+    @responses.activate
+    def test_mother_only_change_baby_text(self):
+        # Setup
+        # make registration
+        self.make_registration_mother_only()
+        # make change object
+        change_data = {
+            "mother_id": "846877e6-afaa-43de-acb1-09f61ad4de99",
+            "action": "change_baby",
+            "data": {},
+            "source": self.make_source_adminuser()
+        }
+        change = Change.objects.create(**change_data)
+        # mock get subscription request
+        subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": subscription_id,
+                    "identity": change_data["mother_id"],
+                    "active": True,
+                    "lang": "eng_NG"
+                }],
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock patch subscription request
+        responses.add(
+            responses.PATCH,
+            'http://localhost:8005/api/v1/subscriptions/%s/' % subscription_id,
+            json={"active": False},
+            status=200, content_type='application/json',
+        )
+        # mock identity lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8001/api/v1/identities/%s/' % change_data[
+                "mother_id"],
+            json={
+                "id": change_data["mother_id"],
+                "version": 1,
+                "details": {
+                    "default_addr_type": "msisdn",
+                    "addresses": {
+                        "msisdn": {
+                            "+2345059992222": {}
+                        }
+                    },
+                    "receiver_role": "mother",
+                    "linked_to": None,
+                    "preferred_msg_type": "text",
+                    "preferred_language": "hau_NG"
+                },
+                "created_at": "2015-07-10T06:13:29.693272Z",
+                "updated_at": "2015-07-10T06:13:29.693298Z"
+            },
+            status=200, content_type='application/json',
+        )
+        # mock mother messageset lookup
+        query_string = '?short_name=postbirth.mother.text.0_12'
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/%s' % query_string,
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 7,
+                    "short_name": 'postbirth.mother.text.0_12',
+                    "default_schedule": 1
+                }]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock mother schedule lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/schedule/1/',
+            json={"id": 1, "day_of_week": "1,3"},
+            status=200, content_type='application/json',
+        )
+
+        # Execute
+        result = implement_action.apply_async(args=[change.id])
+
+        # Check
+        self.assertEqual(result.get(), "Change baby completed")
+        d = SubscriptionRequest.objects.last()
+        self.assertEqual(d.identity, "846877e6-afaa-43de-acb1-09f61ad4de99")
+        self.assertEqual(d.messageset, 7)
+        self.assertEqual(d.next_sequence_number, 1)
+        self.assertEqual(d.lang, "hau_NG")
+        self.assertEqual(d.schedule, 1)
+
 
 class TestChangeLanguage(AuthenticatedAPITestCase):
 
@@ -1716,7 +1925,7 @@ class TestChangeLanguage(AuthenticatedAPITestCase):
         change = Change.objects.create(**change_data)
         # mock get subscription request
         subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
-        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
@@ -1767,7 +1976,7 @@ class TestChangeLanguage(AuthenticatedAPITestCase):
         change = Change.objects.create(**change_data)
         # mock mother get subscription request
         subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
-        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
@@ -1794,7 +2003,7 @@ class TestChangeLanguage(AuthenticatedAPITestCase):
         )
         # mock household get subscription request
         subscription_id = "ece53dbd-962f-4b9a-8546-759b059a2ae1"
-        query_string = '?active=True&id=%s' % change_data["data"][
+        query_string = '?active=True&identity=%s' % change_data["data"][
             "household_id"]
         responses.add(
             responses.GET,
@@ -1849,7 +2058,7 @@ class TestChangeUnsubscribeHousehold(AuthenticatedAPITestCase):
         change = Change.objects.create(**change_data)
         # mock get subscription request
         subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
-        query_string = '?active=True&id=%s' % change_data["data"][
+        query_string = '?active=True&identity=%s' % change_data["data"][
             "household_id"]
         responses.add(
             responses.GET,
@@ -1903,7 +2112,7 @@ class TestChangeUnsubscribeMother(AuthenticatedAPITestCase):
         change = Change.objects.create(**change_data)
         # mock get subscription request
         subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
-        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
@@ -1940,6 +2149,112 @@ class TestChangeUnsubscribeMother(AuthenticatedAPITestCase):
 class TestChangeLoss(AuthenticatedAPITestCase):
 
     @responses.activate
+    def test_change_loss_multiple_registrations(self):
+        # Setup
+        # make registration
+        self.make_registration_mother_only()
+        self.make_registration_mother_only()
+        # make change object
+        change_data = {
+            "mother_id": "846877e6-afaa-43de-acb1-09f61ad4de99",
+            "action": "change_loss",
+            "data": {"reason": "miscarriage"},
+            "source": self.make_source_adminuser()
+        }
+        change = Change.objects.create(**change_data)
+        # mock get subscription request
+        subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": subscription_id,
+                    "identity": change_data["mother_id"],
+                    "active": True,
+                    "lang": "eng_NG"
+                }],
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock patch subscription request
+        responses.add(
+            responses.PATCH,
+            'http://localhost:8005/api/v1/subscriptions/%s/' % subscription_id,
+            json={"active": False},
+            status=200, content_type='application/json',
+        )
+        # mock identity lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8001/api/v1/identities/%s/' % change_data[
+                "mother_id"],
+            json={
+                "id": change_data["mother_id"],
+                "version": 1,
+                "details": {
+                    "default_addr_type": "msisdn",
+                    "addresses": {
+                        "msisdn": {
+                            "+2345059992222": {}
+                        }
+                    },
+                    "receiver_role": "mother",
+                    "linked_to": None,
+                    "preferred_msg_type": "audio",
+                    "preferred_msg_days": "mon_wed",
+                    "preferred_msg_times": "9_11",
+                    "preferred_language": "hau_NG"
+                },
+                "created_at": "2015-07-10T06:13:29.693272Z",
+                "updated_at": "2015-07-10T06:13:29.693298Z"
+            },
+            status=200, content_type='application/json',
+        )
+        # mock mother messageset lookup
+        query_string = '?short_name=miscarriage.mother.audio.0_2.mon_wed.9_11'
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/%s' % query_string,
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 19,
+                    "short_name": 'miscarriage.mother.audio.0_2.mon_wed.9_11',
+                    "default_schedule": 4
+                }]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock mother schedule lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/schedule/4/',
+            json={"id": 4, "day_of_week": "1,3"},
+            status=200, content_type='application/json',
+        )
+
+        # Execute
+        result = implement_action.apply_async(args=[change.id])
+
+        # Check
+        self.assertEqual(result.get(), "Change loss completed")
+        d = SubscriptionRequest.objects.last()
+        self.assertEqual(d.identity, "846877e6-afaa-43de-acb1-09f61ad4de99")
+        self.assertEqual(d.messageset, 19)
+        self.assertEqual(d.next_sequence_number, 1)
+        self.assertEqual(d.lang, "hau_NG")
+        self.assertEqual(d.schedule, 4)
+
+    @responses.activate
     def test_mother_only_change_loss(self):
         # Setup
         # make registration
@@ -1954,7 +2269,7 @@ class TestChangeLoss(AuthenticatedAPITestCase):
         change = Change.objects.create(**change_data)
         # mock get subscription request
         subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
-        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
@@ -2059,7 +2374,7 @@ class TestChangeLoss(AuthenticatedAPITestCase):
         change = Change.objects.create(**change_data)
         # mock mother get subscription request
         subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
-        query_string = '?active=True&id=%s' % change_data["mother_id"]
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
@@ -2138,7 +2453,7 @@ class TestChangeLoss(AuthenticatedAPITestCase):
         )
         # mock friend get subscription request
         subscription_id = "ece53dbd-962f-4b9a-8546-759b059a2ae1"
-        query_string = '?active=True&id=%s' % (
+        query_string = '?active=True&identity=%s' % (
             "629eaf3c-04e5-4404-8a27-3ab3b811326a")
         responses.add(
             responses.GET,
@@ -2176,6 +2491,109 @@ class TestChangeLoss(AuthenticatedAPITestCase):
         self.assertEqual(d.next_sequence_number, 1)
         self.assertEqual(d.lang, "hau_NG")
         self.assertEqual(d.schedule, 4)
+
+    @responses.activate
+    def test_mother_only_change_loss_text(self):
+        # Setup
+        # make registration
+        self.make_registration_mother_only()
+        # make change object
+        change_data = {
+            "mother_id": "846877e6-afaa-43de-acb1-09f61ad4de99",
+            "action": "change_loss",
+            "data": {"reason": "miscarriage"},
+            "source": self.make_source_adminuser()
+        }
+        change = Change.objects.create(**change_data)
+        # mock get subscription request
+        subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": subscription_id,
+                    "identity": change_data["mother_id"],
+                    "active": True,
+                    "lang": "eng_NG"
+                }],
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock patch subscription request
+        responses.add(
+            responses.PATCH,
+            'http://localhost:8005/api/v1/subscriptions/%s/' % subscription_id,
+            json={"active": False},
+            status=200, content_type='application/json',
+        )
+        # mock identity lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8001/api/v1/identities/%s/' % change_data[
+                "mother_id"],
+            json={
+                "id": change_data["mother_id"],
+                "version": 1,
+                "details": {
+                    "default_addr_type": "msisdn",
+                    "addresses": {
+                        "msisdn": {
+                            "+2345059992222": {}
+                        }
+                    },
+                    "receiver_role": "mother",
+                    "linked_to": None,
+                    "preferred_msg_type": "text",
+                    "preferred_language": "hau_NG"
+                },
+                "created_at": "2015-07-10T06:13:29.693272Z",
+                "updated_at": "2015-07-10T06:13:29.693298Z"
+            },
+            status=200, content_type='application/json',
+        )
+        # mock mother messageset lookup
+        query_string = '?short_name=miscarriage.mother.text.0_2'
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/%s' % query_string,
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 18,
+                    "short_name": 'miscarriage.mother.text.0_2',
+                    "default_schedule": 1
+                }]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock mother schedule lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/schedule/1/',
+            json={"id": 1, "day_of_week": "0,2"},
+            status=200, content_type='application/json',
+        )
+
+        # Execute
+        result = implement_action.apply_async(args=[change.id])
+
+        # Check
+        self.assertEqual(result.get(), "Change loss completed")
+        d = SubscriptionRequest.objects.last()
+        self.assertEqual(d.identity, "846877e6-afaa-43de-acb1-09f61ad4de99")
+        self.assertEqual(d.messageset, 18)
+        self.assertEqual(d.next_sequence_number, 1)
+        self.assertEqual(d.lang, "hau_NG")
+        self.assertEqual(d.schedule, 1)
 
 
 class TestMetrics(AuthenticatedAPITestCase):
