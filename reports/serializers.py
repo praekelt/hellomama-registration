@@ -24,7 +24,7 @@ class ReportGenerationSerializer(serializers.Serializer):
         try:
             date = midnight_validator(value)
         except ValueError as e:
-            raise serializers.ValidationError(e.message)
+            raise serializers.ValidationError(str(e))
         return date
 
     def validate_start_date(self, value):
