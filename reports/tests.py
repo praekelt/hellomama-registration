@@ -901,7 +901,8 @@ class ReportsViewTest(TestCase):
         request = self.adminclient.post('/api/v1/reports/', json.dumps({}),
                                         content_type='application/json')
         self.assertEqual(request.status_code, 400)
-        self.assertEqual(request.data, ["Please specify 'output_file'."])
+        self.assertEqual(request.data,
+                         {'output_file': [u'This field is required.']})
 
     @mock.patch("reports.tasks.generate_report.apply_async")
     def test_post_successful(self, mock_generation):
@@ -929,3 +930,24 @@ class ReportsViewTest(TestCase):
             email_recipients=['foo@example.com'],
             email_sender=settings.DEFAULT_FROM_EMAIL,
             email_subject='The Email Subject')
+
+    def test_response_on_incorrect_date_format(self):
+        tmp_file = self.mk_tempfile()
+        data = {
+            'output_file': tmp_file.name,
+            'start_date': '2016:01:01',
+            'end_date': '2016:02:01',
+            'email_to': ['foo@example.com'],
+            'email_subject': 'The Email Subject'
+        }
+
+        request = self.adminclient.post('/api/v1/reports/',
+                                        json.dumps(data),
+                                        content_type='application/json')
+        self.assertEqual(request.status_code, 400)
+        self.assertEqual(request.data, {
+            'start_date':
+                ["time data '2016:01:01' does not match format '%Y-%m-%d'"],
+            'end_date':
+                ["time data '2016:02:01' does not match format '%Y-%m-%d'"]
+            })
