@@ -895,7 +895,7 @@ class ReportsViewTest(TestCase):
         # Authenticated as an admin user
         request = self.adminclient.post('/api/v1/reports/', json.dumps(data),
                                         content_type='application/json')
-        self.assertEqual(request.status_code, 200)
+        self.assertEqual(request.status_code, 202)
 
     def test_output_file_required(self):
         request = self.adminclient.post('/api/v1/reports/', json.dumps({}),
@@ -918,7 +918,7 @@ class ReportsViewTest(TestCase):
         request = self.adminclient.post('/api/v1/reports/',
                                         json.dumps(data),
                                         content_type='application/json')
-        self.assertEqual(request.status_code, 200)
+        self.assertEqual(request.status_code, 202)
         self.assertEqual(request.data, {"report_generation_requested": True})
 
         mock_generation.assert_called_once_with(

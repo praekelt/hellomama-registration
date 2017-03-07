@@ -29,6 +29,6 @@ class ReportsView(APIView):
                                     email_recipients=email_recipients,
                                     email_sender=email_sender,
                                     email_subject=email_subject)
-        status = 200
+        status = 202
         resp = {"report_generation_requested": True}
         return Response(resp, status=status)
