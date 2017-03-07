@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.utils import timezone
 from rest_framework import serializers
 from reports.utils import midnight, midnight_validator, one_month_after
@@ -5,12 +6,12 @@ from reports.utils import midnight, midnight_validator, one_month_after
 
 class ReportGenerationSerializer(serializers.Serializer):
     output_file = serializers.CharField()
-    start_date = serializers.CharField(allow_blank=True, required=False)
-    end_date = serializers.CharField(allow_blank=True, required=False)
-    email_to = serializers.ListField(
-        child=serializers.EmailField(), required=False)
-    email_from = serializers.EmailField(allow_blank=True, required=False)
-    email_subject = serializers.CharField(allow_blank=True, required=False)
+    start_date = serializers.CharField(required=False)
+    end_date = serializers.CharField(required=False)
+    email_to = serializers.ListField(child=serializers.EmailField(),
+                                     default=[])
+    email_from = serializers.EmailField(default=settings.DEFAULT_FROM_EMAIL)
+    email_subject = serializers.CharField(default='HelloMama Generated Report')
 
     def validate(self, data):
         if 'start_date' not in data:
