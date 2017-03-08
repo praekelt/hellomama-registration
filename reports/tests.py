@@ -1,5 +1,11 @@
+import json
 import pytz
 import responses
+
+try:
+    import mock
+except ImportError:
+    from unittest import mock
 
 from datetime import datetime
 from django.conf import settings
@@ -8,6 +14,8 @@ from django.core import mail
 from django.db.models.signals import post_save
 from django.test import TestCase, override_settings
 from openpyxl import load_workbook
+from rest_framework.authtoken.models import Token
+from rest_framework.test import APIClient
 from rest_hooks.models import model_saved
 from tempfile import NamedTemporaryFile
 
@@ -826,3 +834,120 @@ class GenerateReportTest(TestCase):
                 1,
             ]
         )
+
+
+class ReportsViewTest(TestCase):
+    def setUp(self):
+        self.adminclient = APIClient()
+        self.normalclient = APIClient()
+        self.otherclient = APIClient()
+
+        # Admin User setup
+        self.adminusername = 'testadminuser'
+        self.adminpassword = 'testadminpass'
+        self.adminuser = User.objects.create_superuser(
+            self.adminusername,
+            'testadminuser@example.com',
+            self.adminpassword)
+        admintoken = Token.objects.create(user=self.adminuser)
+        self.admintoken = admintoken.key
+        self.adminclient.credentials(
+            HTTP_AUTHORIZATION='Token ' + self.admintoken)
+
+        # Normal User setup
+        self.normalusername = 'testnormaluser'
+        self.normalpassword = 'testnormalpass'
+        self.normaluser = User.objects.create_user(
+            self.normalusername,
+            'testnormaluser@example.com',
+            self.normalpassword)
+        normaltoken = Token.objects.create(user=self.normaluser)
+        self.normaltoken = normaltoken.key
+        self.normalclient.credentials(
+            HTTP_AUTHORIZATION='Token ' + self.normaltoken)
+
+    def mk_tempfile(self):
+        tmp_file = NamedTemporaryFile(suffix='.xlsx')
+        self.addCleanup(tmp_file.close)
+        return tmp_file
+
+    def midnight(self, timestamp):
+        return timestamp.replace(hour=0, minute=0, second=0, microsecond=0,
+                                 tzinfo=pytz.timezone(settings.TIME_ZONE))
+
+    @mock.patch("reports.tasks.generate_report.apply_async")
+    def test_admin_auth_required(self, mock_generation):
+        tmp_file = self.mk_tempfile()
+        data = {'output_file': tmp_file.name}
+
+        # Without authentication
+        request = self.otherclient.post('/api/v1/reports/', json.dumps(data),
+                                        content_type='application/json')
+        self.assertEqual(request.status_code, 401,
+                         "Authentication should be required.")
+
+        # Authenticated as a normal user
+        request = self.normalclient.post('/api/v1/reports/', json.dumps(data),
+                                         content_type='application/json')
+        self.assertEqual(request.status_code, 403,
+                         "Normal users should not have access to the reports")
+
+        # Authenticated as an admin user
+        request = self.adminclient.post('/api/v1/reports/', json.dumps(data),
+                                        content_type='application/json')
+        self.assertEqual(request.status_code, 202)
+
+    def test_output_file_required(self):
+        request = self.adminclient.post('/api/v1/reports/', json.dumps({}),
+                                        content_type='application/json')
+        self.assertEqual(request.status_code, 400)
+        self.assertEqual(request.data,
+                         {'output_file': [u'This field is required.']})
+
+    @mock.patch("reports.tasks.generate_report.apply_async")
+    def test_post_successful(self, mock_generation):
+        tmp_file = self.mk_tempfile()
+        data = {
+            'output_file': tmp_file.name,
+            'start_date': '2016-01-01',
+            'end_date': '2016-02-01',
+            'email_to': ['foo@example.com'],
+            'email_subject': 'The Email Subject'
+        }
+
+        request = self.adminclient.post('/api/v1/reports/',
+                                        json.dumps(data),
+                                        content_type='application/json')
+        self.assertEqual(request.status_code, 202)
+        self.assertEqual(request.data, {"report_generation_requested": True})
+
+        mock_generation.assert_called_once_with(
+            output_file=tmp_file.name,
+            start_date=self.midnight(datetime.strptime('2016-01-01',
+                                                       '%Y-%m-%d')),
+            end_date=self.midnight(datetime.strptime('2016-02-01',
+                                                     '%Y-%m-%d')),
+            email_recipients=['foo@example.com'],
+            email_sender=settings.DEFAULT_FROM_EMAIL,
+            email_subject='The Email Subject')
+
+    def test_response_on_incorrect_date_format(self):
+        tmp_file = self.mk_tempfile()
+        data = {
+            'output_file': tmp_file.name,
+            'start_date': '2016:01:01',
+            'end_date': '2016:02:01',
+            'email_to': ['foo@example.com'],
+            'email_subject': 'The Email Subject'
+        }
+
+        request = self.adminclient.post('/api/v1/reports/',
+                                        json.dumps(data),
+                                        content_type='application/json')
+        self.assertEqual(request.status_code, 400)
+        self.assertEqual(request.data, {
+            'start_date':
+                ["time data '2016:01:01' does not match format '%Y-%m-%d'"],
+            'end_date':
+                ["time data '2016:02:01' does not match format '%Y-%m-%d'"]
+            })

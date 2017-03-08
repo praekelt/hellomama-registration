@@ -1,14 +1,10 @@
-import pytz
-import calendar
-
-from datetime import datetime, timedelta
-
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.core.validators import EmailValidator
 from django.utils import timezone
 
 from reports.tasks import generate_report
+from reports.utils import midnight, midnight_validator, one_month_after
 
 
 def mk_validator(django_validator):
@@ -16,21 +12,6 @@ def mk_validator(django_validator):
         django_validator()(inputstr)
         return inputstr
     return validator
-
-
-def midnight(timestamp):
-    return timestamp.replace(hour=0, minute=0, second=0, microsecond=0)
-
-
-def one_month_after(timestamp):
-    weekday, number_of_days = calendar.monthrange(
-        timestamp.year, timestamp.month)
-    return timestamp + timedelta(days=number_of_days)
-
-
-def midnight_validator(inputstr):
-    return midnight(datetime.strptime(inputstr, '%Y-%m-%d')).replace(
-        tzinfo=pytz.timezone(settings.TIME_ZONE))
 
 
 class Command(BaseCommand):
