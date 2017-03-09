@@ -921,15 +921,13 @@ class ReportsViewTest(TestCase):
         self.assertEqual(request.status_code, 202)
         self.assertEqual(request.data, {"report_generation_requested": True})
 
-        mock_generation.assert_called_once_with(
-            output_file=tmp_file.name,
-            start_date=self.midnight(datetime.strptime('2016-01-01',
-                                                       '%Y-%m-%d')),
-            end_date=self.midnight(datetime.strptime('2016-02-01',
-                                                     '%Y-%m-%d')),
-            email_recipients=['foo@example.com'],
-            email_sender=settings.DEFAULT_FROM_EMAIL,
-            email_subject='The Email Subject')
+        mock_generation.assert_called_once_with(kwargs={
+            "output_file": tmp_file.name,
+            "start_date": '2016-01-01',
+            "end_date": '2016-02-01',
+            "email_recipients": ['foo@example.com'],
+            "email_sender": settings.DEFAULT_FROM_EMAIL,
+            "email_subject": 'The Email Subject'})
 
     def test_response_on_incorrect_date_format(self):
         tmp_file = self.mk_tempfile()

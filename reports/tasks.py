@@ -9,6 +9,7 @@ from django.core.mail import EmailMessage
 from django.utils.dateparse import parse_datetime
 from functools import partial
 from openpyxl import Workbook
+from six import string_types
 
 from seed_services_client import (IdentityStoreApiClient,
                                   StageBasedMessagingApiClient,
@@ -16,7 +17,7 @@ from seed_services_client import (IdentityStoreApiClient,
 
 from registrations.models import Registration
 from changes.models import Change
-from reports.utils import parse_cursor_params
+from reports.utils import parse_cursor_params, midnight_validator
 
 
 class SendEmail(Task):
@@ -83,6 +84,11 @@ class GenerateReport(Task):
             email_sender=settings.DEFAULT_FROM_EMAIL,
             email_subject='Seed Control Interface Generated Report',
             **kwargs):
+
+        if isinstance(start_date, string_types):
+            start_date = midnight_validator(start_date)
+        if isinstance(end_date, string_types):
+            end_date = midnight_validator(end_date)
 
         self.identity_cache = {}
         self.messageset_cache = {}
