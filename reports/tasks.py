@@ -9,6 +9,7 @@ from django.core.mail import EmailMessage
 from django.utils.dateparse import parse_datetime
 from functools import partial
 from openpyxl import Workbook
+from six import string_types
 
 from seed_services_client import (IdentityStoreApiClient,
                                   StageBasedMessagingApiClient,
@@ -84,9 +85,9 @@ class GenerateReport(Task):
             email_subject='Seed Control Interface Generated Report',
             **kwargs):
 
-        if type(start_date) is unicode:
+        if isinstance(start_date, string_types):
             start_date = midnight_validator(start_date)
-        if type(end_date) is unicode:
+        if isinstance(end_date, string_types):
             end_date = midnight_validator(end_date)
 
         self.identity_cache = {}
