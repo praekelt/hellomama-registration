@@ -1,3 +1,4 @@
+from datetime import datetime
 from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -18,12 +19,13 @@ class ReportsView(APIView):
 
         data = serializer.validated_data
 
-        generate_report.apply_async(output_file=data['output_file'],
-                                    start_date=data['start_date'],
-                                    end_date=data['end_date'],
-                                    email_recipients=data['email_to'],
-                                    email_sender=data['email_from'],
-                                    email_subject=data['email_subject'])
+        generate_report.apply_async(kwargs={
+            "output_file": data['output_file'],
+            "start_date": datetime.strftime(data['start_date'], '%Y-%m-%d'),
+            "end_date": datetime.strftime(data['end_date'], '%Y-%m-%d'),
+            "email_recipients": data['email_to'],
+            "email_sender": data['email_from'],
+            "email_subject": data['email_subject']})
         status = 202
         resp = {"report_generation_requested": True}
         return Response(resp, status=status)

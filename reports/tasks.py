@@ -16,7 +16,7 @@ from seed_services_client import (IdentityStoreApiClient,
 
 from registrations.models import Registration
 from changes.models import Change
-from reports.utils import parse_cursor_params
+from reports.utils import parse_cursor_params, midnight_validator
 
 
 class SendEmail(Task):
@@ -83,6 +83,11 @@ class GenerateReport(Task):
             email_sender=settings.DEFAULT_FROM_EMAIL,
             email_subject='Seed Control Interface Generated Report',
             **kwargs):
+
+        if type(start_date) is unicode:
+            start_date = midnight_validator(start_date)
+        if type(end_date) is unicode:
+            end_date = midnight_validator(end_date)
 
         self.identity_cache = {}
         self.messageset_cache = {}
