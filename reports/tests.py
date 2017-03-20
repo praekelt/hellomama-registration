@@ -20,14 +20,10 @@ from rest_hooks.models import model_saved
 from tempfile import NamedTemporaryFile
 
 from registrations.models import (
-    Source, Registration, registration_post_save, fire_created_metric,
+    Registration, registration_post_save, fire_created_metric,
     fire_unique_operator_metric, fire_message_type_metric, fire_source_metric,
     fire_receiver_type_metric, fire_language_metric, fire_state_metric,
     fire_role_metric)
-from changes.models import (
-    Change, change_post_save, fire_language_change_metric,
-    fire_baby_change_metric, fire_loss_change_metric,
-    fire_message_change_metric)
 from .utils import parse_cursor_params
 from .tasks import generate_report
 
@@ -70,23 +66,6 @@ class GenerateReportTest(TestCase):
             "Registration model still has post_save listeners. Make sure"
             " helpers cleaned up properly in earlier tests.")
 
-        assert has_listeners(Change), (
-            "Change model has no post_save listeners. Make sure"
-            " helpers cleaned up properly in earlier tests.")
-        post_save.disconnect(receiver=change_post_save,
-                             sender=Change)
-        post_save.disconnect(receiver=fire_language_change_metric,
-                             sender=Change)
-        post_save.disconnect(receiver=fire_baby_change_metric,
-                             sender=Change)
-        post_save.disconnect(receiver=fire_loss_change_metric,
-                             sender=Change)
-        post_save.disconnect(receiver=fire_message_change_metric,
-                             sender=Change)
-        assert not has_listeners(Change), (
-            "Change model still has post_save listeners. Make sure"
-            " helpers cleaned up properly in earlier tests.")
-
     def tearDown(self):
         def has_listeners(class_name):
             return post_save.has_listeners(class_name)
@@ -107,20 +86,6 @@ class GenerateReportTest(TestCase):
                           sender=Registration)
         post_save.connect(receiver=fire_role_metric,
                           sender=Registration)
-
-        assert not has_listeners(Change), (
-            "Change model still has post_save listeners. Make sure"
-            " helpers removed them properly in earlier tests.")
-        post_save.connect(receiver=change_post_save,
-                          sender=Change)
-        post_save.connect(receiver=fire_language_change_metric,
-                          sender=Change)
-        post_save.connect(receiver=fire_baby_change_metric,
-                          sender=Change)
-        post_save.connect(receiver=fire_loss_change_metric,
-                          sender=Change)
-        post_save.connect(receiver=fire_message_change_metric,
-                          sender=Change)
 
         post_save.connect(receiver=model_saved,
                           dispatch_uid='instance-saved-hook')
@@ -166,25 +131,6 @@ class GenerateReportTest(TestCase):
                     'reg_type': 'reg_type',
                 },
                 source_id=1
-            )
-
-    def add_changes(self, num=1):
-        user = User.objects.create_user('un1', 'email@example.com', 'pw')
-        data = {
-            "name": "test_ussd_source_adminuser",
-            "authority": "hw_full",
-            "user": user
-        }
-        source = Source.objects.create(**data)
-        for i in range(num):
-            Change.objects.create(
-                id="b13e7b77-9ff6-4099-b87e-38d450f5b8cf",
-                action="change_loss",
-                mother_id="8311c23d-f3c4-4cab-9e20-5208d77dcd1b",
-                data={}, validated=True, source=source,
-                created_at="2017-01-27T10:00:06.354178Z",
-                updated_at="2017-01-27T10:00:06.354178Z",
-                created_by=user, updated_by=user
             )
 
     def add_identity_callback(self, identity='operator_id'):
@@ -693,7 +639,7 @@ class GenerateReportTest(TestCase):
             [40, 20, '50.00%'])
 
     @responses.activate
-    def test_generate_report_optout_by_subscription(self):
+    def test_generate_report_optout_by_date(self):
         # Return no registrations or subscriptions for other reports
         self.add_blank_subscription_callback(next_=None)
 
@@ -721,119 +667,23 @@ class GenerateReportTest(TestCase):
 
         # Assert headers are set
         self.assertSheetRow(
-            tmp_file.name, 'Opt Outs by Subscription', 0,
+            tmp_file.name, 'Opt Outs by Date', 0,
             [
-                "Timestamp",
-                "Subscription Message Set",
-                "Receiver's Role",
-                "Reason",
+                "MSISDN",
+                "Optout Date",
+                "Request Source",
+                "Reason"
             ])
 
         # Assert row 1 is written
         self.assertSheetRow(
-            tmp_file.name, 'Opt Outs by Subscription', 1,
-            [
-                "2017-01-27T10:00:06.354178Z",
-                "prebirth.mother.audio.10_42.tue_thu.9_11",
-                "role",
-                "Test reason",
-            ])
-
-        # Assert that warning is written
-        self.assertSheetRow(
-            tmp_file.name, 'Opt Outs by Subscription', 2,
-            [
-                "NOTE: The message set is not guaranteed to be correct, as "
-                "the current structure of the data does not allow us to link "
-                "the opt out to a subscription, so this is a best-effort "
-                "guess.",
-                None,
-                None,
-                None,
-            ])
-
-    @responses.activate
-    def test_generate_report_optouts_by_date(self):
-        # Return no registrations or subscriptions for other reports
-        self.add_blank_subscription_callback(next_=None)
-        self.add_blank_outbound_callback(next_=None)
-
-        # Optouts, first page no results to make sure that we're paging
-        self.add_blank_optouts_callback()
-        self.add_optouts_callback()
-
-        # Callbacks for identities
-        self.add_identity_callback('8311c23d-f3c4-4cab-9e20-5208d77dcd1b')
-        self.add_identity_callback('operator_id')
-
-        # Callbacks for stage based messaging
-        self.add_subscriptions_callback(
-            '?active=False&completed=False&'
-            'created_before=2017-01-27T10%3A00%3A06.354178Z&'
-            'identity=8311c23d-f3c4-4cab-9e20-5208d77dcd1b')
-        self.add_subscriptions_callback(
-            '?active=False&completed=False&'
-            'created_before=2016-01-02+10%3A00%3A06%2B00%3A00&'
-            'identity=8311c23d-f3c4-4cab-9e20-5208d77dcd1b')
-        self.add_messageset_callback()
-
-        # Add registration
-        self.add_registrations()
-        reg = Registration.objects.all()[0]
-        reg.data['receiver_id'] = '8311c23d-f3c4-4cab-9e20-5208d77dcd1b'
-        reg.created_at = '2016-01-02 00:00:00'
-        reg.save()
-
-        # Changes, first page no results to make sure that we're paging
-        self.add_changes()
-        change = Change.objects.all()[0]
-        change.mother_id = '8311c23d-f3c4-4cab-9e20-5208d77dcd1b'
-        change.created_at = '2016-01-02 10:00:06'
-        change.save()
-
-        tmp_file = self.trigger_report_generation()
-        # Check headers
-        self.assertSheetRow(
-            tmp_file.name, 'Opt Outs by Date', 0,
-            [
-                "Timestamp",
-                "Registered Receiver",
-                "Opt Out Reason",
-                "Loss Subscription",
-                "Opt Out Receiver",
-                "Message Sets",
-                "Receivers",
-                "Number of Receivers",
-            ]
-        )
-        # Check optout from change
-        self.assertSheetRow(
             tmp_file.name, 'Opt Outs by Date', 1,
             [
-                "2016-01-02T10:00:06+00:00",
-                "msg_receiver",
-                "miscarriage",
-                "Yes",
-                "role messages",
-                "prebirth.mother.audio.10_42.tue_thu.9_11",
-                "role",
-                1,
-            ]
-        )
-        # Check optout from optout
-        self.assertSheetRow(
-            tmp_file.name, 'Opt Outs by Date', 2,
-            [
+                "+1234",
                 "2017-01-27T10:00:06.354178Z",
-                "msg_receiver",
+                "testsource",
                 "Test reason",
-                None,
-                "role messages",
-                "prebirth.mother.audio.10_42.tue_thu.9_11",
-                "role",
-                1,
-            ]
-        )
+            ])
 
 
 class ReportsViewTest(TestCase):
