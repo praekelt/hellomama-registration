@@ -726,7 +726,7 @@ class ReportsViewTest(TestCase):
                                  tzinfo=pytz.timezone(settings.TIME_ZONE))
 
     @mock.patch("reports.tasks.generate_report.apply_async")
-    def test_admin_auth_required(self, mock_generation):
+    def test_auth_required(self, mock_generation):
         tmp_file = self.mk_tempfile()
         data = {'output_file': tmp_file.name}
 
@@ -736,15 +736,9 @@ class ReportsViewTest(TestCase):
         self.assertEqual(request.status_code, 401,
                          "Authentication should be required.")
 
-        # Authenticated as a normal user
+        # With authenticated
         request = self.normalclient.post('/api/v1/reports/', json.dumps(data),
                                          content_type='application/json')
-        self.assertEqual(request.status_code, 403,
-                         "Normal users should not have access to the reports")
-
-        # Authenticated as an admin user
-        request = self.adminclient.post('/api/v1/reports/', json.dumps(data),
-                                        content_type='application/json')
         self.assertEqual(request.status_code, 202)
 
     def test_output_file_required(self):

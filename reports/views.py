@@ -1,5 +1,5 @@
 from datetime import datetime
-from rest_framework.permissions import IsAdminUser
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -11,7 +11,7 @@ class ReportsView(APIView):
     """ Reports Generation
         POST - starts up the task that generates the reports
     """
-    permission_classes = (IsAdminUser,)
+    permission_classes = (IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
         serializer = ReportGenerationSerializer(data=request.data)
