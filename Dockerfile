@@ -1,4 +1,8 @@
-FROM praekeltfoundation/django-bootstrap:onbuild
+FROM praekeltfoundation/django-bootstrap:py2
+
+COPY . /app
+RUN pip install -e .
+
 ENV DJANGO_SETTINGS_MODULE "hellomama_registration.settings"
 RUN ./manage.py collectstatic --noinput
-ENV APP_MODULE "hellomama_registration.wsgi:application"
+CMD ["hellomama_registration.wsgi:application"]
