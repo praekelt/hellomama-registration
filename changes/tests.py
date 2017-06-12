@@ -2995,7 +2995,7 @@ class ControlInterfaceOptoutViewTest(AuthenticatedAPITestCase):
     def test_ci_optout_invalid(self):
         request = {}
 
-        response = self.adminclient.post('/api/v1/optout_ci/',
+        response = self.adminclient.post('/api/v1/optout_admin/',
                                          json.dumps(request),
                                          content_type='application/json')
 
@@ -3010,7 +3010,7 @@ class ControlInterfaceOptoutViewTest(AuthenticatedAPITestCase):
         }
 
         self.make_source_adminuser()
-        response = self.adminclient.post('/api/v1/optout_ci/',
+        response = self.adminclient.post('/api/v1/optout_admin/',
                                          json.dumps(request),
                                          content_type='application/json')
 
