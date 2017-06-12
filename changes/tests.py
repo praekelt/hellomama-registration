@@ -2984,3 +2984,37 @@ class IdentityStoreOptoutViewTest(AuthenticatedAPITestCase):
                           '"identity", "optout_reason" and "optout_source" '
                           'must be specified.'})
         self.assertEqual(len(responses.calls), 0)
+
+
+class ControlInterfaceOptoutViewTest(AuthenticatedAPITestCase):
+
+    """
+    Tests related to the optout control interface view.
+    """
+
+    def test_ci_optout_invalid(self):
+        request = {}
+
+        response = self.adminclient.post('/api/v1/optout_ci/',
+                                         json.dumps(request),
+                                         content_type='application/json')
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(utils.json_decode(response.content),
+                         {'reason': '"identity" must be specified.'})
+        self.assertEqual(len(responses.calls), 0)
+
+    def test_ci_optout(self):
+        request = {
+            "identity": "mother-id-123"
+        }
+
+        self.make_source_adminuser()
+        response = self.adminclient.post('/api/v1/optout_ci/',
+                                         json.dumps(request),
+                                         content_type='application/json')
+
+        self.assertEqual(response.status_code, 200)
+        change = Change.objects.last()
+        self.assertEqual(change.mother_id, "mother-id-123")
+        self.assertEqual(change.action, "unsubscribe_mother_only")

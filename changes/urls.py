@@ -12,4 +12,6 @@ urlpatterns = [
     url(r'^api/v1/change/', views.ChangePost.as_view()),
     url(r'^api/v1/optout/', views.ReceiveIdentityStoreOptout.as_view(),
         name="identity_store_optout"),
+    url(r'^api/v1/optout_ci/', views.ReceiveControlInterfaceOptout.as_view(),
+        name="control_interface_optout")
 ]
