@@ -14,5 +14,5 @@ urlpatterns = [
         name="identity_store_optout"),
     url(r'^api/v1/optout_admin/',
         views.ReceiveControlInterfaceOptout.as_view(),
-        name="control_interface_optout")
+        name="optout_admin")
 ]
