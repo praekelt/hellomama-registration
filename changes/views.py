@@ -212,32 +212,16 @@ def fire_optout_message_type_metric(msg_type):
     })
 
 
-class ReceiveAdminOptout(mixins.CreateModelMixin,
-                         generics.GenericAPIView):
+class ReceiveAdminOptout(generics.CreateAPIView):
     permission_classes = (IsAuthenticated,)
+    serializer_class = ChangeSerializer
 
     def post(self, request, *args, **kwargs):
 
-        try:
-            data = utils.json_decode(request.body)
-        except ValueError as e:
-            return JsonResponse({'reason': "JSON decode error",
-                                'details': six.text_type(e)}, status=400)
-
-        try:
-            identity_id = data['identity']
-        except KeyError as e:
-            return JsonResponse({'reason': '"identity" must be specified.'},
-                                status=400)
-
         source = Source.objects.get(user=self.request.user)
-        request.data["source"] = source.id
 
-        Change.objects.create(**{
-            "mother_id": identity_id,
-            "action": "unsubscribe_mother_only",
-            "data": {"reason": "other"},
-            "source": source
-        })
+        request.data['source'] = source.id
+        request.data['data'] = {"reason": "other"}
+        request.data['action'] = "unsubscribe_mother_only"
 
-        return JsonResponse({})
+        return super(ReceiveAdminOptout, self).post(request, *args, **kwargs)

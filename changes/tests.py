@@ -2995,18 +2995,19 @@ class ControlInterfaceOptoutViewTest(AuthenticatedAPITestCase):
     def test_ci_optout_invalid(self):
         request = {}
 
+        self.make_source_adminuser()
         response = self.adminclient.post('/api/v1/optout_admin/',
                                          json.dumps(request),
                                          content_type='application/json')
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(utils.json_decode(response.content),
-                         {'reason': '"identity" must be specified.'})
+                         {"mother_id": ["This field is required."]})
         self.assertEqual(len(responses.calls), 0)
 
     def test_ci_optout(self):
         request = {
-            "identity": "mother-id-123"
+            "mother_id": "mother-id-123"
         }
 
         self.make_source_adminuser()
@@ -3014,7 +3015,7 @@ class ControlInterfaceOptoutViewTest(AuthenticatedAPITestCase):
                                          json.dumps(request),
                                          content_type='application/json')
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 201)
         change = Change.objects.last()
         self.assertEqual(change.mother_id, "mother-id-123")
         self.assertEqual(change.action, "unsubscribe_mother_only")
