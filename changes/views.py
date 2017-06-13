@@ -212,8 +212,8 @@ def fire_optout_message_type_metric(msg_type):
     })
 
 
-class ReceiveControlInterfaceOptout(mixins.CreateModelMixin,
-                                    generics.GenericAPIView):
+class ReceiveAdminOptout(mixins.CreateModelMixin,
+                         generics.GenericAPIView):
     permission_classes = (IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
