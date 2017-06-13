@@ -210,3 +210,18 @@ def fire_optout_message_type_metric(msg_type):
         'metric_name': total_key,
         'metric_value': total,
     })
+
+
+class ReceiveAdminOptout(generics.CreateAPIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = ChangeSerializer
+
+    def post(self, request, *args, **kwargs):
+
+        source = Source.objects.get(user=self.request.user)
+
+        request.data['source'] = source.id
+        request.data['data'] = {"reason": "other"}
+        request.data['action'] = "unsubscribe_mother_only"
+
+        return super(ReceiveAdminOptout, self).post(request, *args, **kwargs)
