@@ -3019,7 +3019,7 @@ class ControlInterfaceOptoutViewTest(AuthenticatedAPITestCase):
         change = Change.objects.last()
         self.assertEqual(change.mother_id, "mother-id-123")
         self.assertEqual(change.action, "unsubscribe_mother_only")
-        self.assertEqual(change.source.user, self.adminuser)
+        self.assertEqual(change.source.name, "test_ussd_source_adminuser")
 
     def test_ci_optout_no_source(self):
         request = {
