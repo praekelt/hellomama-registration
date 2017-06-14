@@ -218,7 +218,15 @@ class ReceiveAdminOptout(generics.CreateAPIView):
 
     def post(self, request, *args, **kwargs):
 
-        source = Source.objects.get(user=self.request.user)
+        sources = Source.objects.filter(user=self.request.user)
+        if sources:
+            source = sources[0]
+        else:
+            source = Source.objects.create(**{
+                "name": self.request.user.get_full_name(),
+                "user": self.request.user,
+                "authority": "advisor"
+            })
 
         request.data['source'] = source.id
         request.data['data'] = {"reason": "other"}
