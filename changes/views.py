@@ -222,7 +222,8 @@ class ReceiveAdminOptout(generics.CreateAPIView):
             user=self.request.user,
             defaults={
                 "authority": "advisor",
-                "name": self.request.user.get_full_name()
+                "name": (self.request.user.get_full_name() or
+                         self.request.user.username)
                 })
 
         request.data['source'] = source.id
