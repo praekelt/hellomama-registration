@@ -529,12 +529,12 @@ class PullThirdPartyRegistrations(Task):
                 serializer = RegistrationSerializer(data=reg_info)
                 serializer.is_valid(raise_exception=True)
                 serializer.save()
-            except Exception, error:
-                loop_error = Exception
+            except Exception as error:
+                loop_error = error
                 line['error'] = str(error)
                 ThirdPartyRegistrationError.objects.create(**{'data': line})
 
         if loop_error:
-            raise loop_error
+            raise
 
 pull_third_party_registrations = PullThirdPartyRegistrations()
