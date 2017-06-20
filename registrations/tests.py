@@ -38,7 +38,7 @@ from .models import (
     Source, Registration, SubscriptionRequest, registration_post_save,
     fire_created_metric, fire_unique_operator_metric, fire_message_type_metric,
     fire_source_metric, fire_receiver_type_metric, fire_language_metric,
-    fire_state_metric, fire_role_metric)
+    fire_state_metric, fire_role_metric, ThirdPartyRegistrationError)
 from .tasks import (
     validate_registration,
     is_valid_date, is_valid_uuid, is_valid_lang, is_valid_msg_type,
@@ -3314,3 +3314,101 @@ class TestRepopulateMetricsTask(TestCase):
             'foo.bar', datetime.utcfromtimestamp(300),
             datetime.utcfromtimestamp(500))
         mock_send_metric.assert_not_called()
+
+
+def override_get_data(self):
+    return [{
+        "mothers_phone_number": "07031221927",
+        "pregnancy_week": "13",
+        "preferred_msg_language": "english",
+        "type_of_registration": "prebirth",
+        "preferred_msg_type": "voice",
+        "message_days": "tuesday_and_thursday",
+        "message_time": "2-5pm",
+        "message_receiver": "mother_and_father",
+        "gatekeeper_phone_number": "07031221927"
+    }]
+
+
+def override_get_data_bad(self):
+    return [{
+        "mothers_phone_number": "",
+        "pregnancy_week": "13",
+        "preferred_msg_language": "english",
+        "type_of_registration": "prebirth",
+        "preferred_msg_type": "voice",
+        "message_days": "tuesday_and_thursday",
+        "message_time": "2-5pm",
+        "message_receiver": "",
+        "gatekeeper_phone_number": ""
+    }]
+
+
+class TestThirdPartyRegistrations(AuthenticatedAPITestCase):
+
+    def setUp(self):
+        tasks.PullThirdPartyRegistrations.get_data = override_get_data
+        super(TestThirdPartyRegistrations, self).setUp()
+
+    def mock_identity_lookup(self, msisdn, identity_id):
+        # mock friend MSISDN lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8001/api/v1/identities/search/?details__addresses__msisdn=%s' % msisdn,  # noqa
+            json={
+                "count": 1, "next": None, "previous": None,
+                "results": [{
+                    "id": identity_id
+                }]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+
+    @responses.activate
+    def test_start_pull_task(self):
+        self.make_source_adminuser()
+
+        self.mock_identity_lookup(
+            "%2B2347031221927", "4038a518-2940-4b15-9c5c-2b7b123b8735")
+        self.mock_identity_lookup(
+            "11111", "4038a518-1111-1111-1111-hfud7383gfyt")
+
+        response = self.adminclient.post('/api/v1/extregistration/',
+                                         content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code,
+                         status.HTTP_200_OK)
+
+        r = Registration.objects.last()
+        self.assertEqual(r.mother_id, "4038a518-2940-4b15-9c5c-2b7b123b8735")
+        self.assertEqual(r.stage, "prebirth")
+        self.assertEqual(r.data["msg_receiver"], "mother_father")
+        self.assertEqual(r.data["operator_id"],
+                         "4038a518-1111-1111-1111-hfud7383gfyt")
+        self.assertEqual(r.data["language"], "eng_NG")
+        self.assertEqual(r.data["msg_type"], "audio")
+        self.assertEqual(r.data["receiver_id"],
+                         "4038a518-2940-4b15-9c5c-2b7b123b8735")
+        self.assertEqual(r.data["voice_times"], "2_5")
+        self.assertEqual(r.data["voice_days"], "tue_thu")
+        self.assertEqual(r.data["last_period_date"], "20150518")
+
+    @responses.activate
+    def test_start_pull_task_error(self):
+        tasks.PullThirdPartyRegistrations.get_data = override_get_data_bad
+        self.make_source_adminuser()
+
+        self.mock_identity_lookup(
+            "11111", "4038a518-1111-1111-1111-hfud7383gfyt")
+
+        response = self.adminclient.post('/api/v1/extregistration/',
+                                         content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code,
+                         status.HTTP_200_OK)
+
+        self.assertEqual(Registration.objects.count(), 0)
+
+        e = ThirdPartyRegistrationError.objects.last()
+        self.assertEqual(e.data['error'], "{'source': [u'This field is required.'], 'mother_id': [u'This field may not be null.']}")  # noqa

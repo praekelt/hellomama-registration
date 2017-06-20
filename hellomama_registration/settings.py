@@ -334,4 +334,11 @@ EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '25'))
 EMAIL_SUBJECT_PREFIX = os.environ.get('EMAIL_SUBJECT_PREFIX', '[Django]')
 
+THIRDPARTY_REGISTRATIONS_URL = os.environ.get('THIRDPARTY_REGISTRATIONS_URL',
+                                              'REPLACEME')
+THIRDPARTY_REGISTRATIONS_USER = os.environ.get('THIRDPARTY_REGISTRATIONS_USER',
+                                               'REPLACEME')
+THIRDPARTY_REGISTRATIONS_PASSWORD = os.environ.get(
+    'THIRDPARTY_REGISTRATIONS_PASSWORD', 'REPLACEME')
+
 djcelery.setup_loader()
