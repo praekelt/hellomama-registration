@@ -3411,4 +3411,4 @@ class TestThirdPartyRegistrations(AuthenticatedAPITestCase):
         self.assertEqual(Registration.objects.count(), 0)
 
         e = ThirdPartyRegistrationError.objects.last()
-        self.assertEqual(e.data['error'], "{'source': [u'This field is required.'], 'mother_id': [u'This field may not be null.']}")  # noqa
+        self.assertEqual(e.data['error'], "{'mother_id': [u'This field may not be null.']}")  # noqa

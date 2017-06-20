@@ -498,7 +498,7 @@ class PullThirdPartyRegistrations(Task):
                 reg_info = {
                     "stage": line['type_of_registration'],
                     "mother_id": mother_id,
-                    "source_id": source.id,
+                    "source": source.id,
                     "data": {
                         "msg_receiver":
                             self.get_receiver(line['message_receiver']),
@@ -533,7 +533,7 @@ class PullThirdPartyRegistrations(Task):
                 serializer = RegistrationSerializer(data=reg_info)
                 serializer.is_valid(raise_exception=True)
 
-                Registration.objects.create(**reg_info)
+                Registration.objects.create(**serializer.validated_data)
             except Exception, error:
                 line['error'] = str(error)
                 ThirdPartyRegistrationError.objects.create(**{'data': line})
