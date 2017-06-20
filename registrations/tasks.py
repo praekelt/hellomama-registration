@@ -531,7 +531,7 @@ class PullThirdPartyRegistrations(Task):
                 serializer.save()
             except Exception as error:
                 loop_error = error
-                line['error'] = str(error)
+                line['error'] = json.dumps(error.detail)
                 ThirdPartyRegistrationError.objects.create(**{'data': line})
 
         if loop_error:
