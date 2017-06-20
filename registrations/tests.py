@@ -6,6 +6,7 @@ try:
 except ImportError:
     from io import StringIO
 import responses
+import openpyxl
 
 try:
     from urllib.parse import urlparse
@@ -31,6 +32,7 @@ from rest_hooks.models import model_saved, Hook
 from requests.exceptions import ConnectTimeout
 from requests_testadapter import TestAdapter, TestSession
 from go_http.metrics import MetricsApiClient
+from openpyxl.writer.excel import save_virtual_workbook
 
 from hellomama_registration import utils
 from registrations import tasks
@@ -3346,10 +3348,6 @@ def override_get_data_bad(self):
 
 class TestThirdPartyRegistrations(AuthenticatedAPITestCase):
 
-    def setUp(self):
-        tasks.PullThirdPartyRegistrations.get_data = override_get_data
-        super(TestThirdPartyRegistrations, self).setUp()
-
     def mock_identity_lookup(self, msisdn, identity_id):
         # mock friend MSISDN lookup
         responses.add(
@@ -3365,8 +3363,44 @@ class TestThirdPartyRegistrations(AuthenticatedAPITestCase):
             match_querystring=True
         )
 
+    def mock_excel_download(self):
+
+        wb = openpyxl.Workbook()
+        ws = wb.create_sheet("Forms")
+
+        data = override_get_data(None)[0]
+
+        col = 1
+        for key, value in data.items():
+            d = ws.cell(row=1, column=col)
+            d.value = key
+
+            d = ws.cell(row=2, column=col)
+            d.value = value
+
+            col += 1
+
+        responses.add(
+            responses.GET,
+            settings.THIRDPARTY_REGISTRATIONS_URL,
+            status=200,
+            body=save_virtual_workbook(wb)
+        )
+
+    @responses.activate
+    @override_settings(THIRDPARTY_REGISTRATIONS_URL='http://www.3rd.org/d/99/')
+    def test_get_data(self):
+
+        self.mock_excel_download()
+
+        task = tasks.PullThirdPartyRegistrations()
+        data = task.get_data()
+
+        self.assertEqual(data, override_get_data(None))
+
     @responses.activate
     def test_start_pull_task(self):
+        tasks.PullThirdPartyRegistrations.get_data = override_get_data
         self.make_source_adminuser()
 
         self.mock_identity_lookup(
@@ -3378,7 +3412,7 @@ class TestThirdPartyRegistrations(AuthenticatedAPITestCase):
                                          content_type='application/json')
         # Check
         self.assertEqual(response.status_code,
-                         status.HTTP_200_OK)
+                         status.HTTP_201_CREATED)
 
         r = Registration.objects.last()
         self.assertEqual(r.mother_id, "4038a518-2940-4b15-9c5c-2b7b123b8735")
@@ -3402,12 +3436,13 @@ class TestThirdPartyRegistrations(AuthenticatedAPITestCase):
         self.mock_identity_lookup(
             "11111", "4038a518-1111-1111-1111-hfud7383gfyt")
 
-        response = self.adminclient.post('/api/v1/extregistration/',
-                                         content_type='application/json')
-        # Check
-        self.assertEqual(response.status_code,
-                         status.HTTP_200_OK)
+        try:
+            self.adminclient.post('/api/v1/extregistration/',
+                                  content_type='application/json')
+        except:
+            pass
 
+        # Check
         self.assertEqual(Registration.objects.count(), 0)
 
         e = ThirdPartyRegistrationError.objects.last()

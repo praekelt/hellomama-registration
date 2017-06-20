@@ -15,6 +15,7 @@ from hellomama_registration.utils import get_available_metrics
 # from .tasks import scheduled_metrics
 from .tasks import pull_third_party_registrations
 
+
 class HookViewSet(viewsets.ModelViewSet):
     """
     Retrieve, create, update or destroy webhooks.
@@ -172,7 +173,7 @@ class ThirdPartyRegistrationView(APIView):
     permission_classes = (IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
-        status = 200
+        status = 201
         pull_third_party_registrations.apply_async(args=[self.request.user.id])
         resp = {"third_party_registration_pull_initiated": True}
         return Response(resp, status=status)

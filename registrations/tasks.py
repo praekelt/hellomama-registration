@@ -457,16 +457,10 @@ class PullThirdPartyRegistrations(Task):
         wb = load_workbook(filename=BytesIO(response.content))
         ws = wb.get_sheet_by_name('Forms')
 
-        columns = [
-            "mothers_phone_number",
-            "pregnancy_week",
-            "preferred_msg_language",
-            "type_of_registration",
-            "preferred_msg_type",
-            "message_days",
-            "message_time",
-            "message_receiver",
-            "gatekeeper_phone_number"]
+        columns = []
+        header_row = ws[1]
+        for cell in header_row:
+            columns.append(cell.value.replace('form.', ''))
 
         data = []
 
@@ -483,6 +477,8 @@ class PullThirdPartyRegistrations(Task):
         data = self.get_data()
 
         source = Source.objects.get(user=user_id)
+
+        loop_error = None
 
         for line in data:
 
@@ -532,10 +528,13 @@ class PullThirdPartyRegistrations(Task):
 
                 serializer = RegistrationSerializer(data=reg_info)
                 serializer.is_valid(raise_exception=True)
-
-                Registration.objects.create(**serializer.validated_data)
+                serializer.save()
             except Exception, error:
+                loop_error = Exception
                 line['error'] = str(error)
                 ThirdPartyRegistrationError.objects.create(**{'data': line})
+
+        if loop_error:
+            raise loop_error
 
 pull_third_party_registrations = PullThirdPartyRegistrations()
