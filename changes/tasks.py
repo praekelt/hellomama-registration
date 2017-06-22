@@ -131,16 +131,6 @@ class ImplementAction(Task):
         for subscription in subscriptions:
             utils.deactivate_subscription(subscription)
 
-        # Determine voice_days & voice_times
-        if change.data["msg_type"] == 'audio':
-            to_type = 'audio'
-            voice_days = change.data["voice_days"]
-            voice_times = change.data["voice_times"]
-        else:
-            to_type = 'text'
-            voice_days = None
-            voice_times = None
-
         if 'audio' in current_msgset["short_name"]:
             from_type = 'audio'
         else:
@@ -160,9 +150,22 @@ class ImplementAction(Task):
             stage = 'prebirth'
             weeks = 11  # just a placeholder to get the messageset_short_name
 
-        new_short_name = utils.get_messageset_short_name(
-            stage, 'mother', to_type,
-            weeks, voice_days, voice_times)
+        if change.data.get("new_short_name"):
+            new_short_name = change.get("new_short_name")
+        else:
+            # Determine voice_days & voice_times
+            if change.data["msg_type"] == 'audio':
+                to_type = 'audio'
+                voice_days = change.data["voice_days"]
+                voice_times = change.data["voice_times"]
+            else:
+                to_type = 'text'
+                voice_days = None
+                voice_times = None
+
+            new_short_name = utils.get_messageset_short_name(
+                stage, 'mother', to_type,
+                weeks, voice_days, voice_times)
 
         new_msgset_id, new_msgset_schedule, next_sequence_number =\
             utils.get_messageset_schedule_sequence(new_short_name, weeks)

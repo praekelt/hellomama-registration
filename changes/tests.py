@@ -2986,7 +2986,7 @@ class IdentityStoreOptoutViewTest(AuthenticatedAPITestCase):
         self.assertEqual(len(responses.calls), 0)
 
 
-class ControlInterfaceOptoutViewTest(AuthenticatedAPITestCase):
+class AdminViewsTest(AuthenticatedAPITestCase):
 
     """
     Tests related to the optout control interface view.
@@ -3065,3 +3065,95 @@ class ControlInterfaceOptoutViewTest(AuthenticatedAPITestCase):
         self.assertEqual(source.name, user.get_full_name())
         self.assertEqual(source.user, user)
         self.assertEqual(source.authority, "advisor")
+
+    def test_ci_change_no_identity(self):
+        request = {}
+
+        self.make_source_adminuser()
+        response = self.adminclient.post('/api/v1/change_admin/',
+                                         json.dumps(request),
+                                         content_type='application/json')
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(utils.json_decode(response.content),
+                         {"mother_id": ["This field is required."]})
+        self.assertEqual(len(responses.calls), 0)
+
+    def test_ci_change_invalid(self):
+        request = {
+            "mother_id": "846877e6-afaa-43de-acb1-09f61ad4de99"
+        }
+
+        self.make_source_adminuser()
+        response = self.adminclient.post('/api/v1/change_admin/',
+                                         json.dumps(request),
+                                         content_type='application/json')
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            utils.json_decode(response.content),
+            {"non_field_errors": ["One of these fields must be populated: messageset, language"]})  # noqa
+
+    def test_ci_change_language(self):
+        request = {
+            "mother_id": "846877e6-afaa-43de-acb1-09f61ad4de99",
+            "language": "eng_ZA"
+        }
+
+        self.make_source_adminuser()
+        response = self.adminclient.post('/api/v1/change_admin/',
+                                         json.dumps(request),
+                                         content_type='application/json')
+
+        self.assertEqual(response.status_code, 201)
+        change = Change.objects.last()
+        self.assertEqual(change.mother_id,
+                         "846877e6-afaa-43de-acb1-09f61ad4de99")
+        self.assertEqual(change.action, "change_language")
+        self.assertEqual(change.data, {"new_language": "eng_ZA"})
+
+    def test_ci_change_messaging(self):
+        request = {
+            "mother_id": "846877e6-afaa-43de-acb1-09f61ad4de99",
+            "messageset": "messageset_one"
+        }
+
+        self.make_source_adminuser()
+        response = self.adminclient.post('/api/v1/change_admin/',
+                                         json.dumps(request),
+                                         content_type='application/json')
+
+        self.assertEqual(response.status_code, 201)
+        change = Change.objects.last()
+        self.assertEqual(change.mother_id,
+                         "846877e6-afaa-43de-acb1-09f61ad4de99")
+        self.assertEqual(change.action, "change_messaging")
+        self.assertEqual(change.data, {"new_short_name": "messageset_one"})
+
+    def test_ci_change_language_and_messaging(self):
+        identity = "846877e6-afaa-43de-acb1-09f61ad4de99"
+        request = {
+            "mother_id": identity,
+            "messageset": "messageset_one",
+            "language": "eng_ZA"
+        }
+
+        self.make_source_adminuser()
+        response = self.adminclient.post('/api/v1/change_admin/',
+                                         json.dumps(request),
+                                         content_type='application/json')
+
+        self.assertEqual(response.status_code, 201)
+
+        changes = Change.objects.filter(mother_id=identity)
+        self.assertEqual(changes.count(), 2)
+
+        changes = Change.objects.filter(mother_id=identity,
+                                        action="change_messaging")
+        self.assertEqual(changes.count(), 1)
+        self.assertEqual(changes[0].data, {"new_short_name": "messageset_one"})
+
+        changes = Change.objects.filter(mother_id=identity,
+                                        action="change_language")
+        self.assertEqual(changes.count(), 1)
+        self.assertEqual(changes[0].data, {"new_language": "eng_ZA"})
