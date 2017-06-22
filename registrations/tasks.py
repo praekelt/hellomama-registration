@@ -397,7 +397,7 @@ repopulate_metrics = RepopulateMetrics()
 
 class PullThirdPartyRegistrations(Task):
 
-    def get_or_create_identity(self, msisdn):
+    def get_or_create_identity(self, msisdn, details={}):
 
         if not msisdn:
             return None
@@ -408,6 +408,9 @@ class PullThirdPartyRegistrations(Task):
         identities = utils.search_identities(params)
 
         for identity in identities:
+            if details:
+                identity['details'].update(details)
+                utils.patch_identity(identity['id'], identity['details'])
             return identity['id']
 
         identity = {
@@ -420,6 +423,7 @@ class PullThirdPartyRegistrations(Task):
                 }
             }
         }
+        identity['details'].update(details)
         identity = utils.create_identity(identity)['id']
         return identity
 
@@ -483,11 +487,22 @@ class PullThirdPartyRegistrations(Task):
         for line in data:
 
             try:
-                mother_id = self.get_or_create_identity(
-                    line['mothers_phone_number'])
+                operator_id = self.get_or_create_identity(
+                    line['health_worker_phone_number'])
 
-                # TODO: fix this - waiting for pathfinder
-                operator_id = self.get_or_create_identity("11111")
+                language = self.get_language(line['preferred_msg_language'])
+                receiver = self.get_receiver(line['message_receiver'])
+
+                identity_details = {
+                    "default_addr_type": "msisdn",
+                    "operator_id": operator_id,
+                    "preferred_language": language,
+                    "receiver_role": "mother",
+                    "gravida": line['gravida'],
+                }
+
+                mother_id = self.get_or_create_identity(
+                    line['mothers_phone_number'], identity_details)
 
                 msg_type = self.get_msg_type(line['preferred_msg_type'])
 
@@ -496,18 +511,20 @@ class PullThirdPartyRegistrations(Task):
                     "mother_id": mother_id,
                     "source": source.id,
                     "data": {
-                        "msg_receiver":
-                            self.get_receiver(line['message_receiver']),
+                        "msg_receiver": receiver,
                         "operator_id": operator_id,
-                        "language":
-                            self.get_language(line['preferred_msg_language']),
+                        "language": language,
                         "msg_type": msg_type
                     }
                 }
 
                 if line['gatekeeper_phone_number']:
+                    identity_details["receiver_role"] = receiver.replace(
+                        'mother_', '')
+                    identity_details["linked_to"] = mother_id
                     receiver_id = self.get_or_create_identity(
-                        line['gatekeeper_phone_number'])
+                        line['gatekeeper_phone_number'],
+                        identity_details)
                     reg_info['data']['receiver_id'] = receiver_id
 
                 if msg_type == 'audio':
