@@ -10,6 +10,7 @@ from django.conf import settings
 from go_http.metrics import MetricsApiClient
 from openpyxl import load_workbook
 from io import BytesIO
+from rest_framework.exceptions import ValidationError
 
 from hellomama_registration import utils
 from .graphite import RetentionScheme
@@ -415,7 +416,6 @@ class PullThirdPartyRegistrations(Task):
 
         identity = {
             'details': {
-                'default_addr_type': 'msisdn',
                 'addresses': {
                     'msisdn': {
                         msisdn: {'default': True}
@@ -546,9 +546,13 @@ class PullThirdPartyRegistrations(Task):
                 serializer = RegistrationSerializer(data=reg_info)
                 serializer.is_valid(raise_exception=True)
                 serializer.save()
-            except Exception as error:
+            except ValidationError as error:
                 loop_error = error
                 line['error'] = json.dumps(error.detail)
+                ThirdPartyRegistrationError.objects.create(**{'data': line})
+            except Exception as error:
+                loop_error = error
+                line['error'] = error.message
                 ThirdPartyRegistrationError.objects.create(**{'data': line})
 
         if loop_error:

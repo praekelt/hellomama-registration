@@ -3471,5 +3471,28 @@ class TestThirdPartyRegistrations(AuthenticatedAPITestCase):
 
         e = ThirdPartyRegistrationError.objects.last()
         self.assertEqual(
-            json.loads(e.data['error']),
+            utils.json_decode(e.data['error']),
             {'mother_id': ['This field may not be null.']})
+
+    @responses.activate
+    def test_start_pull_task_connection_error(self):
+        tasks.PullThirdPartyRegistrations.get_data = override_get_data
+        self.make_source_adminuser()
+
+        operator_identity = "4038a518-1111-1111-1111-hfud7383gfyt"
+
+        self.mock_identity_lookup("11111", operator_identity)
+        self.mock_identity_patch(operator_identity)
+
+        try:
+            self.adminclient.post('/api/v1/extregistration/',
+                                  content_type='application/json')
+        except:
+            pass
+
+        # Check
+        self.assertEqual(Registration.objects.count(), 0)
+
+        e = ThirdPartyRegistrationError.objects.last()
+
+        self.assertTrue(e.data['error'].find("Connection refused") != -1)
