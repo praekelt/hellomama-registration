@@ -10,7 +10,6 @@ from django.conf import settings
 from go_http.metrics import MetricsApiClient
 from openpyxl import load_workbook
 from io import BytesIO
-from rest_framework.exceptions import ValidationError
 
 from hellomama_registration import utils
 from .graphite import RetentionScheme
