@@ -3470,9 +3470,9 @@ class TestThirdPartyRegistrations(AuthenticatedAPITestCase):
         self.assertEqual(Registration.objects.count(), 0)
 
         e = ThirdPartyRegistrationError.objects.last()
-        self.assertEqual(
-            utils.json_decode(e.data['error']),
-            {'mother_id': ['This field may not be null.']})
+        self.assertTrue(e.data['error'].find("mother_id") != -1)
+        self.assertTrue(
+            e.data['error'].find("This field may not be null.") != -1)
 
     @responses.activate
     def test_start_pull_task_connection_error(self):
