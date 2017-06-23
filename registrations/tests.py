@@ -3450,6 +3450,37 @@ class TestThirdPartyRegistrations(AuthenticatedAPITestCase):
         self.assertEqual(r.data["voice_days"], "tue_thu")
         self.assertEqual(r.data["last_period_date"], "20150518")
 
+        self.assertEqual(len(responses.calls), 5)
+        patch_father = responses.calls[3].request.body
+        patch_mother = responses.calls[4].request.body
+        self.assertEqual(
+            json.loads(patch_father),
+            {
+                "operator_id": "4038a518-1111-1111-1111-hfud7383gfyt",
+                "gravida": "2",
+                "preferred_language": "eng_NG",
+                "preferred_msg_days": "tue_thu",
+                "preferred_msg_type": "audio",
+                "household_msgs_only": True,
+                "receiver_role": "father",
+                "default_addr_type": "msisdn",
+                "linked_to": "4038a518-2940-4b15-9c5c-2b7b123b8735",
+                "preferred_msg_times": "2_5"
+            })
+        self.assertEqual(
+            json.loads(patch_mother),
+            {
+                "operator_id": "4038a518-1111-1111-1111-hfud7383gfyt",
+                "gravida": "2",
+                "preferred_language": "eng_NG",
+                "preferred_msg_days": "tue_thu",
+                "preferred_msg_type": "audio",
+                "receiver_role": "mother",
+                "default_addr_type": "msisdn",
+                "linked_to": "4038a518-2940-4b15-9c5c-829385793255",
+                "preferred_msg_times": "2_5"
+            })
+
     @responses.activate
     def test_start_pull_task_error(self):
         tasks.PullThirdPartyRegistrations.get_data = override_get_data_bad
