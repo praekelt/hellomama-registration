@@ -6,7 +6,8 @@ from django.shortcuts import redirect
 from django.template.response import TemplateResponse
 
 from hellomama_registration.utils import get_available_metrics
-from .models import Source, Registration, SubscriptionRequest
+from .models import (Source, Registration, SubscriptionRequest,
+                     ThirdPartyRegistrationError)
 from .tasks import repopulate_metrics
 
 
@@ -82,6 +83,12 @@ class SubscriptionRequestAdmin(admin.ModelAdmin):
     search_fields = ["id", "identity"]
 
 
+class ThirdPartyRegistrationErrorAdmin(admin.ModelAdmin):
+    list_display = ['id', 'data', 'created_at', 'updated_at']
+
+
 admin.site.register(Source)
 admin.site.register(Registration, RegistrationAdmin)
 admin.site.register(SubscriptionRequest, SubscriptionRequestAdmin)
+admin.site.register(ThirdPartyRegistrationError,
+                    ThirdPartyRegistrationErrorAdmin)
