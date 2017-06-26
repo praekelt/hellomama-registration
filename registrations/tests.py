@@ -3334,6 +3334,22 @@ def override_get_data(self):
     }]
 
 
+def override_get_data_mother_only(self):
+    return [{
+        "mothers_phone_number": "07031221927",
+        "health_worker_phone_number": "11111",
+        "pregnancy_week": "13",
+        "gravida": "2",
+        "preferred_msg_language": "english",
+        "type_of_registration": "prebirth",
+        "preferred_msg_type": "voice",
+        "message_days": "tuesday_and_thursday",
+        "message_time": "2-5pm",
+        "message_receiver": "mother_only",
+        "gatekeeper_phone_number": None
+    }]
+
+
 def override_get_data_bad(self):
     return [{
         "mothers_phone_number": "",
@@ -3478,6 +3494,53 @@ class TestThirdPartyRegistrations(AuthenticatedAPITestCase):
                 "receiver_role": "mother",
                 "default_addr_type": "msisdn",
                 "linked_to": "4038a518-2940-4b15-9c5c-829385793255",
+                "preferred_msg_times": "2_5"
+            })
+
+    @responses.activate
+    def test_start_pull_task_mother_only(self):
+        tasks.PullThirdPartyRegistrations.get_data = \
+            override_get_data_mother_only
+        self.make_source_adminuser()
+
+        mother_id = "4038a518-2940-4b15-9c5c-2b7b123b8735"
+        operator_id = "4038a518-1111-1111-1111-hfud7383gfyt"
+
+        self.mock_identity_lookup("%2B2347031221927", mother_id)
+        self.mock_identity_lookup("11111", operator_id)
+
+        self.mock_identity_patch(mother_id)
+
+        response = self.adminclient.post('/api/v1/extregistration/',
+                                         content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code,
+                         status.HTTP_201_CREATED)
+
+        r = Registration.objects.last()
+        self.assertEqual(r.mother_id, "4038a518-2940-4b15-9c5c-2b7b123b8735")
+        self.assertEqual(r.stage, "prebirth")
+        self.assertEqual(r.data["msg_receiver"], "mother_only")
+        self.assertEqual(r.data["operator_id"], operator_id)
+        self.assertEqual(r.data["language"], "eng_NG")
+        self.assertEqual(r.data["msg_type"], "audio")
+        self.assertEqual(r.data["receiver_id"], mother_id)
+        self.assertEqual(r.data["voice_times"], "2_5")
+        self.assertEqual(r.data["voice_days"], "tue_thu")
+        self.assertEqual(r.data["last_period_date"], "20150518")
+
+        self.assertEqual(len(responses.calls), 3)
+        patch_mother = responses.calls[2].request.body
+        self.assertEqual(
+            json.loads(patch_mother),
+            {
+                "operator_id": "4038a518-1111-1111-1111-hfud7383gfyt",
+                "gravida": "2",
+                "preferred_language": "eng_NG",
+                "preferred_msg_days": "tue_thu",
+                "preferred_msg_type": "audio",
+                "receiver_role": "mother",
+                "default_addr_type": "msisdn",
                 "preferred_msg_times": "2_5"
             })
 
