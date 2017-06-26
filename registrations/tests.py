@@ -2046,7 +2046,7 @@ class TestMetrics(AuthenticatedAPITestCase):
             data={"foo.last": 1.0}
         )
         _, auth = request.request.headers['Authorization'].split()
-        user, password = b64decode(auth).split(':')
+        user, password = b64decode(auth).decode().split(':')
         self.assertEqual(user, 'metricuser')
         self.assertEqual(password, 'metricpass')
         self.assertEqual(result.get(),
