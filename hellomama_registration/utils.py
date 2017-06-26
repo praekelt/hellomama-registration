@@ -5,7 +5,7 @@ import re
 import six
 from django.conf import settings
 from registrations.models import Source
-
+from datetime import timedelta
 
 session = requests.Session()
 http = requests.adapters.HTTPAdapter(max_retries=5)
@@ -30,6 +30,12 @@ def calc_pregnancy_week_lmp(today, lmp):
     return preg_weeks
 
 
+def calc_date_from_pregnancy_week(today, weeks):
+    days = int(weeks) * 7
+    last_period_date = today - timedelta(days=days)
+    return last_period_date
+
+
 def calc_baby_age(today, baby_dob):
     """ Calculate the baby's age in weeks.
     """
@@ -41,6 +47,34 @@ def calc_baby_age(today, baby_dob):
     else:
         # Return -1 if the date is in the future
         return -1
+
+
+def calc_baby_dob(today, weeks):
+    days = int(weeks) * 7
+    baby_dob = today - timedelta(days=days)
+    return baby_dob
+
+
+def normalize_msisdn(raw, country_code):
+
+    if len(raw) <= 5:
+        return raw
+
+    raw = re.sub('[^0-9+]', '', raw)
+
+    if raw[:2] == '00':
+        return '+' + raw[2:]
+
+    if raw[:1] == '0':
+        return '+' + country_code + raw[1:]
+
+    if raw[:1] == '+':
+        return raw
+
+    if raw[:len(country_code)] == country_code:
+        return '+' + raw
+
+    return raw
 
 
 def get_identity(identity):
@@ -101,6 +135,19 @@ def patch_identity(identity, data):
         'Content-Type': 'application/json'
     }
     r = session.patch(url, data=json.dumps(data), headers=headers)
+    r.raise_for_status()
+    return r.json()
+
+
+def create_identity(data):
+    """ Creates the identity with the data provided
+    """
+    url = "%s/identities/" % (settings.IDENTITY_STORE_URL)
+    headers = {
+        'Authorization': 'Token %s' % settings.IDENTITY_STORE_TOKEN,
+        'Content-Type': 'application/json'
+    }
+    r = session.post(url, data=json.dumps(data), headers=headers)
     r.raise_for_status()
     return r.json()
 

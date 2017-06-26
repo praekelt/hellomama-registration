@@ -13,6 +13,7 @@ from .serializers import (UserSerializer, GroupSerializer,
 from hellomama_registration.utils import get_available_metrics
 # Uncomment line below if scheduled metrics are added
 # from .tasks import scheduled_metrics
+from .tasks import pull_third_party_registrations
 
 
 class HookViewSet(viewsets.ModelViewSet):
@@ -161,4 +162,18 @@ class HealthcheckView(APIView):
                 "database": "Accessible"
             }
         }
+        return Response(resp, status=status)
+
+
+class ThirdPartyRegistrationView(APIView):
+
+    """ ThirdPartyRegistrationView Interaction
+        POST - starts up the task that pulls registrations from a 3rd party
+    """
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request, *args, **kwargs):
+        status = 201
+        pull_third_party_registrations.apply_async(args=[self.request.user.id])
+        resp = {"third_party_registration_pull_initiated": True}
         return Response(resp, status=status)

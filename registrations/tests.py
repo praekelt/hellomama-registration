@@ -6,6 +6,7 @@ try:
 except ImportError:
     from io import StringIO
 import responses
+import openpyxl
 
 try:
     from urllib.parse import urlparse
@@ -31,6 +32,7 @@ from rest_hooks.models import model_saved, Hook
 from requests.exceptions import ConnectTimeout
 from requests_testadapter import TestAdapter, TestSession
 from go_http.metrics import MetricsApiClient
+from openpyxl.writer.excel import save_virtual_workbook
 
 from hellomama_registration import utils
 from registrations import tasks
@@ -38,7 +40,7 @@ from .models import (
     Source, Registration, SubscriptionRequest, registration_post_save,
     fire_created_metric, fire_unique_operator_metric, fire_message_type_metric,
     fire_source_metric, fire_receiver_type_metric, fire_language_metric,
-    fire_state_metric, fire_role_metric)
+    fire_state_metric, fire_role_metric, ThirdPartyRegistrationError)
 from .tasks import (
     validate_registration,
     is_valid_date, is_valid_uuid, is_valid_lang, is_valid_msg_type,
@@ -3314,3 +3316,214 @@ class TestRepopulateMetricsTask(TestCase):
             'foo.bar', datetime.utcfromtimestamp(300),
             datetime.utcfromtimestamp(500))
         mock_send_metric.assert_not_called()
+
+
+def override_get_data(self):
+    return [{
+        "mothers_phone_number": "07031221927",
+        "health_worker_phone_number": "11111",
+        "pregnancy_week": "13",
+        "gravida": "2",
+        "preferred_msg_language": "english",
+        "type_of_registration": "prebirth",
+        "preferred_msg_type": "voice",
+        "message_days": "tuesday_and_thursday",
+        "message_time": "2-5pm",
+        "message_receiver": "mother_and_father",
+        "gatekeeper_phone_number": "07031221928"
+    }]
+
+
+def override_get_data_bad(self):
+    return [{
+        "mothers_phone_number": "",
+        "health_worker_phone_number": "11111",
+        "pregnancy_week": "13",
+        "gravida": "2",
+        "preferred_msg_language": "english",
+        "type_of_registration": "prebirth",
+        "preferred_msg_type": "voice",
+        "message_days": "tuesday_and_thursday",
+        "message_time": "2-5pm",
+        "message_receiver": "",
+        "gatekeeper_phone_number": ""
+    }]
+
+
+class TestThirdPartyRegistrations(AuthenticatedAPITestCase):
+
+    def mock_identity_lookup(self, msisdn, identity_id):
+        responses.add(
+            responses.GET,
+            'http://localhost:8001/api/v1/identities/search/?details__addresses__msisdn=%s' % msisdn,  # noqa
+            json={
+                "count": 1, "next": None, "previous": None,
+                "results": [{
+                    "id": identity_id,
+                    "details": {}
+                }]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+
+    def mock_identity_patch(self, identity_id):
+        responses.add(
+            responses.PATCH,
+            'http://localhost:8001/api/v1/identities/%s/' % identity_id,
+            json={
+                "count": 1, "next": None, "previous": None,
+                "results": [{
+                    "id": identity_id,
+                    "details": {}
+                }]
+            },
+
+        )
+
+    def mock_excel_download(self):
+
+        wb = openpyxl.Workbook()
+        ws = wb.create_sheet("Forms")
+
+        data = override_get_data(None)[0]
+
+        col = 1
+        for key, value in data.items():
+            d = ws.cell(row=1, column=col)
+            d.value = key
+
+            d = ws.cell(row=2, column=col)
+            d.value = value
+
+            col += 1
+
+        responses.add(
+            responses.GET,
+            settings.THIRDPARTY_REGISTRATIONS_URL,
+            status=200,
+            body=save_virtual_workbook(wb)
+        )
+
+    @responses.activate
+    @override_settings(THIRDPARTY_REGISTRATIONS_URL='http://www.3rd.org/d/99/')
+    def test_get_data(self):
+
+        self.mock_excel_download()
+
+        task = tasks.PullThirdPartyRegistrations()
+        data = task.get_data()
+
+        self.assertEqual(data, override_get_data(None))
+
+    @responses.activate
+    def test_start_pull_task(self):
+        tasks.PullThirdPartyRegistrations.get_data = override_get_data
+        self.make_source_adminuser()
+
+        mother_id = "4038a518-2940-4b15-9c5c-2b7b123b8735"
+        father_id = "4038a518-2940-4b15-9c5c-829385793255"
+        operator_id = "4038a518-1111-1111-1111-hfud7383gfyt"
+
+        self.mock_identity_lookup("%2B2347031221927", mother_id)
+        self.mock_identity_lookup("%2B2347031221928", father_id)
+        self.mock_identity_lookup("11111", operator_id)
+
+        self.mock_identity_patch(mother_id)
+        self.mock_identity_patch(father_id)
+
+        response = self.adminclient.post('/api/v1/extregistration/',
+                                         content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code,
+                         status.HTTP_201_CREATED)
+
+        r = Registration.objects.last()
+        self.assertEqual(r.mother_id, "4038a518-2940-4b15-9c5c-2b7b123b8735")
+        self.assertEqual(r.stage, "prebirth")
+        self.assertEqual(r.data["msg_receiver"], "mother_father")
+        self.assertEqual(r.data["operator_id"], operator_id)
+        self.assertEqual(r.data["language"], "eng_NG")
+        self.assertEqual(r.data["msg_type"], "audio")
+        self.assertEqual(r.data["receiver_id"], father_id)
+        self.assertEqual(r.data["voice_times"], "2_5")
+        self.assertEqual(r.data["voice_days"], "tue_thu")
+        self.assertEqual(r.data["last_period_date"], "20150518")
+
+        self.assertEqual(len(responses.calls), 5)
+        patch_father = responses.calls[3].request.body
+        patch_mother = responses.calls[4].request.body
+        self.assertEqual(
+            json.loads(patch_father),
+            {
+                "operator_id": "4038a518-1111-1111-1111-hfud7383gfyt",
+                "gravida": "2",
+                "preferred_language": "eng_NG",
+                "preferred_msg_days": "tue_thu",
+                "preferred_msg_type": "audio",
+                "household_msgs_only": True,
+                "receiver_role": "father",
+                "default_addr_type": "msisdn",
+                "linked_to": "4038a518-2940-4b15-9c5c-2b7b123b8735",
+                "preferred_msg_times": "2_5"
+            })
+        self.assertEqual(
+            json.loads(patch_mother),
+            {
+                "operator_id": "4038a518-1111-1111-1111-hfud7383gfyt",
+                "gravida": "2",
+                "preferred_language": "eng_NG",
+                "preferred_msg_days": "tue_thu",
+                "preferred_msg_type": "audio",
+                "receiver_role": "mother",
+                "default_addr_type": "msisdn",
+                "linked_to": "4038a518-2940-4b15-9c5c-829385793255",
+                "preferred_msg_times": "2_5"
+            })
+
+    @responses.activate
+    def test_start_pull_task_error(self):
+        tasks.PullThirdPartyRegistrations.get_data = override_get_data_bad
+        self.make_source_adminuser()
+
+        operator_identity = "4038a518-1111-1111-1111-hfud7383gfyt"
+
+        self.mock_identity_lookup("11111", operator_identity)
+        self.mock_identity_patch(operator_identity)
+
+        try:
+            self.adminclient.post('/api/v1/extregistration/',
+                                  content_type='application/json')
+        except:
+            pass
+
+        # Check
+        self.assertEqual(Registration.objects.count(), 0)
+
+        e = ThirdPartyRegistrationError.objects.last()
+        self.assertTrue(e.data['error'].find("mother_id") != -1)
+        self.assertTrue(
+            e.data['error'].find("This field may not be null.") != -1)
+
+    @responses.activate
+    def test_start_pull_task_connection_error(self):
+        tasks.PullThirdPartyRegistrations.get_data = override_get_data
+        self.make_source_adminuser()
+
+        operator_identity = "4038a518-1111-1111-1111-hfud7383gfyt"
+
+        self.mock_identity_lookup("11111", operator_identity)
+        self.mock_identity_patch(operator_identity)
+
+        try:
+            self.adminclient.post('/api/v1/extregistration/',
+                                  content_type='application/json')
+        except:
+            pass
+
+        # Check
+        self.assertEqual(Registration.objects.count(), 0)
+
+        e = ThirdPartyRegistrationError.objects.last()
+
+        self.assertTrue(e.data['error'].find("Connection refused") != -1)

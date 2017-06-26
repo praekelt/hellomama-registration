@@ -8,12 +8,15 @@ from celery.task import Task
 from celery.utils.log import get_task_logger
 from django.conf import settings
 from go_http.metrics import MetricsApiClient
+from openpyxl import load_workbook
+from io import BytesIO
 
 from hellomama_registration import utils
 from .graphite import RetentionScheme
-from .models import Registration, SubscriptionRequest
+from .models import (Registration, SubscriptionRequest, Source,
+                     ThirdPartyRegistrationError)
 from .metrics import MetricGenerator, send_metric
-
+from .serializers import RegistrationSerializer
 
 logger = get_task_logger(__name__)
 
@@ -390,3 +393,181 @@ class RepopulateMetrics(Task):
         connection.close()
 
 repopulate_metrics = RepopulateMetrics()
+
+
+class PullThirdPartyRegistrations(Task):
+
+    def get_or_create_identity(self, msisdn, details={}):
+
+        if not msisdn:
+            return {}
+
+        msisdn = utils.normalize_msisdn(msisdn, '234')
+
+        params = {"details__addresses__msisdn": msisdn}
+        identities = utils.search_identities(params)
+
+        for identity in identities:
+            if details:
+                identity['details'].update(details)
+                utils.patch_identity(identity['id'], identity['details'])
+            return identity
+
+        identity = {
+            'details': {
+                'addresses': {
+                    'msisdn': {
+                        msisdn: {'default': True}
+                    }
+                }
+            }
+        }
+        identity['details'].update(details)
+        identity = utils.create_identity(identity)
+        return identity
+
+    def get_language(self, language):
+        return {'english': 'eng_NG',
+                'igbo': 'ibo_NG',
+                'pidgin': 'pcm_NG'}.get(language, language)
+
+    def get_msg_type(self, msg_type):
+        return 'audio' if msg_type == 'voice' else msg_type
+
+    def get_voice_times(self, time):
+        return {'9-11am': '9_11',
+                '2-5pm': '2_5',
+                '6-8pm': '6_8'}.get(time, time)
+
+    def get_voice_days(self, days):
+        return {'monday_and_wednesday': 'mon_wed',
+                'tuesday_and_thursday': 'tue_thu'}.get(days, days)
+
+    def get_receiver(self, receiver):
+        return {
+            "mother_and_father": "mother_father",
+            "mother_and_family": "mother_family",
+            "mother_and_friend": "mother_friend",
+        }.get(receiver, receiver)
+
+    def get_data(self):
+        url = settings.THIRDPARTY_REGISTRATIONS_URL
+        username = settings.THIRDPARTY_REGISTRATIONS_USER
+        password = settings.THIRDPARTY_REGISTRATIONS_PASSWORD
+
+        response = requests.get(url, auth=(username, password))
+
+        wb = load_workbook(filename=BytesIO(response.content))
+        ws = wb.get_sheet_by_name('Forms')
+
+        columns = []
+        header_row = ws[1]
+        for cell in header_row:
+            columns.append(cell.value.replace('form.', ''))
+
+        data = []
+
+        for row in ws.iter_rows(min_row=2):
+            reg = {}
+            for i, column in enumerate(columns):
+                reg[column] = row[i].value
+
+            data.append(reg)
+
+        return data
+
+    def run(self, user_id, **kwargs):
+        data = self.get_data()
+
+        source = Source.objects.get(user=user_id)
+
+        loop_error = None
+
+        for line in data:
+
+            try:
+                mother_identity = self.get_or_create_identity(
+                    line['mothers_phone_number'], {})
+                operator_identity = self.get_or_create_identity(
+                    line['health_worker_phone_number'])
+
+                language = self.get_language(line['preferred_msg_language'])
+                receiver = self.get_receiver(line['message_receiver'])
+                msg_type = self.get_msg_type(line['preferred_msg_type'])
+
+                identity_details = {
+                    "default_addr_type": "msisdn",
+                    "operator_id": operator_identity['id'],
+                    "preferred_language": language,
+                    "receiver_role": "mother",
+                    "gravida": line['gravida'],
+                    "preferred_msg_type": msg_type
+                }
+
+                reg_info = {
+                    "stage": line['type_of_registration'],
+                    "source": source.id,
+                    "data": {
+                        "msg_receiver": receiver,
+                        "operator_id": operator_identity['id'],
+                        "language": language,
+                        "msg_type": msg_type
+                    }
+                }
+
+                if msg_type == 'audio':
+                    times = self.get_voice_times(line['message_time'])
+                    days = self.get_voice_days(line['message_days'])
+
+                    reg_info['data']['voice_times'] = times
+                    reg_info['data']['voice_days'] = days
+
+                    if receiver.find('_only') == -1:
+                        identity_details["preferred_msg_times"] = times
+                        identity_details["preferred_msg_days"] = days
+
+                reg_info["mother_id"] = mother_identity.get('id')
+
+                if line['gatekeeper_phone_number']:
+                    receiver_details = identity_details.copy()
+                    receiver_details["receiver_role"] = receiver.replace(
+                        'mother_', '').replace('_only', '')
+                    receiver_details["linked_to"] = mother_identity.get('id')
+
+                    if receiver.find('_only') == -1:
+                        receiver_details["household_msgs_only"] = True
+
+                    receiver_identity = self.get_or_create_identity(
+                        line['gatekeeper_phone_number'],
+                        receiver_details)
+                    reg_info['data']['receiver_id'] = receiver_identity['id']
+
+                    identity_details["linked_to"] = receiver_identity['id']
+
+                if mother_identity:
+                    mother_identity['details'].update(identity_details)
+                    utils.patch_identity(mother_identity['id'],
+                                         mother_identity['details'])
+
+                if line['type_of_registration'] == 'prebirth':
+                    reg_info['data']['last_period_date'] = \
+                        utils.calc_date_from_pregnancy_week(
+                            utils.get_today(),
+                            line["pregnancy_week"]).strftime("%Y%m%d")
+                else:
+                    reg_info['data']['baby_dob'] = utils.calc_baby_dob(
+                        utils.get_today(),
+                        line["pregnancy_week"]).strftime("%Y%m%d")
+
+                serializer = RegistrationSerializer(data=reg_info)
+                serializer.is_valid(raise_exception=True)
+                serializer.save()
+            except Exception as error:
+                loop_error = error
+                line['error'] = str(error)
+                ThirdPartyRegistrationError.objects.create(**{'data': line})
+
+        if loop_error:
+            raise
+
+pull_third_party_registrations = PullThirdPartyRegistrations()
