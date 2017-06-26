@@ -33,6 +33,7 @@ class ChangeSerializer(serializers.ModelSerializer):
 
 class AdminChangeSerializer(serializers.Serializer):
     mother_id = serializers.UUIDField(allow_null=False)
+    subscription = serializers.UUIDField(required=False)
     messageset = serializers.CharField(required=False)
     language = serializers.CharField(required=False)
 
