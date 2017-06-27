@@ -151,7 +151,11 @@ class ImplementAction(Task):
             weeks = 11  # just a placeholder to get the messageset_short_name
 
         if change.data.get("new_short_name"):
-            new_short_name = change.get("new_short_name")
+            new_short_name = change.data.get("new_short_name")
+
+            to_type = 'text'
+            if 'audio' in new_short_name:
+                to_type = 'audio'
         else:
             # Determine voice_days & voice_times
             if change.data["msg_type"] == 'audio':
@@ -188,7 +192,9 @@ class ImplementAction(Task):
             "identity": change.mother_id,
             "messageset": new_msgset_id,
             "next_sequence_number": new_nsn,
-            "lang": current_sub["lang"],  # use first subscription's lang
+            # use first subscription's lang if the change doesn't include a new
+            # language
+            "lang": change.data.get("new_language", current_sub["lang"]),
             "schedule": new_msgset_schedule
         }
         SubscriptionRequest.objects.create(**mother_sub)

@@ -262,9 +262,11 @@ class ReceiveAdminChange(generics.CreateAPIView):
                 "data": {"new_short_name": data['messageset']},
                 "source": source.id,
             }
+            if data.get('language'):
+                change["data"]["new_language"] = data['language']
             changes.append(change)
 
-        if data.get('language'):
+        elif data.get('language'):
             change = {
                 "mother_id": data['mother_id'],
                 "action": "change_language",
