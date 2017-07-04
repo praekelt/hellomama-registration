@@ -3093,6 +3093,36 @@ class AdminViewsTest(AuthenticatedAPITestCase):
     Tests related to the optout control interface view.
     """
 
+    def add_messageset_language_callback(self):
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset_languages/',
+            json={
+                "2": ["afr_ZA", "eng_ZA"],
+                "4": ["afr_ZA", "eng_ZA", "zul_ZA"]
+            },
+            status=200,
+            content_type='application/json')
+
+    def add_messageset_via_short_name(self, short_name, id=13, schedule=8):
+        query_string = '?short_name=%s' % short_name
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/%s' % query_string,
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": id,
+                    "short_name": short_name,
+                    "default_schedule": schedule
+                }]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+
     def test_ci_optout_invalid(self):
         request = {}
 
@@ -3195,11 +3225,38 @@ class AdminViewsTest(AuthenticatedAPITestCase):
             utils.json_decode(response.content),
             {"non_field_errors": ["One of these fields must be populated: messageset, language"]})  # noqa
 
+    @responses.activate
     def test_ci_change_language(self):
         request = {
             "mother_id": "846877e6-afaa-43de-acb1-09f61ad4de99",
             "language": "eng_ZA"
         }
+
+        self.add_messageset_language_callback()
+
+        # mock get subscription request
+        subscription_id = "846877e6-afaa-43de-acb1-09f61ad4de99"
+        query_string = '?active=True&identity=%s' % request["mother_id"]
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": subscription_id,
+                    "identity": request["mother_id"],
+                    "active": True,
+                    "lang": "eng_NG",
+                    "next_sequence_number": 36,
+                    "messageset": 2,
+                    "schedule": 1
+                }],
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
 
         self.make_source_adminuser()
         response = self.adminclient.post('/api/v1/change_admin/',
@@ -3231,6 +3288,7 @@ class AdminViewsTest(AuthenticatedAPITestCase):
         self.assertEqual(change.action, "change_messaging")
         self.assertEqual(change.data, {"new_short_name": "messageset_one"})
 
+    @responses.activate
     def test_ci_change_language_and_messaging(self):
         identity = "846877e6-afaa-43de-acb1-09f61ad4de99"
         request = {
@@ -3240,6 +3298,11 @@ class AdminViewsTest(AuthenticatedAPITestCase):
         }
 
         self.make_source_adminuser()
+
+        self.add_messageset_language_callback()
+
+        self.add_messageset_via_short_name("messageset_one", 2)
+
         response = self.adminclient.post('/api/v1/change_admin/',
                                          json.dumps(request),
                                          content_type='application/json')
@@ -3254,3 +3317,24 @@ class AdminViewsTest(AuthenticatedAPITestCase):
             "new_short_name": "messageset_one",
             "new_language": "eng_ZA"
         })
+
+    @responses.activate
+    def test_ci_change_language_and_messaging_invalid(self):
+        identity = "846877e6-afaa-43de-acb1-09f61ad4de99"
+        request = {
+            "mother_id": identity,
+            "messageset": "messageset_one",
+            "language": "zul_ZA"
+        }
+
+        self.make_source_adminuser()
+
+        self.add_messageset_language_callback()
+
+        self.add_messageset_via_short_name("messageset_one", 2)
+
+        response = self.adminclient.post('/api/v1/change_admin/',
+                                         json.dumps(request),
+                                         content_type='application/json')
+
+        self.assertEqual(response.status_code, 400)
