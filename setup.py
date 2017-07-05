@@ -27,7 +27,7 @@ setup(
         'django-rest-hooks==1.3.1',
         'go-http==0.3.0',
         'django-filter==0.12.0',
-        'seed-services-client>=0.12.0',
+        'seed-services-client>=0.23.0',
         'drfdocs==0.0.11',
         'pika==0.10.0',
     ],

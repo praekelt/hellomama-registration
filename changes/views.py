@@ -1,13 +1,15 @@
 import django_filters
 from .models import Source, Change
 from registrations.models import Registration, get_or_incr_cache
-from rest_framework import viewsets, mixins, generics, filters
+from rest_framework import viewsets, mixins, generics, filters, status
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 from .serializers import ChangeSerializer
 from django.http import JsonResponse
 from django.conf import settings
 from django.db.models import Q
 from hellomama_registration import utils
+from .serializers import AdminChangeSerializer
 
 import six
 
@@ -212,22 +214,74 @@ def fire_optout_message_type_metric(msg_type):
     })
 
 
+def get_or_create_source(request):
+    source, created = Source.objects.get_or_create(
+        user=request.user,
+        defaults={
+            "authority": "advisor",
+            "name": (request.user.get_full_name() or
+                     request.user.username)
+            })
+    return source
+
+
 class ReceiveAdminOptout(generics.CreateAPIView):
     permission_classes = (IsAuthenticated,)
     serializer_class = ChangeSerializer
 
     def post(self, request, *args, **kwargs):
 
-        source, created = Source.objects.get_or_create(
-            user=self.request.user,
-            defaults={
-                "authority": "advisor",
-                "name": (self.request.user.get_full_name() or
-                         self.request.user.username)
-                })
+        source = get_or_create_source(self.request)
 
         request.data['source'] = source.id
         request.data['data'] = {"reason": "other"}
         request.data['action'] = "unsubscribe_mother_only"
 
         return super(ReceiveAdminOptout, self).post(request, *args, **kwargs)
+
+
+class ReceiveAdminChange(generics.CreateAPIView):
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request, *args, **kwargs):
+
+        admin_serializer = AdminChangeSerializer(data=request.data)
+        if admin_serializer.is_valid():
+            data = admin_serializer.validated_data
+        else:
+            return Response(admin_serializer.errors,
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        source = get_or_create_source(self.request)
+
+        changes = []
+        if data.get('messageset'):
+            change = {
+                "mother_id": data['mother_id'],
+                "action": "change_messaging",
+                "data": {"new_short_name": data['messageset']},
+                "source": source.id,
+            }
+            if data.get('language'):
+                change["data"]["new_language"] = data['language']
+            changes.append(change)
+
+        elif data.get('language'):
+            change = {
+                "mother_id": data['mother_id'],
+                "action": "change_language",
+                "data": {"new_language": data['language']},
+                "source": source.id,
+            }
+            changes.append(change)
+
+        serializer = ChangeSerializer(data=changes, many=True)
+
+        if serializer.is_valid():
+            serializer.save()
+
+            return Response(data=serializer.data,
+                            status=status.HTTP_201_CREATED)
+        else:
+            return Response(serializer.errors,
+                            status=status.HTTP_400_BAD_REQUEST)
