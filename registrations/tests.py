@@ -1,3 +1,4 @@
+from base64 import b64decode
 import json
 import uuid
 from datetime import timedelta, datetime
@@ -31,7 +32,6 @@ from rest_framework.authtoken.models import Token
 from rest_hooks.models import model_saved, Hook
 from requests.exceptions import ConnectTimeout
 from requests_testadapter import TestAdapter, TestSession
-from go_http.metrics import MetricsApiClient
 from openpyxl.writer.excel import save_virtual_workbook
 
 from hellomama_registration import utils
@@ -237,18 +237,6 @@ class AuthenticatedAPITestCase(APITestCase):
         post_save.connect(receiver=model_saved,
                           dispatch_uid='instance-saved-hook')
 
-    def _replace_get_metric_client(self, session=None):
-        return MetricsApiClient(
-            auth_token=settings.METRICS_AUTH_TOKEN,
-            api_url=settings.METRICS_URL,
-            session=self.session)
-
-    def _restore_get_metric_client(self, session=None):
-        return MetricsApiClient(
-            auth_token=settings.METRICS_AUTH_TOKEN,
-            api_url=settings.METRICS_URL,
-            session=session)
-
     def make_source_adminuser(self):
         data = {
             "name": "test_ussd_source_adminuser",
@@ -285,7 +273,6 @@ class AuthenticatedAPITestCase(APITestCase):
     def setUp(self):
         super(AuthenticatedAPITestCase, self).setUp()
         self._replace_post_save_hooks()
-        tasks.get_metric_client = self._replace_get_metric_client
 
         # Add a user with an email username
         self.emailusername = 'guy@example.com'
@@ -321,7 +308,6 @@ class AuthenticatedAPITestCase(APITestCase):
 
     def tearDown(self):
         self._restore_post_save_hooks()
-        tasks.get_metric_client = self._restore_get_metric_client
 
 
 class TestLogin(AuthenticatedAPITestCase):
@@ -2034,38 +2020,46 @@ class TestMetrics(AuthenticatedAPITestCase):
         else:
             self.assertEqual(json.loads(request.body), data)
 
-    def _mount_session(self):
-        response = [{
-            'name': 'foo',
-            'value': 9000,
-            'aggregator': 'bar',
-        }]
-        adapter = RecordingAdapter(json.dumps(response).encode('utf-8'))
-        self.session.mount(
-            "http://metrics-url/metrics/", adapter)
-        return adapter
+    def add_metrics_callback(self):
+        responses.add(
+            responses.POST, "http://metrics-url/metrics/",
+            json={}, status=200, content_type='application/json')
 
+    @responses.activate
+    @override_settings(METRICS_AUTH=('metricuser', 'metricpass'))
     def test_direct_fire(self):
+        """
+        When calling the `fire_metric` task, it should make a POST request
+        to the metrics API, with the correct details.
+        """
         # Setup
-        adapter = self._mount_session()
+        self.add_metrics_callback()
         # Execute
         result = tasks.fire_metric.apply_async(kwargs={
             "metric_name": 'foo.last',
             "metric_value": 1,
-            "session": self.session
         })
         # Check
-        [request] = adapter.requests
+        [request] = responses.calls
         self._check_request(
-            request, 'POST',
+            request.request, 'POST',
             data={"foo.last": 1.0}
         )
+        _, auth = request.request.headers['Authorization'].split()
+        user, password = b64decode(auth).decode().split(':')
+        self.assertEqual(user, 'metricuser')
+        self.assertEqual(password, 'metricpass')
         self.assertEqual(result.get(),
                          "Fired metric <foo.last> with value <1.0>")
 
+    @responses.activate
     def test_created_metric(self):
+        """
+        Ensure that when a new registration is created, all of the relevant
+        metrics are fired.
+        """
         # Setup
-        adapter = self._mount_session()
+        self.add_metrics_callback()
         # reconnect metric post_save hook
         post_save.connect(fire_created_metric, sender=Registration)
 
@@ -2074,29 +2068,30 @@ class TestMetrics(AuthenticatedAPITestCase):
         self.make_registration_adminuser()
 
         # Check
-        [request1, request2, request3, request4] = adapter.requests
+        [request1, request2, request3, request4] = responses.calls
         self._check_request(
-            request1, 'POST',
+            request1.request, 'POST',
             data={"registrations.created.sum": 1.0}
         )
         self._check_request(
-            request2, 'POST',
+            request2.request, 'POST',
             data={"registrations.created.total.last": 1}
         )
         self._check_request(
-            request3, 'POST',
+            request3.request, 'POST',
             data={"registrations.created.sum": 1.0}
         )
         self._check_request(
-            request4, 'POST',
+            request4.request, 'POST',
             data={"registrations.created.total.last": 2}
         )
         # remove post_save hooks to prevent teardown errors
         post_save.disconnect(fire_created_metric, sender=Registration)
 
+    @responses.activate
     def test_source_metric(self):
         # Setup
-        adapter = self._mount_session()
+        self.add_metrics_callback()
         # reconnect metric post_save hook
         post_save.connect(fire_source_metric, sender=Registration)
 
@@ -2104,17 +2099,18 @@ class TestMetrics(AuthenticatedAPITestCase):
         self.make_registration_adminuser()
 
         # Check
-        [request] = adapter.requests
+        [request] = responses.calls
         self._check_request(
-            request, 'POST',
+            request.request, 'POST',
             data={"registrations.source.testadminuser.sum": 1.0}
         )
         # remove post_save hooks to prevent teardown errors
         post_save.disconnect(fire_source_metric, sender=Registration)
 
+    @responses.activate
     def test_unique_operator_metric_single(self):
         # Setup
-        adapter = self._mount_session()
+        self.add_metrics_callback()
         # reconnect operator metric post_save hook
         post_save.connect(fire_unique_operator_metric, sender=Registration)
 
@@ -2122,9 +2118,9 @@ class TestMetrics(AuthenticatedAPITestCase):
         self.make_registration_adminuser()
 
         # Check
-        [request] = adapter.requests
+        [request] = responses.calls
         self._check_request(
-            request, 'POST',
+            request.request, 'POST',
             data={"registrations.unique_operators.sum": 1.0}
         )
 
@@ -2163,80 +2159,83 @@ class TestMetrics(AuthenticatedAPITestCase):
         # remove post_save hooks to prevent teardown errors
         post_save.disconnect(fire_unique_operator_metric, sender=Registration)
 
+    @responses.activate
     def test_message_type_metric(self):
         """
         When creating a registration, two metrics should be fired for the
         message type that the registration is created for, one of type sum, and
         one of type last.
         """
-        adapter = self._mount_session()
+        self.add_metrics_callback()
         post_save.connect(fire_message_type_metric, sender=Registration)
 
         self.make_registration_adminuser()
 
-        [request_sum, request_last] = adapter.requests
+        [request_sum, request_last] = responses.calls
         self._check_request(
-            request_sum, 'POST',
+            request_sum.request, 'POST',
             data={"registrations.msg_type.text.sum": 1.0}
         )
         self._check_request(
-            request_last, 'POST',
+            request_last.request, 'POST',
             data={"registrations.msg_type.text.total.last": 1.0}
         )
 
         post_save.disconnect(fire_message_type_metric, sender=Registration)
 
+    @responses.activate
     def test_receiver_type_metric(self):
         """
         When creating a registration, two metrics should be fired for the
         receiver type that the registration is created for. One of type sum
         with a value of 1, and one of type last with the current total.
         """
-        adapter = self._mount_session()
+        self.add_metrics_callback()
         post_save.connect(fire_receiver_type_metric, sender=Registration)
 
         self.make_registration_adminuser()
 
-        [request_sum, request_total] = adapter.requests
+        [request_sum, request_total] = responses.calls
         self._check_request(
-            request_sum, 'POST',
+            request_sum.request, 'POST',
             data={"registrations.receiver_type.mother_only.sum": 1.0}
         )
         self._check_request(
-            request_total, 'POST',
+            request_total.request, 'POST',
             data={"registrations.receiver_type.mother_only.total.last": 1.0}
         )
 
         post_save.disconnect(fire_receiver_type_metric, sender=Registration)
 
+    @responses.activate
     def test_receiver_type_metric_multiple(self):
         """
         When creating a registration, two metrics should be fired for the
         receiver type that the registration is created for. One of type sum
         with a value of 1, and one of type last with the current total.
         """
-        adapter = self._mount_session()
+        self.add_metrics_callback()
         post_save.connect(fire_receiver_type_metric, sender=Registration)
 
         cache.clear()
         self.make_registration_adminuser()
         self.make_registration_adminuser()
 
-        [r_sum1, r_total1, r_sum2, r_total2] = adapter.requests
+        [r_sum1, r_total1, r_sum2, r_total2] = responses.calls
         self._check_request(
-            r_sum1, 'POST',
+            r_sum1.request, 'POST',
             data={"registrations.receiver_type.mother_only.sum": 1.0}
         )
         self._check_request(
-            r_total1, 'POST',
+            r_total1.request, 'POST',
             data={"registrations.receiver_type.mother_only.total.last": 1.0}
         )
         self._check_request(
-            r_sum2, 'POST',
+            r_sum2.request, 'POST',
             data={"registrations.receiver_type.mother_only.sum": 1.0}
         )
         self._check_request(
-            r_total2, 'POST',
+            r_total2.request, 'POST',
             data={"registrations.receiver_type.mother_only.total.last": 2.0}
         )
 
@@ -2250,61 +2249,62 @@ class TestMetrics(AuthenticatedAPITestCase):
         one of type last. The sum metric should always be one, the last metric
         should increment for each registration of that type.
         """
-        adapter = self._mount_session()
+        self.add_metrics_callback()
         post_save.connect(fire_message_type_metric, sender=Registration)
 
         cache.clear()
         self.make_registration_adminuser()
         self.make_registration_adminuser()
 
-        [r_sum1, r_last1, r_sum2, r_last2] = adapter.requests
+        [r_sum1, r_last1, r_sum2, r_last2] = responses.calls
         self._check_request(
-            r_sum1, 'POST',
+            r_sum1.request, 'POST',
             data={"registrations.msg_type.text.sum": 1.0}
         )
         self._check_request(
-            r_last1, 'POST',
+            r_last1.request, 'POST',
             data={"registrations.msg_type.text.total.last": 1.0}
         )
         self._check_request(
-            r_sum2, 'POST',
+            r_sum2.request, 'POST',
             data={"registrations.msg_type.text.sum": 1.0}
         )
         self._check_request(
-            r_last2, 'POST',
+            r_last2.request, 'POST',
             data={"registrations.msg_type.text.total.last": 2.0}
         )
 
         post_save.disconnect(fire_message_type_metric, sender=Registration)
 
+    @responses.activate
     def test_language_metric(self):
         """
         When creating a registration, two metrics should be fired for the
         receiver type that the registration is created for. One of type sum
         with a value of 1, and one of type last with the current total.
         """
-        adapter = self._mount_session()
+        self.add_metrics_callback()
         post_save.connect(fire_language_metric, sender=Registration)
 
         cache.clear()
         self.make_registration_adminuser()
         self.make_registration_adminuser()
 
-        [r_sum1, r_total1, r_sum2, r_total2] = adapter.requests
+        [r_sum1, r_total1, r_sum2, r_total2] = responses.calls
         self._check_request(
-            r_sum1, 'POST',
+            r_sum1.request, 'POST',
             data={"registrations.language.eng_NG.sum": 1.0}
         )
         self._check_request(
-            r_total1, 'POST',
+            r_total1.request, 'POST',
             data={"registrations.language.eng_NG.total.last": 1.0}
         )
         self._check_request(
-            r_sum2, 'POST',
+            r_sum2.request, 'POST',
             data={"registrations.language.eng_NG.sum": 1.0}
         )
         self._check_request(
-            r_total2, 'POST',
+            r_total2.request, 'POST',
             data={"registrations.language.eng_NG.total.last": 2.0}
         )
 
@@ -2352,7 +2352,7 @@ class TestMetrics(AuthenticatedAPITestCase):
         state that the user is registered in. One of type sum with a value of
         1, and one of type last with the current total.
         """
-        adapter = self._mount_session()
+        self.add_metrics_callback()
         post_save.connect(fire_state_metric, sender=Registration)
 
         operator_id = REG_DATA['hw_pre_mother']['operator_id']
@@ -2372,21 +2372,21 @@ class TestMetrics(AuthenticatedAPITestCase):
         self.make_registration_adminuser()
         self.make_registration_adminuser()
 
-        [r_sum1, r_total1, r_sum2, r_total2] = adapter.requests
+        [_, r_sum1, _, r_total1, _, r_sum2, _, r_total2] = responses.calls
         self._check_request(
-            r_sum1, 'POST',
+            r_sum1.request, 'POST',
             data={"registrations.state.abuja.sum": 1.0}
         )
         self._check_request(
-            r_total1, 'POST',
+            r_total1.request, 'POST',
             data={"registrations.state.abuja.total.last": 1.0}
         )
         self._check_request(
-            r_sum2, 'POST',
+            r_sum2.request, 'POST',
             data={"registrations.state.abuja.sum": 1.0}
         )
         self._check_request(
-            r_total2, 'POST',
+            r_total2.request, 'POST',
             data={"registrations.state.abuja.total.last": 2.0}
         )
 
@@ -2399,7 +2399,7 @@ class TestMetrics(AuthenticatedAPITestCase):
         role that the user is registered as. One of type sum with a value of
         1, and one of type last with the current total.
         """
-        adapter = self._mount_session()
+        self.add_metrics_callback()
         post_save.connect(fire_role_metric, sender=Registration)
 
         operator_id = REG_DATA['hw_pre_mother']['operator_id']
@@ -2419,21 +2419,21 @@ class TestMetrics(AuthenticatedAPITestCase):
         self.make_registration_adminuser()
         self.make_registration_adminuser()
 
-        [r_sum1, r_total1, r_sum2, r_total2] = adapter.requests
+        [_, r_sum1, _, r_total1, _, r_sum2, _, r_total2] = responses.calls
         self._check_request(
-            r_sum1, 'POST',
+            r_sum1.request, 'POST',
             data={"registrations.role.midwife.sum": 1.0}
         )
         self._check_request(
-            r_total1, 'POST',
+            r_total1.request, 'POST',
             data={"registrations.role.midwife.total.last": 1.0}
         )
         self._check_request(
-            r_sum2, 'POST',
+            r_sum2.request, 'POST',
             data={"registrations.role.midwife.sum": 1.0}
         )
         self._check_request(
-            r_total2, 'POST',
+            r_total2.request, 'POST',
             data={"registrations.role.midwife.total.last": 2.0}
         )
 
