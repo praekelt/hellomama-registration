@@ -446,6 +446,107 @@ class TestRegistrationCreation(AuthenticatedAPITestCase):
 class TestChangeMessaging(AuthenticatedAPITestCase):
 
     @responses.activate
+    def test_prebirth_text_to_audio_week28_new_short_name(self):
+        # Setup
+        # make change object
+        change_data = {
+            "mother_id": "846877e6-afaa-43de-acb1-09f61ad4de99",
+            "action": "change_messaging",
+            "data": {
+                "new_short_name": "prebirth.mother.audio.10_42.tue_thu.9_11",
+                "new_language": "ibo_NG"
+            },
+            "source": self.make_source_adminuser()
+        }
+        change = Change.objects.create(**change_data)
+        # mock get subscription request
+        subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": subscription_id,
+                    "identity": change_data["mother_id"],
+                    "active": True,
+                    "lang": "eng_NG",
+                    "next_sequence_number": 54,
+                    "messageset": 1,
+                    "schedule": 1
+                }],
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock current messageset lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/1/',
+            json={
+                "id": 1,
+                "short_name": 'prebirth.mother.text.10_42',
+                "default_schedule": 1
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock schedule 1 lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/schedule/1/',
+            json={"id": 1, "day_of_week": "1,3,5"},
+            status=200, content_type='application/json',
+        )
+        # mock patch subscription request
+        responses.add(
+            responses.PATCH,
+            'http://localhost:8005/api/v1/subscriptions/%s/' % subscription_id,
+            json={"active": False},
+            status=200, content_type='application/json',
+        )
+        # mock messageset via shortname lookup
+        query_string = '?short_name=prebirth.mother.audio.10_42.tue_thu.9_11'
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/%s' % query_string,
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 4,
+                    "short_name": 'prebirth.mother.audio.10_42.tue_thu.9_11',
+                    "default_schedule": 6
+                }]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock schedule 6 lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/schedule/6/',
+            json={"id": 6, "day_of_week": "2,4"},
+            status=200, content_type='application/json',
+        )
+
+        # Execute
+        result = implement_action.apply_async(args=[change.id])
+
+        # Check
+        self.assertEqual(result.get(), "Change messaging completed")
+        d = SubscriptionRequest.objects.last()
+        self.assertEqual(d.identity, "846877e6-afaa-43de-acb1-09f61ad4de99")
+        self.assertEqual(d.messageset, 4)
+        self.assertEqual(d.next_sequence_number, 36)  # week 28 - 18*2
+        self.assertEqual(d.lang, "ibo_NG")
+        self.assertEqual(d.schedule, 6)
+
+    @responses.activate
     def test_prebirth_text_to_audio_week28(self):
         # Setup
         # make change object
@@ -2986,11 +3087,41 @@ class IdentityStoreOptoutViewTest(AuthenticatedAPITestCase):
         self.assertEqual(len(responses.calls), 0)
 
 
-class ControlInterfaceOptoutViewTest(AuthenticatedAPITestCase):
+class AdminViewsTest(AuthenticatedAPITestCase):
 
     """
     Tests related to the optout control interface view.
     """
+
+    def add_messageset_language_callback(self):
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset_languages/',
+            json={
+                "2": ["afr_ZA", "eng_ZA"],
+                "4": ["afr_ZA", "eng_ZA", "zul_ZA"]
+            },
+            status=200,
+            content_type='application/json')
+
+    def add_messageset_via_short_name(self, short_name, id=13, schedule=8):
+        query_string = '?short_name=%s' % short_name
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/%s' % query_string,
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": id,
+                    "short_name": short_name,
+                    "default_schedule": schedule
+                }]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
 
     def test_ci_optout_invalid(self):
         request = {}
@@ -3065,3 +3196,145 @@ class ControlInterfaceOptoutViewTest(AuthenticatedAPITestCase):
         self.assertEqual(source.name, user.get_full_name())
         self.assertEqual(source.user, user)
         self.assertEqual(source.authority, "advisor")
+
+    def test_ci_change_no_identity(self):
+        request = {}
+
+        self.make_source_adminuser()
+        response = self.adminclient.post('/api/v1/change_admin/',
+                                         json.dumps(request),
+                                         content_type='application/json')
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(utils.json_decode(response.content),
+                         {"mother_id": ["This field is required."]})
+        self.assertEqual(len(responses.calls), 0)
+
+    def test_ci_change_invalid(self):
+        request = {
+            "mother_id": "846877e6-afaa-43de-acb1-09f61ad4de99"
+        }
+
+        self.make_source_adminuser()
+        response = self.adminclient.post('/api/v1/change_admin/',
+                                         json.dumps(request),
+                                         content_type='application/json')
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            utils.json_decode(response.content),
+            {"non_field_errors": ["One of these fields must be populated: messageset, language"]})  # noqa
+
+    @responses.activate
+    def test_ci_change_language(self):
+        request = {
+            "mother_id": "846877e6-afaa-43de-acb1-09f61ad4de99",
+            "language": "eng_ZA"
+        }
+
+        self.add_messageset_language_callback()
+
+        # mock get subscription request
+        subscription_id = "846877e6-afaa-43de-acb1-09f61ad4de99"
+        query_string = '?active=True&identity=%s' % request["mother_id"]
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": subscription_id,
+                    "identity": request["mother_id"],
+                    "active": True,
+                    "lang": "eng_NG",
+                    "next_sequence_number": 36,
+                    "messageset": 2,
+                    "schedule": 1
+                }],
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+
+        self.make_source_adminuser()
+        response = self.adminclient.post('/api/v1/change_admin/',
+                                         json.dumps(request),
+                                         content_type='application/json')
+
+        self.assertEqual(response.status_code, 201)
+        change = Change.objects.last()
+        self.assertEqual(change.mother_id,
+                         "846877e6-afaa-43de-acb1-09f61ad4de99")
+        self.assertEqual(change.action, "change_language")
+        self.assertEqual(change.data, {"new_language": "eng_ZA"})
+
+    def test_ci_change_messaging(self):
+        request = {
+            "mother_id": "846877e6-afaa-43de-acb1-09f61ad4de99",
+            "messageset": "messageset_one"
+        }
+
+        self.make_source_adminuser()
+        response = self.adminclient.post('/api/v1/change_admin/',
+                                         json.dumps(request),
+                                         content_type='application/json')
+
+        self.assertEqual(response.status_code, 201)
+        change = Change.objects.last()
+        self.assertEqual(change.mother_id,
+                         "846877e6-afaa-43de-acb1-09f61ad4de99")
+        self.assertEqual(change.action, "change_messaging")
+        self.assertEqual(change.data, {"new_short_name": "messageset_one"})
+
+    @responses.activate
+    def test_ci_change_language_and_messaging(self):
+        identity = "846877e6-afaa-43de-acb1-09f61ad4de99"
+        request = {
+            "mother_id": identity,
+            "messageset": "messageset_one",
+            "language": "eng_ZA"
+        }
+
+        self.make_source_adminuser()
+
+        self.add_messageset_language_callback()
+
+        self.add_messageset_via_short_name("messageset_one", 2)
+
+        response = self.adminclient.post('/api/v1/change_admin/',
+                                         json.dumps(request),
+                                         content_type='application/json')
+
+        self.assertEqual(response.status_code, 201)
+
+        changes = Change.objects.filter(mother_id=identity)
+        self.assertEqual(changes.count(), 1)
+
+        self.assertEqual(changes[0].action, "change_messaging")
+        self.assertEqual(changes[0].data, {
+            "new_short_name": "messageset_one",
+            "new_language": "eng_ZA"
+        })
+
+    @responses.activate
+    def test_ci_change_language_and_messaging_invalid(self):
+        identity = "846877e6-afaa-43de-acb1-09f61ad4de99"
+        request = {
+            "mother_id": identity,
+            "messageset": "messageset_one",
+            "language": "zul_ZA"
+        }
+
+        self.make_source_adminuser()
+
+        self.add_messageset_language_callback()
+
+        self.add_messageset_via_short_name("messageset_one", 2)
+
+        response = self.adminclient.post('/api/v1/change_admin/',
+                                         json.dumps(request),
+                                         content_type='application/json')
+
+        self.assertEqual(response.status_code, 400)

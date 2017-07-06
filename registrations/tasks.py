@@ -507,11 +507,13 @@ class PullThirdPartyRegistrations(Task):
                 reg_info = {
                     "stage": line['type_of_registration'],
                     "source": source.id,
+                    "mother_id": mother_identity.get('id'),
                     "data": {
                         "msg_receiver": receiver,
                         "operator_id": operator_identity['id'],
                         "language": language,
-                        "msg_type": msg_type
+                        "msg_type": msg_type,
+                        "receiver_id": mother_identity.get('id')
                     }
                 }
 
@@ -522,11 +524,8 @@ class PullThirdPartyRegistrations(Task):
                     reg_info['data']['voice_times'] = times
                     reg_info['data']['voice_days'] = days
 
-                    if receiver.find('_only') == -1:
-                        identity_details["preferred_msg_times"] = times
-                        identity_details["preferred_msg_days"] = days
-
-                reg_info["mother_id"] = mother_identity.get('id')
+                    identity_details["preferred_msg_times"] = times
+                    identity_details["preferred_msg_days"] = days
 
                 if line['gatekeeper_phone_number']:
                     receiver_details = identity_details.copy()
