@@ -547,6 +547,100 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
         self.assertEqual(d.schedule, 6)
 
     @responses.activate
+    def test_prebirth_text_to_text_new_short_name(self):
+        # Setup
+        # make change object
+        change_data = {
+            "mother_id": "846877e6-afaa-43de-acb1-09f61ad4de99",
+            "action": "change_messaging",
+            "data": {
+                "new_short_name": "prebirth.mother.text.0_9",
+                "new_language": "ibo_NG"
+            },
+            "source": self.make_source_adminuser()
+        }
+        change = Change.objects.create(**change_data)
+        # mock get subscription request
+        subscription_id = "07f4d95c-ad78-4bf1-8779-c47b428e89d0"
+        query_string = '?active=True&identity=%s' % change_data["mother_id"]
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": subscription_id,
+                    "identity": change_data["mother_id"],
+                    "active": True,
+                    "lang": "eng_NG",
+                    "next_sequence_number": 10,
+                    "messageset": 1,
+                    "schedule": 1
+                }],
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock current messageset lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/1/',
+            json={
+                "id": 1,
+                "short_name": 'prebirth.mother.text.10_42',
+                "default_schedule": 1
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock schedule 1 lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/schedule/1/',
+            json={"id": 1, "day_of_week": "1,3,5"},
+            status=200, content_type='application/json',
+        )
+        # mock patch subscription request
+        responses.add(
+            responses.PATCH,
+            'http://localhost:8005/api/v1/subscriptions/%s/' % subscription_id,
+            json={"active": False},
+            status=200, content_type='application/json',
+        )
+        # mock messageset via shortname lookup
+        query_string = '?short_name=prebirth.mother.text.0_9'
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/%s' % query_string,
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 4,
+                    "short_name": 'prebirth.mother.text.0_9',
+                    "default_schedule": 1
+                }]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+
+        # Execute
+        result = implement_action.apply_async(args=[change.id])
+
+        # Check
+        self.assertEqual(result.get(), "Change messaging completed")
+        d = SubscriptionRequest.objects.last()
+        self.assertEqual(d.identity, "846877e6-afaa-43de-acb1-09f61ad4de99")
+        self.assertEqual(d.messageset, 4)
+        self.assertEqual(d.next_sequence_number, 10)
+        self.assertEqual(d.lang, "ibo_NG")
+        self.assertEqual(d.schedule, 1)
+
+    @responses.activate
     def test_prebirth_text_to_audio_week28(self):
         # Setup
         # make change object
