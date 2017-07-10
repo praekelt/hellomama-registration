@@ -182,7 +182,8 @@ class ImplementAction(Task):
             new_days = new_sched["day_of_week"]
             new_rate = len(new_days.split(','))  # msgs per week
 
-        new_nsn = int(current_nsn * new_rate / float(current_rate))
+            new_nsn = int(current_nsn * new_rate / float(current_rate))
+
         # prevent rounding nsn to 0
         if new_nsn == 0:
             new_nsn = 1
