@@ -7,6 +7,7 @@ import pika
 from celery.task import Task
 from celery.utils.log import get_task_logger
 from django.conf import settings
+from seed_services_client import IdentityStoreApiClient
 from seed_services_client.metrics import MetricsApiClient
 from openpyxl import load_workbook
 from io import BytesIO
@@ -423,7 +424,10 @@ class PullThirdPartyRegistrations(Task):
             }
         }
         identity['details'].update(details)
-        identity = utils.create_identity(identity)
+        identity_store_client = IdentityStoreApiClient(
+            settings.IDENTITY_STORE_TOKEN,
+            settings.IDENTITY_STORE_URL)
+        identity = identity_store_client.create_identity(identity)
         return identity
 
     def get_language(self, language):

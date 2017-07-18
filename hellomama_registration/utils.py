@@ -139,19 +139,6 @@ def patch_identity(identity, data):
     return r.json()
 
 
-def create_identity(data):
-    """ Creates the identity with the data provided
-    """
-    url = "%s/identities/" % (settings.IDENTITY_STORE_URL)
-    headers = {
-        'Authorization': 'Token %s' % settings.IDENTITY_STORE_TOKEN,
-        'Content-Type': 'application/json'
-    }
-    r = session.post(url, data=json.dumps(data), headers=headers)
-    r.raise_for_status()
-    return r.json()
-
-
 def search_optouts(params=None):
     """ Returns the optouts matching the given parameters
     """
