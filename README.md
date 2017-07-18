@@ -1,5 +1,6 @@
 # hellomama-registration
-HelloMama Registration accepts registrations for the Hello Mama project.
+
+HelloMama Registration accepts registrations for [the HelloMama project](https://www.praekelt.org/hellomama/).
 
 This app uses the Django cache framework for efficient calculation of metrics,
 so if you are running multiple instances, make sure to setup a shared Django
