@@ -190,10 +190,14 @@ class AddRegistrationView(APIView):
         status = 201
         resp = {"registration_added": True}
 
-        source = Source.objects.get(user=self.request.user.id)
         try:
+            source = Source.objects.get(user=self.request.user.id)
             pull_third_party_registrations.create_registration(
                 request.data, source)
+        except Source.DoesNotExist as error:
+            resp['registration_added'] = False
+            resp['error'] = str(error)
+            status = 400
         except KeyError as error:
             resp['registration_added'] = False
             resp['error'] = 'Missing field: %s' % str(error)

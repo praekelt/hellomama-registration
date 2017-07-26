@@ -3630,6 +3630,34 @@ class TestAddRegistrationsAPI(TestThirdPartyRegistrations):
         self.assertEqual(Registration.objects.count(), 1)
 
     @responses.activate
+    def test_add_registration_no_source(self):
+        """
+        It should not create a registration if the user doesn't have a source
+        even if the data is valid
+        """
+
+        mother_id = "4038a518-2940-4b15-9c5c-2b7b123b8735"
+        operator_id = "4038a518-1111-1111-1111-hfud7383gfyt"
+
+        self.mock_identity_lookup("%2B2347031221927", mother_id)
+        self.mock_identity_lookup("11111", operator_id)
+
+        self.mock_identity_patch(mother_id)
+
+        data = override_get_data_mother_only(None)[0]
+
+        response = self.adminclient.post('/api/v1/addregistration/',
+                                         json.dumps(data),
+                                         content_type='application/json')
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data['registration_added'], False)
+        self.assertEqual(response.data['error'],
+                         "Source matching query does not exist.")
+
+        self.assertEqual(Registration.objects.count(), 0)
+
+    @responses.activate
     def test_add_registration_missing_field(self):
         """
         It should not create a registration if there are missing fields, it
