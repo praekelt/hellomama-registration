@@ -476,6 +476,83 @@ class PullThirdPartyRegistrations(Task):
 
         return data
 
+    def create_registration(self, line, source):
+        mother_identity = self.get_or_create_identity(
+            line['mothers_phone_number'], {})
+        operator_identity = self.get_or_create_identity(
+            line['health_worker_phone_number'])
+
+        language = self.get_language(line['preferred_msg_language'])
+        receiver = self.get_receiver(line['message_receiver'])
+        msg_type = self.get_msg_type(line['preferred_msg_type'])
+
+        identity_details = {
+            "default_addr_type": "msisdn",
+            "operator_id": operator_identity['id'],
+            "preferred_language": language,
+            "receiver_role": "mother",
+            "gravida": line['gravida'],
+            "preferred_msg_type": msg_type
+        }
+
+        reg_info = {
+            "stage": line['type_of_registration'],
+            "source": source.id,
+            "mother_id": mother_identity.get('id'),
+            "data": {
+                "msg_receiver": receiver,
+                "operator_id": operator_identity['id'],
+                "language": language,
+                "msg_type": msg_type,
+                "receiver_id": mother_identity.get('id')
+            }
+        }
+
+        if msg_type == 'audio':
+            times = self.get_voice_times(line['message_time'])
+            days = self.get_voice_days(line['message_days'])
+
+            reg_info['data']['voice_times'] = times
+            reg_info['data']['voice_days'] = days
+
+            identity_details["preferred_msg_times"] = times
+            identity_details["preferred_msg_days"] = days
+
+        if line['gatekeeper_phone_number']:
+            receiver_details = identity_details.copy()
+            receiver_details["receiver_role"] = receiver.replace(
+                'mother_', '').replace('_only', '')
+            receiver_details["linked_to"] = mother_identity.get('id')
+
+            if receiver.find('_only') == -1:
+                receiver_details["household_msgs_only"] = True
+
+            receiver_identity = self.get_or_create_identity(
+                line['gatekeeper_phone_number'],
+                receiver_details)
+            reg_info['data']['receiver_id'] = receiver_identity['id']
+
+            identity_details["linked_to"] = receiver_identity['id']
+
+        if mother_identity:
+            mother_identity['details'].update(identity_details)
+            utils.patch_identity(mother_identity['id'],
+                                 mother_identity['details'])
+
+        if line['type_of_registration'] == 'prebirth':
+            reg_info['data']['last_period_date'] = \
+                utils.calc_date_from_pregnancy_week(
+                    utils.get_today(),
+                    line["pregnancy_week"]).strftime("%Y%m%d")
+        else:
+            reg_info['data']['baby_dob'] = utils.calc_baby_dob(
+                utils.get_today(),
+                line["pregnancy_week"]).strftime("%Y%m%d")
+
+        serializer = RegistrationSerializer(data=reg_info)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
     def run(self, user_id, **kwargs):
         data = self.get_data()
 
@@ -484,83 +561,8 @@ class PullThirdPartyRegistrations(Task):
         loop_error = None
 
         for line in data:
-
             try:
-                mother_identity = self.get_or_create_identity(
-                    line['mothers_phone_number'], {})
-                operator_identity = self.get_or_create_identity(
-                    line['health_worker_phone_number'])
-
-                language = self.get_language(line['preferred_msg_language'])
-                receiver = self.get_receiver(line['message_receiver'])
-                msg_type = self.get_msg_type(line['preferred_msg_type'])
-
-                identity_details = {
-                    "default_addr_type": "msisdn",
-                    "operator_id": operator_identity['id'],
-                    "preferred_language": language,
-                    "receiver_role": "mother",
-                    "gravida": line['gravida'],
-                    "preferred_msg_type": msg_type
-                }
-
-                reg_info = {
-                    "stage": line['type_of_registration'],
-                    "source": source.id,
-                    "mother_id": mother_identity.get('id'),
-                    "data": {
-                        "msg_receiver": receiver,
-                        "operator_id": operator_identity['id'],
-                        "language": language,
-                        "msg_type": msg_type,
-                        "receiver_id": mother_identity.get('id')
-                    }
-                }
-
-                if msg_type == 'audio':
-                    times = self.get_voice_times(line['message_time'])
-                    days = self.get_voice_days(line['message_days'])
-
-                    reg_info['data']['voice_times'] = times
-                    reg_info['data']['voice_days'] = days
-
-                    identity_details["preferred_msg_times"] = times
-                    identity_details["preferred_msg_days"] = days
-
-                if line['gatekeeper_phone_number']:
-                    receiver_details = identity_details.copy()
-                    receiver_details["receiver_role"] = receiver.replace(
-                        'mother_', '').replace('_only', '')
-                    receiver_details["linked_to"] = mother_identity.get('id')
-
-                    if receiver.find('_only') == -1:
-                        receiver_details["household_msgs_only"] = True
-
-                    receiver_identity = self.get_or_create_identity(
-                        line['gatekeeper_phone_number'],
-                        receiver_details)
-                    reg_info['data']['receiver_id'] = receiver_identity['id']
-
-                    identity_details["linked_to"] = receiver_identity['id']
-
-                if mother_identity:
-                    mother_identity['details'].update(identity_details)
-                    utils.patch_identity(mother_identity['id'],
-                                         mother_identity['details'])
-
-                if line['type_of_registration'] == 'prebirth':
-                    reg_info['data']['last_period_date'] = \
-                        utils.calc_date_from_pregnancy_week(
-                            utils.get_today(),
-                            line["pregnancy_week"]).strftime("%Y%m%d")
-                else:
-                    reg_info['data']['baby_dob'] = utils.calc_baby_dob(
-                        utils.get_today(),
-                        line["pregnancy_week"]).strftime("%Y%m%d")
-
-                serializer = RegistrationSerializer(data=reg_info)
-                serializer.is_valid(raise_exception=True)
-                serializer.save()
+                self.create_registration(line, source)
             except Exception as error:
                 loop_error = error
                 line['error'] = str(error)

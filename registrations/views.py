@@ -177,3 +177,30 @@ class ThirdPartyRegistrationView(APIView):
         pull_third_party_registrations.apply_async(args=[self.request.user.id])
         resp = {"third_party_registration_pull_initiated": True}
         return Response(resp, status=status)
+
+
+class AddRegistrationView(APIView):
+
+    """ ThirdPartyRegistrationView Interaction
+        POST - Validates and Saves the registration
+    """
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request, *args, **kwargs):
+        status = 201
+        resp = {"registration_added": True}
+
+        source = Source.objects.get(user=self.request.user.id)
+        try:
+            pull_third_party_registrations.create_registration(
+                request.data, source)
+        except KeyError as error:
+            resp['registration_added'] = False
+            resp['error'] = 'Missing field: %s' % str(error)
+            status = 400
+        except Exception as error:
+            resp['registration_added'] = False
+            resp['error'] = str(error)
+            status = 400
+
+        return Response(resp, status=status)
