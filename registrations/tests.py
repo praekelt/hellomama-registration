@@ -3604,6 +3604,9 @@ class TestAddRegistrationsAPI(TestThirdPartyRegistrations):
 
     @responses.activate
     def test_add_registration(self):
+        """
+        It should successfully create a registration if the data is valid
+        """
 
         self.make_source_adminuser()
 
@@ -3624,8 +3627,14 @@ class TestAddRegistrationsAPI(TestThirdPartyRegistrations):
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.data['registration_added'], True)
 
+        self.assertEqual(Registration.objects.count(), 1)
+
     @responses.activate
     def test_add_registration_missing_field(self):
+        """
+        It should not create a registration if there are missing fields, it
+        should repond with correct code and message
+        """
 
         self.make_source_adminuser()
 
@@ -3648,8 +3657,14 @@ class TestAddRegistrationsAPI(TestThirdPartyRegistrations):
         self.assertEqual(response.data['registration_added'], False)
         self.assertEqual(response.data['error'], "Missing field: 'gravida'")
 
+        self.assertEqual(Registration.objects.count(), 0)
+
     @responses.activate
     def test_add_registration_invalid_data(self):
+        """
+        It should not create a registration if there is invalid data, it
+        should repond with correct code and message
+        """
 
         self.make_source_adminuser()
 
@@ -3669,5 +3684,7 @@ class TestAddRegistrationsAPI(TestThirdPartyRegistrations):
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.data['registration_added'], False)
-        self.assertEqual(response.data['error'],
-                         "{'mother_id': [u'This field may not be null.']}")
+        self.assertTrue(
+            response.data['error'].find("This field may not be null") != -1)
+
+        self.assertEqual(Registration.objects.count(), 0)
