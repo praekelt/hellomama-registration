@@ -18,4 +18,6 @@ urlpatterns = [
     url(r'^api/v1/', include(router.urls)),
     url(r'^api/v1/extregistration/$',
         views.ThirdPartyRegistrationView.as_view()),
+    url(r'^api/v1/addregistration/$',
+        views.AddRegistrationView.as_view()),
 ]
