@@ -3629,6 +3629,12 @@ class TestAddRegistrationsAPI(TestThirdPartyRegistrations):
 
         self.assertEqual(Registration.objects.count(), 1)
 
+        reg = Registration.objects.last()
+        self.assertEqual(
+            reg.created_by, User.objects.get(username='testadminuser'))
+        self.assertEqual(
+            reg.updated_by, User.objects.get(username='testadminuser'))
+
     @responses.activate
     def test_add_registration_no_source(self):
         """

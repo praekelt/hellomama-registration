@@ -551,7 +551,8 @@ class PullThirdPartyRegistrations(Task):
 
         serializer = RegistrationSerializer(data=reg_info)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        serializer.save(created_by=source.user,
+                        updated_by=source.user)
 
     def run(self, user_id, **kwargs):
         data = self.get_data()
