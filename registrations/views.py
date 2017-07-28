@@ -104,16 +104,21 @@ class MetricsView(APIView):
         return Response(resp, status=status)
 
 
-class RegistrationPost(mixins.CreateModelMixin, generics.GenericAPIView):
+class RegistrationPostPatch(mixins.CreateModelMixin, mixins.UpdateModelMixin,
+                            generics.GenericAPIView):
     permission_classes = (IsAuthenticated,)
     queryset = Registration.objects.all()
     serializer_class = RegistrationSerializer
+    lookup_field = 'id'
 
     def post(self, request, *args, **kwargs):
         # load the users sources - posting users should only have one source
         source = Source.objects.get(user=self.request.user)
         request.data["source"] = source.id
         return self.create(request, *args, **kwargs)
+
+    def patch(self, request, *args, **kwargs):
+        return self.partial_update(request, *args, **kwargs)
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user,
