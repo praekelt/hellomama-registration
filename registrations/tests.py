@@ -527,6 +527,65 @@ class TestRegistrationAPI(AuthenticatedAPITestCase):
         self.assertEqual(d.validated, False)  # Should ignore True post_data
         self.assertEqual(d.data, {"test_key1": "test_value1"})
 
+    def test_update_registration_adminuser(self):
+        # Setup
+        registration = self.make_registration_normaluser()
+        post_data = {
+            "data": {"test_key1": "test_value1"}
+        }
+        # Execute
+        response = self.adminclient.patch(
+            '/api/v1/registration/%s/' % registration.id,
+            json.dumps(post_data),
+            content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        registration.refresh_from_db()
+
+        self.assertEqual(registration.data, {"test_key1": "test_value1"})
+        self.assertEqual(registration.updated_by, self.adminuser)
+
+    def test_update_registration_normaluser(self):
+        # Setup
+        registration = self.make_registration_normaluser()
+        post_data = {
+            "data": {"test_key1": "test_value1"}
+        }
+        # Execute
+        response = self.normalclient.patch(
+            '/api/v1/registration/%s/' % registration.id,
+            json.dumps(post_data),
+            content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        registration.refresh_from_db()
+
+        self.assertEqual(registration.data, {"test_key1": "test_value1"})
+        self.assertEqual(registration.updated_by, self.normaluser)
+
+    def test_update_registration_readonly_field(self):
+        # Setup
+        registration = self.make_registration_normaluser()
+        post_data = {
+            "data": {"test_key1": "test_value1"},
+            "validated": True
+        }
+        # Execute
+        response = self.adminclient.patch(
+            '/api/v1/registration/%s/' % registration.id,
+            json.dumps(post_data),
+            content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        registration.refresh_from_db()
+
+        self.assertEqual(registration.data, {"test_key1": "test_value1"})
+        self.assertEqual(registration.updated_by, self.adminuser)
+        self.assertEqual(registration.validated, False)
+
     def test_list_registrations(self):
         # Setup
         registration1 = self.make_registration_normaluser()
