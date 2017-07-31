@@ -6,12 +6,19 @@ import six
 from django.conf import settings
 from registrations.models import Source
 from datetime import timedelta
+from seed_services_client import IdentityStoreApiClient
 
 session = requests.Session()
 http = requests.adapters.HTTPAdapter(max_retries=5)
 https = requests.adapters.HTTPAdapter(max_retries=5)
 session.mount('http://', http)
 session.mount('https://', https)
+
+identity_store_client = IdentityStoreApiClient(
+    api_url=settings.IDENTITY_STORE_URL,
+    auth_token=settings.IDENTITY_STORE_TOKEN,
+    retries=5,
+)
 
 
 def get_today():
@@ -78,13 +85,7 @@ def normalize_msisdn(raw, country_code):
 
 
 def get_identity(identity):
-    url = "%s/%s/%s/" % (settings.IDENTITY_STORE_URL, "identities", identity)
-    headers = {
-        'Authorization': 'Token %s' % settings.IDENTITY_STORE_TOKEN,
-        'Content-Type': 'application/json'
-    }
-    r = session.get(url, headers=headers)
-    return r.json()
+    return identity_store_client.get_identity(identity)
 
 
 def get_identity_address(identity):
