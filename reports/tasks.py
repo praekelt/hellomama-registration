@@ -7,6 +7,7 @@ from django.utils.dateparse import parse_datetime
 from functools import partial
 from openpyxl import Workbook
 from six import string_types
+from datetime import timedelta
 
 from seed_services_client import (IdentityStoreApiClient,
                                   StageBasedMessagingApiClient,
@@ -85,6 +86,8 @@ class GenerateReport(Task):
             start_date = midnight_validator(start_date)
         if isinstance(end_date, string_types):
             end_date = midnight_validator(end_date)
+
+        end_date = end_date + timedelta(days=1, microseconds=-1)
 
         self.identity_cache = {}
         self.messageset_cache = {}

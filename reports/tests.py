@@ -162,7 +162,7 @@ class GenerateReportTest(TestCase):
         responses.add(
             responses.GET,
             ("http://sbm.example.com/subscriptions/?"
-             "created_before=2016-02-01T00%3A00%3A00%2B00%3A00"),
+             "created_before=2016-02-01T23%3A59%3A59.999999%2B00%3A00"),
             match_querystring=True,
             json={
                 'count': 0,
@@ -213,7 +213,7 @@ class GenerateReportTest(TestCase):
         responses.add(
             responses.GET,
             ("http://ms.example.com/outbound/?"
-             "before=2016-02-01T00%3A00%3A00%2B00%3A00"
+             "before=2016-02-01T23%3A59%3A59.999999%2B00%3A00"
              "&after=2016-01-01T00%3A00%3A00%2B00%3A00"),
             match_querystring=True,
             json={
@@ -273,7 +273,7 @@ class GenerateReportTest(TestCase):
         responses.add(
             responses.GET,
             ("http://idstore.example.com/optouts/search/?"
-             "created_at__lte=2016-02-01T00%3A00%3A00%2B00%3A00&"
+             "created_at__lte=2016-02-01T23%3A59%3A59.999999%2B00%3A00&"
              "created_at__gte=2016-01-01T00%3A00%3A00%2B00%3A00"),
             match_querystring=True,
             json={
@@ -350,7 +350,7 @@ class GenerateReportTest(TestCase):
         """
         # Add Registrations
         self.add_registrations()
-        Registration.objects.all().update(created_at='2016-01-02 00:00:00')
+        Registration.objects.all().update(created_at='2016-02-01 01:00:00')
 
         # HCW Identity
         self.add_identity_callback()
@@ -404,7 +404,7 @@ class GenerateReportTest(TestCase):
             tmp_file.name, 'Registrations by date', 1,
             [
                 '+2340000000000',
-                '2016-01-02T00:00:00+00:00',
+                '2016-02-01T01:00:00+00:00',
                 'gravida',
                 'msg_type',
                 'last_period_date',
