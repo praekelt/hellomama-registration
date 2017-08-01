@@ -35,4 +35,5 @@ def midnight_validator(inputstr):
 
 
 def generate_random_filename(suffix='.xlsx'):
-    return ''.join(random.choice(string.lowercase) for i in range(12)) + suffix
+    return ''.join(
+        random.choice(string.ascii_lowercase) for i in range(12)) + suffix
