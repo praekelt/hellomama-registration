@@ -1,4 +1,5 @@
 import collections
+import os
 
 from celery.task import Task
 from django.conf import settings
@@ -30,6 +31,11 @@ class SendEmail(Task):
         with open(file_location, 'rb') as fp:
             email.attach(file_name, fp.read(), 'application/vnd.ms-excel')
         email.send()
+
+        try:
+            os.remove(file_location)
+        except OSError:
+            pass
 
 
 class ExportSheet(object):

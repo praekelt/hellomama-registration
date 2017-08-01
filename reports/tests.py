@@ -336,7 +336,8 @@ class GenerateReportTest(TestCase):
             return filename
 
     @responses.activate
-    def test_generate_report_email(self):
+    @mock.patch("os.remove")
+    def test_generate_report_email(self, mock_remove):
         """
         Generating a report should create an email with the correct address,
         subject, and attachment.
@@ -351,7 +352,8 @@ class GenerateReportTest(TestCase):
         self.assertEqual('report-2016-01-01-to-2016-02-01.xlsx', file_name)
 
     @responses.activate
-    def test_generate_report_registrations(self):
+    @mock.patch("os.remove")
+    def test_generate_report_registrations(self, mock_remove):
         """
         When generating a report, the first tab should be a list of
         registrations with the relevant registration details.
@@ -385,6 +387,8 @@ class GenerateReportTest(TestCase):
         self.add_blank_optouts_callback(next_=None)
 
         tmp_file = self.trigger_report_generation()
+
+        mock_remove.assert_called_once_with(tmp_file)
 
         # Assert headers are set
         self.assertSheetRow(
@@ -429,7 +433,8 @@ class GenerateReportTest(TestCase):
             ])
 
     @responses.activate
-    def test_generate_report_health_worker_registrations(self):
+    @mock.patch("os.remove")
+    def test_generate_report_health_worker_registrations(self, mock_remove):
         """
         When generating a report, the second tab should be registrations per
         health worker, and it should have the correct information.
@@ -464,6 +469,8 @@ class GenerateReportTest(TestCase):
 
         tmp_file = self.trigger_report_generation()
 
+        mock_remove.assert_called_once_with(tmp_file)
+
         # Assert headers are set
         self.assertSheetRow(
             tmp_file, 'Health worker registrations', 0,
@@ -487,7 +494,8 @@ class GenerateReportTest(TestCase):
             ])
 
     @responses.activate
-    def test_generate_report_enrollments(self):
+    @mock.patch("os.remove")
+    def test_generate_report_enrollments(self, mock_remove):
         """
         When generating a report, the third tab should be enrollments,
         and it should have the correct information.
@@ -521,6 +529,8 @@ class GenerateReportTest(TestCase):
 
         tmp_file = self.trigger_report_generation()
 
+        mock_remove.assert_called_once_with(tmp_file)
+
         # Assert headers are set
         self.assertSheetRow(
             tmp_file, 'Enrollments', 0,
@@ -539,7 +549,8 @@ class GenerateReportTest(TestCase):
             ['prebirth', 'role', 2, 2, 0, 0])
 
     @responses.activate
-    def test_generate_report_sms_per_msisdn(self):
+    @mock.patch("os.remove")
+    def test_generate_report_sms_per_msisdn(self, mock_remove):
         """
         When generating a report, the fourth tab should be SMS delivery per
         MSISDN, and it should have the correct information.
@@ -573,6 +584,8 @@ class GenerateReportTest(TestCase):
 
         tmp_file = self.trigger_report_generation()
 
+        mock_remove.assert_called_once_with(tmp_file)
+
         # Assert headers are set
         self.assertSheetRow(
             tmp_file, 'SMS delivery per MSISDN', 0,
@@ -590,7 +603,8 @@ class GenerateReportTest(TestCase):
             ['addr', 'Yes', 'No', 'Yes', 'No'])
 
     @responses.activate
-    def test_generate_report_obd_delivery_failure(self):
+    @mock.patch("os.remove")
+    def test_generate_report_obd_delivery_failure(self, mock_remove):
         # Add Registrations, 2 registrations for 1 operator
         self.add_registrations(num=2)
 
@@ -622,6 +636,8 @@ class GenerateReportTest(TestCase):
 
         tmp_file = self.trigger_report_generation()
 
+        mock_remove.assert_called_once_with(tmp_file)
+
         # Assert period row
         self.assertSheetRow(
             tmp_file, 'OBD Delivery Failure', 1,
@@ -647,7 +663,8 @@ class GenerateReportTest(TestCase):
             [40, 20, '50.00%'])
 
     @responses.activate
-    def test_generate_report_optout_by_date(self):
+    @mock.patch("os.remove")
+    def test_generate_report_optout_by_date(self, mock_remove):
         # Return no registrations or subscriptions for other reports
         self.add_blank_subscription_callback(next_=None)
 
@@ -672,6 +689,8 @@ class GenerateReportTest(TestCase):
         self.add_blank_outbound_callback(next_=None)
 
         tmp_file = self.trigger_report_generation()
+
+        mock_remove.assert_called_once_with(tmp_file)
 
         # Assert headers are set
         self.assertSheetRow(
