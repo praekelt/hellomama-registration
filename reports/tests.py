@@ -1,6 +1,7 @@
 import json
 import pytz
 import responses
+import os
 
 try:
     import mock
@@ -17,15 +18,20 @@ from openpyxl import load_workbook
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 from rest_hooks.models import model_saved
-from tempfile import NamedTemporaryFile
 
 from registrations.models import (
     Registration, registration_post_save, fire_created_metric,
     fire_unique_operator_metric, fire_message_type_metric, fire_source_metric,
     fire_receiver_type_metric, fire_language_metric, fire_state_metric,
     fire_role_metric)
-from .utils import parse_cursor_params
+from .utils import parse_cursor_params, generate_random_filename
 from .tasks import generate_report
+
+
+class mockobj(object):
+    @classmethod
+    def choice(cls, li):
+        return li[0]
 
 
 @override_settings(
@@ -90,6 +96,13 @@ class GenerateReportTest(TestCase):
         post_save.connect(receiver=model_saved,
                           dispatch_uid='instance-saved-hook')
 
+        try:
+            with mock.patch('random.choice', mockobj.choice):
+                filename = generate_random_filename()
+                os.remove(filename)
+        except OSError:
+            pass
+
     def assertSheetRow(self, file_name, sheet_name, row_number, expected):
         wb = load_workbook(file_name)
         sheet = wb[sheet_name]
@@ -97,11 +110,6 @@ class GenerateReportTest(TestCase):
         self.assertEqual(
             [cell.value for cell in rows[row_number]],
             expected)
-
-    def mk_tempfile(self):
-        tmp_file = NamedTemporaryFile(suffix='.xlsx')
-        self.addCleanup(tmp_file.close)
-        return tmp_file
 
     def test_parse_cursor_params(self):
         cursor = ("https://example"
@@ -314,18 +322,18 @@ class GenerateReportTest(TestCase):
                                  tzinfo=pytz.timezone(settings.TIME_ZONE))
 
     def trigger_report_generation(self):
-        tmp_file = self.mk_tempfile()
+        with mock.patch('random.choice', mockobj.choice):
+            filename = generate_random_filename()
 
-        generate_report.apply_async(kwargs={
-            'start_date': self.midnight(datetime.strptime('2016-01-01',
-                                                          '%Y-%m-%d')),
-            'end_date': self.midnight(datetime.strptime('2016-02-01',
-                                                        '%Y-%m-%d')),
-            'output_file': tmp_file.name,
-            'email_recipients': ['foo@example.com'],
-            'email_subject': 'The Email Subject'})
+            generate_report.apply_async(kwargs={
+                'start_date': self.midnight(datetime.strptime('2016-01-01',
+                                                              '%Y-%m-%d')),
+                'end_date': self.midnight(datetime.strptime('2016-02-01',
+                                                            '%Y-%m-%d')),
+                'email_recipients': ['foo@example.com'],
+                'email_subject': 'The Email Subject'})
 
-        return tmp_file
+            return filename
 
     @responses.activate
     def test_generate_report_email(self):
@@ -380,7 +388,7 @@ class GenerateReportTest(TestCase):
 
         # Assert headers are set
         self.assertSheetRow(
-            tmp_file.name, 'Registrations by date', 0,
+            tmp_file, 'Registrations by date', 0,
             [
                 'MSISDN',
                 'Created',
@@ -401,7 +409,7 @@ class GenerateReportTest(TestCase):
 
         # Assert 1 row is written
         self.assertSheetRow(
-            tmp_file.name, 'Registrations by date', 1,
+            tmp_file, 'Registrations by date', 1,
             [
                 '+2340000000000',
                 '2016-02-01T01:00:00+00:00',
@@ -458,7 +466,7 @@ class GenerateReportTest(TestCase):
 
         # Assert headers are set
         self.assertSheetRow(
-            tmp_file.name, 'Health worker registrations', 0,
+            tmp_file, 'Health worker registrations', 0,
             [
                 'Unique Personnel Code',
                 'Facility',
@@ -469,7 +477,7 @@ class GenerateReportTest(TestCase):
 
         # Assert 1 row is written
         self.assertSheetRow(
-            tmp_file.name, 'Health worker registrations', 1,
+            tmp_file, 'Health worker registrations', 1,
             [
                 'personnel_code',
                 'facility_name',
@@ -515,7 +523,7 @@ class GenerateReportTest(TestCase):
 
         # Assert headers are set
         self.assertSheetRow(
-            tmp_file.name, 'Enrollments', 0,
+            tmp_file, 'Enrollments', 0,
             [
                 'Message set',
                 'Roleplayer',
@@ -527,7 +535,7 @@ class GenerateReportTest(TestCase):
 
         # Assert 1 row is written
         self.assertSheetRow(
-            tmp_file.name, 'Enrollments', 1,
+            tmp_file, 'Enrollments', 1,
             ['prebirth', 'role', 2, 2, 0, 0])
 
     @responses.activate
@@ -567,7 +575,7 @@ class GenerateReportTest(TestCase):
 
         # Assert headers are set
         self.assertSheetRow(
-            tmp_file.name, 'SMS delivery per MSISDN', 0,
+            tmp_file, 'SMS delivery per MSISDN', 0,
             [
                 'MSISDN',
                 'SMS 1',
@@ -578,7 +586,7 @@ class GenerateReportTest(TestCase):
 
         # Assert 1 row is written
         self.assertSheetRow(
-            tmp_file.name, 'SMS delivery per MSISDN', 1,
+            tmp_file, 'SMS delivery per MSISDN', 1,
             ['addr', 'Yes', 'No', 'Yes', 'No'])
 
     @responses.activate
@@ -616,7 +624,7 @@ class GenerateReportTest(TestCase):
 
         # Assert period row
         self.assertSheetRow(
-            tmp_file.name, 'OBD Delivery Failure', 1,
+            tmp_file, 'OBD Delivery Failure', 1,
             [
                 "In the last period:",
                 "2016-01-01 - 2016-02-01",
@@ -625,7 +633,7 @@ class GenerateReportTest(TestCase):
 
         # Check headers
         self.assertSheetRow(
-            tmp_file.name, 'OBD Delivery Failure', 2,
+            tmp_file, 'OBD Delivery Failure', 2,
             [
                 "OBDs Sent",
                 "OBDs failed",
@@ -635,7 +643,7 @@ class GenerateReportTest(TestCase):
 
         # Assert 1 row is written
         self.assertSheetRow(
-            tmp_file.name, 'OBD Delivery Failure', 3,
+            tmp_file, 'OBD Delivery Failure', 3,
             [40, 20, '50.00%'])
 
     @responses.activate
@@ -667,7 +675,7 @@ class GenerateReportTest(TestCase):
 
         # Assert headers are set
         self.assertSheetRow(
-            tmp_file.name, 'Opt Outs by Date', 0,
+            tmp_file, 'Opt Outs by Date', 0,
             [
                 "MSISDN",
                 "Optout Date",
@@ -677,7 +685,7 @@ class GenerateReportTest(TestCase):
 
         # Assert row 1 is written
         self.assertSheetRow(
-            tmp_file.name, 'Opt Outs by Date', 1,
+            tmp_file, 'Opt Outs by Date', 1,
             [
                 "+1234",
                 "2017-01-27T10:00:06.354178Z",
@@ -716,19 +724,13 @@ class ReportsViewTest(TestCase):
         self.normalclient.credentials(
             HTTP_AUTHORIZATION='Token ' + self.normaltoken)
 
-    def mk_tempfile(self):
-        tmp_file = NamedTemporaryFile(suffix='.xlsx')
-        self.addCleanup(tmp_file.close)
-        return tmp_file
-
     def midnight(self, timestamp):
         return timestamp.replace(hour=0, minute=0, second=0, microsecond=0,
                                  tzinfo=pytz.timezone(settings.TIME_ZONE))
 
     @mock.patch("reports.tasks.generate_report.apply_async")
     def test_auth_required(self, mock_generation):
-        tmp_file = self.mk_tempfile()
-        data = {'output_file': tmp_file.name}
+        data = {}
 
         # Without authentication
         request = self.otherclient.post('/api/v1/reports/', json.dumps(data),
@@ -741,18 +743,9 @@ class ReportsViewTest(TestCase):
                                          content_type='application/json')
         self.assertEqual(request.status_code, 202)
 
-    def test_output_file_required(self):
-        request = self.adminclient.post('/api/v1/reports/', json.dumps({}),
-                                        content_type='application/json')
-        self.assertEqual(request.status_code, 400)
-        self.assertEqual(request.data,
-                         {'output_file': [u'This field is required.']})
-
     @mock.patch("reports.tasks.generate_report.apply_async")
     def test_post_successful(self, mock_generation):
-        tmp_file = self.mk_tempfile()
         data = {
-            'output_file': tmp_file.name,
             'start_date': '2016-01-01',
             'end_date': '2016-02-01',
             'email_to': ['foo@example.com'],
@@ -766,7 +759,6 @@ class ReportsViewTest(TestCase):
         self.assertEqual(request.data, {"report_generation_requested": True})
 
         mock_generation.assert_called_once_with(kwargs={
-            "output_file": tmp_file.name,
             "start_date": '2016-01-01',
             "end_date": '2016-02-01',
             "email_recipients": ['foo@example.com'],
@@ -774,9 +766,7 @@ class ReportsViewTest(TestCase):
             "email_subject": 'The Email Subject'})
 
     def test_response_on_incorrect_date_format(self):
-        tmp_file = self.mk_tempfile()
         data = {
-            'output_file': tmp_file.name,
             'start_date': '2016:01:01',
             'end_date': '2016:02:01',
             'email_to': ['foo@example.com'],
