@@ -5,7 +5,6 @@ from reports.utils import midnight, midnight_validator, one_month_after
 
 
 class ReportGenerationSerializer(serializers.Serializer):
-    output_file = serializers.CharField()
     start_date = serializers.CharField(required=False)
     end_date = serializers.CharField(required=False)
     email_to = serializers.ListField(child=serializers.EmailField(),

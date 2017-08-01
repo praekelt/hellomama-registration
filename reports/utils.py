@@ -1,5 +1,7 @@
 import pytz
 import calendar
+import random
+import string
 
 # NOTE: Python 3 compatibility
 try:
@@ -30,3 +32,8 @@ def one_month_after(timestamp):
 def midnight_validator(inputstr):
     return midnight(datetime.strptime(inputstr, '%Y-%m-%d')).replace(
         tzinfo=pytz.timezone(settings.TIME_ZONE))
+
+
+def generate_random_filename(suffix='.xlsx'):
+    return ''.join(
+        random.choice(string.ascii_lowercase) for i in range(12)) + suffix

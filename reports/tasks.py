@@ -1,4 +1,5 @@
 import collections
+import os
 
 from celery.task import Task
 from django.conf import settings
@@ -14,7 +15,8 @@ from seed_services_client import (IdentityStoreApiClient,
                                   MessageSenderApiClient)
 
 from registrations.models import Registration
-from reports.utils import parse_cursor_params, midnight_validator
+from reports.utils import (parse_cursor_params, midnight_validator,
+                           generate_random_filename)
 
 
 class SendEmail(Task):
@@ -29,6 +31,11 @@ class SendEmail(Task):
         with open(file_location, 'rb') as fp:
             email.attach(file_name, fp.read(), 'application/vnd.ms-excel')
         email.send()
+
+        try:
+            os.remove(file_location)
+        except OSError:
+            pass
 
 
 class ExportSheet(object):
@@ -77,7 +84,7 @@ class GenerateReport(Task):
     disk and email it to specified recipients
     """
 
-    def run(self, output_file, start_date, end_date, email_recipients=[],
+    def run(self, start_date, end_date, email_recipients=[],
             email_sender=settings.DEFAULT_FROM_EMAIL,
             email_subject='Seed Control Interface Generated Report',
             **kwargs):
@@ -123,6 +130,7 @@ class GenerateReport(Task):
         self.handle_optouts(
             sheet, sbm_client, ids_client, start_date, end_date)
 
+        output_file = generate_random_filename()
         workbook.save(output_file)
 
         if email_recipients:

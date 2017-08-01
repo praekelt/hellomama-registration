@@ -20,7 +20,6 @@ class ReportsView(APIView):
         data = serializer.validated_data
 
         generate_report.apply_async(kwargs={
-            "output_file": data['output_file'],
             "start_date": datetime.strftime(data['start_date'], '%Y-%m-%d'),
             "end_date": datetime.strftime(data['end_date'], '%Y-%m-%d'),
             "email_recipients": data['email_to'],
