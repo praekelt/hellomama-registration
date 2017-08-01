@@ -1,6 +1,4 @@
 import collections
-import random
-import string
 
 from celery.task import Task
 from django.conf import settings
