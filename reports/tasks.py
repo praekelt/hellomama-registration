@@ -98,6 +98,7 @@ class GenerateReport(Task):
 
         self.identity_cache = {}
         self.messageset_cache = {}
+        self.address_cache = {}
 
         ids_client = IdentityStoreApiClient(settings.IDENTITY_STORE_TOKEN,
                                             settings.IDENTITY_STORE_URL)
@@ -152,6 +153,14 @@ class GenerateReport(Task):
         identity_object = ids_client.get_identity(identity)
         self.identity_cache[identity] = identity_object
         return identity_object
+
+    def get_identity_address(self, ids_client, identity):
+        if identity in self.identity_cache:
+            return self.address_cache[identity]
+
+        address = ids_client.get_identity_address(identity)
+        self.address_cache[identity] = address
+        return address
 
     def get_messageset(self, sbm_client, messageset):
         if messageset in self.messageset_cache:
@@ -367,16 +376,8 @@ class GenerateReport(Task):
 
                 if (not outbound.get('to_addr', '') and
                         outbound.get('to_identity', '')):
-                    identity = self.get_identity(
+                    outbound['to_addr'] = self.get_identity_address(
                         ids_client, outbound['to_identity'])
-
-                    details = identity.get('details', {})
-                    default_addr_type = details.get(
-                        'default_addr_type', 'msisdn')
-
-                    addresses = details.get('addresses', {})
-                    outbound['to_addr'] = list(
-                        addresses.get(default_addr_type, {}).keys())[0]
 
                 count[outbound['to_addr']] += 1
                 data[outbound['to_addr']][outbound['created_at']] = \

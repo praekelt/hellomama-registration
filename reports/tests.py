@@ -163,6 +163,25 @@ class GenerateReportTest(TestCase):
             status=200,
             content_type='application/json')
 
+    def add_identity_address_callback(
+            self, identity='operator_id', msisdn="+27711445511"):
+        responses.add(
+            responses.GET,
+            'http://idstore.example.com/identities/{}/addresses/msisdn?default=True'.format(identity),  # noqa
+            match_querystring=True,
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [
+                    {
+                        "address": msisdn
+                    }
+                ]
+            },
+            status=200,
+            content_type='application/json')
+
     def add_blank_subscription_callback(self, next_='?foo=bar'):
         if next_:
             next_ = 'http://sbm.example.com/subscriptions/{}'.format(next_)
@@ -579,6 +598,8 @@ class GenerateReportTest(TestCase):
         self.add_identity_callback('17cf37cf-edd6-4634-88e3-f793575f7e3a')
 
         self.add_blank_outbound_callback()
+
+        self.add_identity_address_callback('receiver_id', '+2340000000000')
 
         # Create 4 outbounds with to_addr populated and 4 with to_identity
         self.add_outbound_callback(
