@@ -392,7 +392,7 @@ class GenerateReport(Task):
 
             sheet.set_header(header)
 
-            for msisdn, sms_data in data.items():
+            for msisdn, sms_data in sorted(data.items()):
 
                 row = {1: msisdn}
 

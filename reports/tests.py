@@ -626,10 +626,10 @@ class GenerateReportTest(TestCase):
         # Assert 2 rows are written
         self.assertSheetRow(
             tmp_file, 'SMS delivery per MSISDN', 1,
-            ['+2340000001111', 'Yes', 'No', 'Yes', 'No'])
+            ['+2340000000000', 'Yes', 'No', 'Yes', 'No'])
         self.assertSheetRow(
             tmp_file, 'SMS delivery per MSISDN', 2,
-            ['+2340000000000', 'Yes', 'No', 'Yes', 'No'])
+            ['+2340000001111', 'Yes', 'No', 'Yes', 'No'])
 
     @responses.activate
     @mock.patch("os.remove")
