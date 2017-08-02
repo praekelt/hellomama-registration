@@ -375,8 +375,8 @@ class GenerateReport(Task):
                         'default_addr_type', 'msisdn')
 
                     addresses = details.get('addresses', {})
-                    outbound['to_addr'] = addresses.get(
-                        default_addr_type, {}).keys()[0]
+                    outbound['to_addr'] = list(
+                        addresses.get(default_addr_type, {}).keys())[0]
 
                 count[outbound['to_addr']] += 1
                 data[outbound['to_addr']][outbound['created_at']] = \
