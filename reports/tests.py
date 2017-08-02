@@ -232,17 +232,20 @@ class GenerateReportTest(TestCase):
             status=200,
             content_type='application/json')
 
-    def add_outbound_callback(self, path='?foo=bar', num=1, metadata={}):
+    def add_outbound_callback(
+            self, num=1, metadata={}, options=(('addr', ''), )):
         outbounds = []
 
         for i in range(0, num):
-            outbounds.append({
-                'to_addr': 'addr',
-                'content': 'content',
-                'delivered': True if i % 2 == 0 else False,
-                'created_at': '2016-01-01T10:30:21.{}Z'.format(i),
-                'metadata': metadata
-            })
+            for option in options:
+                outbounds.append({
+                    'to_addr': option[0],
+                    'to_identity': option[1],
+                    'content': 'content',
+                    'delivered': True if i % 2 == 0 else False,
+                    'created_at': '2016-01-01T10:30:21.{}Z'.format(i),
+                    'metadata': metadata
+                })
 
         responses.add(
             responses.GET,
@@ -577,7 +580,9 @@ class GenerateReportTest(TestCase):
 
         self.add_blank_outbound_callback()
 
-        self.add_outbound_callback(num=4)
+        # Create 4 outbounds with to_addr populated and 4 with to_identity
+        self.add_outbound_callback(
+            num=4, options=(('+2340000001111', ''), ('', 'receiver_id')))
 
         # No opt outs, we're not testing optout by subscription
         self.add_blank_optouts_callback(next_=None)
@@ -597,10 +602,13 @@ class GenerateReportTest(TestCase):
                 'SMS 4'
             ])
 
-        # Assert 1 row is written
+        # Assert 2 rows are written
         self.assertSheetRow(
             tmp_file, 'SMS delivery per MSISDN', 1,
-            ['addr', 'Yes', 'No', 'Yes', 'No'])
+            ['+2340000001111', 'Yes', 'No', 'Yes', 'No'])
+        self.assertSheetRow(
+            tmp_file, 'SMS delivery per MSISDN', 2,
+            ['+2340000000000', 'Yes', 'No', 'Yes', 'No'])
 
     @responses.activate
     @mock.patch("os.remove")

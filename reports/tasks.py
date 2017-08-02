@@ -120,7 +120,8 @@ class GenerateReport(Task):
                                 end_date)
 
         sheet = workbook.add_sheet('SMS delivery per MSISDN', 3)
-        self.handle_sms_delivery_msisdn(sheet, ms_client, start_date, end_date)
+        self.handle_sms_delivery_msisdn(sheet, ms_client, ids_client,
+                                        start_date, end_date)
 
         sheet = workbook.add_sheet('OBD Delivery Failure', 4)
         self.handle_obd_delivery_failure(sheet, ms_client, start_date,
@@ -351,7 +352,7 @@ class GenerateReport(Task):
             })
 
     def handle_sms_delivery_msisdn(
-            self, sheet, ms_client, start_date, end_date):
+            self, sheet, ms_client, ids_client, start_date, end_date):
 
         outbounds = self.get_outbounds(
             ms_client,
@@ -363,6 +364,19 @@ class GenerateReport(Task):
         count = collections.defaultdict(int)
         for outbound in outbounds:
             if 'voice_speech_url' not in outbound.get('metadata', {}):
+
+                if (not outbound.get('to_addr', '') and
+                        outbound.get('to_identity', '')):
+                    identity = self.get_identity(
+                        ids_client, outbound['to_identity'])
+
+                    details = identity.get('details', {})
+                    default_addr_type = details.get(
+                        'default_addr_type', 'msisdn')
+
+                    addresses = details.get('addresses', {})
+                    outbound['to_addr'] = addresses.get(
+                        default_addr_type, {}).keys()[0]
 
                 count[outbound['to_addr']] += 1
                 data[outbound['to_addr']][outbound['created_at']] = \
