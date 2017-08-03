@@ -3432,3 +3432,149 @@ class AdminViewsTest(AuthenticatedAPITestCase):
                                          content_type='application/json')
 
         self.assertEqual(response.status_code, 400)
+
+
+class AddChangeViewsTest(AuthenticatedAPITestCase):
+    """
+    Tests related to the adding of changes view.
+    """
+    def mock_identity_lookup(self, msisdn, identity_id):
+        responses.add(
+            responses.GET,
+            'http://localhost:8001/api/v1/identities/search/?details__addresses__msisdn=%s' % msisdn,  # noqa
+            json={
+                "count": 1, "next": None, "previous": None,
+                "results": [{
+                    "id": identity_id,
+                    "details": {}
+                }]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+
+    def mock_identity_optout(self):
+        responses.add(responses.POST,
+                      "http://localhost:8001/api/v1/optout/",
+                      json={"foo": "bar"},
+                      status=200, content_type='application/json')
+
+    @responses.activate
+    def test_add_change_language(self):
+        # Setup
+        self.make_source_adminuser()
+        mother_id = "4038a518-2940-4b15-9c5c-2b7b123b8735"
+
+        self.mock_identity_lookup("%2B2347031221927", mother_id)
+        post_data = {
+            "msisdn": "07031221927",
+            "action": "change_language",
+            "data": {"test_key1": "test_value1"}
+        }
+        # Execute
+        response = self.adminclient.post('/api/v1/addchange/',
+                                         json.dumps(post_data),
+                                         content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        d = Change.objects.last()
+        self.assertEqual(d.source.name, 'test_ussd_source_adminuser')
+        self.assertEqual(d.action, 'change_language')
+        self.assertEqual(d.validated, False)
+        self.assertEqual(d.data, {"test_key1": "test_value1"})
+        self.assertEqual(d.created_by, self.adminuser)
+
+        self.assertEqual(len(responses.calls), 1)
+
+    @responses.activate
+    def test_add_change_unsubscribe(self):
+        # Setup
+        self.make_source_adminuser()
+        mother_id = "4038a518-2940-4b15-9c5c-2b7b123b8735"
+
+        self.mock_identity_lookup("%2B2347031221927", mother_id)
+        self.mock_identity_optout()
+
+        post_data = {
+            "msisdn": "07031221927",
+            "action": "unsubscribe_mother_only",
+            "data": {"reason": "miscarriage"}
+        }
+        # Execute
+        response = self.adminclient.post('/api/v1/addchange/',
+                                         json.dumps(post_data),
+                                         content_type='application/json')
+
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        d = Change.objects.last()
+        self.assertEqual(d.source.name, 'test_ussd_source_adminuser')
+        self.assertEqual(d.action, 'unsubscribe_mother_only')
+        self.assertEqual(d.validated, False)
+        self.assertEqual(d.data, {"reason": "miscarriage"})
+        self.assertEqual(d.created_by, self.adminuser)
+
+        self.assertEqual(len(responses.calls), 2)
+
+    @responses.activate
+    def test_add_change_missing_field(self):
+        # Setup
+        post_data = {
+            "action": "change_language",
+            "data": {"test_key1": "test_value1"}
+        }
+        # Execute
+        response = self.adminclient.post('/api/v1/addchange/',
+                                         json.dumps(post_data),
+                                         content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            utils.json_decode(response.content),
+            {"msisdn": ["This field is required."]})
+
+        self.assertEqual(len(responses.calls), 0)
+
+    @responses.activate
+    def test_add_change_no_source(self):
+        # Setup
+        mother_id = "4038a518-2940-4b15-9c5c-2b7b123b8735"
+
+        self.mock_identity_lookup("%2B2347031221927", mother_id)
+        post_data = {
+            "msisdn": "07031221927",
+            "action": "change_language",
+            "data": {"test_key1": "test_value1"}
+        }
+        # Execute
+        response = self.adminclient.post('/api/v1/addchange/',
+                                         json.dumps(post_data),
+                                         content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            utils.json_decode(response.content),
+            "Source not found for user.")
+        self.assertEqual(len(responses.calls), 0)
+
+    @responses.activate
+    def test_add_change_invalid_field(self):
+        # Setup
+        post_data = {
+            "msisdn": "07031221927",
+            "action": "change_everything",
+            "data": {"test_key1": "test_value1"}
+        }
+        # Execute
+        response = self.adminclient.post('/api/v1/addchange/',
+                                         json.dumps(post_data),
+                                         content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            utils.json_decode(response.content),
+            {'action': ['"change_everything" is not a valid choice.']})
+
+        self.assertEqual(len(responses.calls), 0)

@@ -78,3 +78,14 @@ class AdminChangeSerializer(serializers.Serializer):
         OneFieldRequiredValidator(['messageset', 'language']),
         LanguageValidator()
     ]
+
+
+class AddChangeSerializer(serializers.ModelSerializer):
+    msisdn = serializers.CharField(required=True)
+
+    class Meta:
+        model = Change
+        read_only_fields = ('validated', 'created_by', 'updated_by',
+                            'created_at', 'updated_at')
+        fields = ('id', 'action', 'msisdn', 'data', 'validated', 'created_at',
+                  'updated_at', 'created_by', 'updated_by')

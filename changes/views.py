@@ -9,7 +9,8 @@ from django.http import JsonResponse
 from django.conf import settings
 from django.db.models import Q
 from hellomama_registration import utils
-from .serializers import AdminChangeSerializer
+from .serializers import AdminChangeSerializer, AddChangeSerializer
+from seed_services_client import IdentityStoreApiClient
 
 import six
 
@@ -279,6 +280,60 @@ class ReceiveAdminChange(generics.CreateAPIView):
 
         if serializer.is_valid():
             serializer.save()
+
+            return Response(data=serializer.data,
+                            status=status.HTTP_201_CREATED)
+        else:
+            return Response(serializer.errors,
+                            status=status.HTTP_400_BAD_REQUEST)
+
+
+class AddChangeView(generics.CreateAPIView):
+
+    """ AddChangeView Interaction
+        POST - Validates and Saves the change, optouts if needed
+    """
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request, *args, **kwargs):
+        add_serializer = AddChangeSerializer(data=request.data)
+        if add_serializer.is_valid():
+            data = add_serializer.validated_data
+        else:
+            return Response(add_serializer.errors,
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            source = Source.objects.get(user=self.request.user)
+        except Source.DoesNotExist:
+            return Response("Source not found for user.",
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        data["source"] = source.id
+
+        ids_client = IdentityStoreApiClient(
+            settings.IDENTITY_STORE_TOKEN, settings.IDENTITY_STORE_URL)
+        data['msisdn'] = utils.normalize_msisdn(data['msisdn'], '234')
+        identity = ids_client.get_identity_by_address('msisdn', data['msisdn'])
+        data['mother_id'] = identity['results'][0]['id']
+
+        if 'unsubscribe' in data['action']:
+            optout_info = {
+                'optout_type': 'stop',
+                'identity': data['mother_id'],
+                'reason': data['data']['reason'],
+                'address_type': 'msisdn',
+                'address': data['msisdn'],
+                'request_source': source.name,
+                'requestor_source_id': source.id
+            }
+            ids_client.create_optout(optout_info)
+
+        serializer = ChangeSerializer(data=data)
+
+        if serializer.is_valid():
+            serializer.save(created_by=self.request.user,
+                            updated_by=self.request.user)
 
             return Response(data=serializer.data,
                             status=status.HTTP_201_CREATED)
