@@ -3519,6 +3519,43 @@ class AddChangeViewsTest(AuthenticatedAPITestCase):
         self.assertEqual(len(responses.calls), 2)
 
     @responses.activate
+    def test_add_change_unsubscribe_household(self):
+        # Setup
+        self.make_source_adminuser()
+        mother_id = "4038a518-2940-4b15-9c5c-2b7b123b8735"
+        household_id = "4038a518-2940-4b15-9c5c-9ix9cvx09cv8"
+
+        self.mock_identity_lookup("%2B2347031221927", mother_id)
+        self.mock_identity_lookup("%2B2347031221928", household_id)
+        self.mock_identity_optout()
+
+        post_data = {
+            "msisdn": "07031221927",
+            "action": "unsubscribe_household_only",
+            "data": {
+                "reason": "not_useful",
+                "household_msisdn": "07031221928"
+            }
+        }
+        # Execute
+        response = self.adminclient.post('/api/v1/addchange/',
+                                         json.dumps(post_data),
+                                         content_type='application/json')
+
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        d = Change.objects.last()
+        self.assertEqual(d.source.name, 'test_ussd_source_adminuser')
+        self.assertEqual(d.action, 'unsubscribe_household_only')
+        self.assertEqual(d.validated, False)
+        self.assertEqual(d.data["reason"], "not_useful")
+        self.assertEqual(d.data["household_id"], household_id)
+        self.assertEqual(d.created_by, self.adminuser)
+
+        self.assertEqual(len(responses.calls), 3)
+
+    @responses.activate
     def test_add_change_missing_field(self):
         # Setup
         post_data = {
