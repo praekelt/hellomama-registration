@@ -155,7 +155,7 @@ class GenerateReport(Task):
         return identity_object
 
     def get_identity_address(self, ids_client, identity):
-        if identity in self.identity_cache:
+        if identity in self.address_cache:
             return self.address_cache[identity]
 
         address = ids_client.get_identity_address(identity)
