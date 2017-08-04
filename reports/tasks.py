@@ -98,6 +98,7 @@ class GenerateReport(Task):
 
         self.identity_cache = {}
         self.messageset_cache = {}
+        self.address_cache = {}
 
         ids_client = IdentityStoreApiClient(settings.IDENTITY_STORE_TOKEN,
                                             settings.IDENTITY_STORE_URL)
@@ -120,7 +121,8 @@ class GenerateReport(Task):
                                 end_date)
 
         sheet = workbook.add_sheet('SMS delivery per MSISDN', 3)
-        self.handle_sms_delivery_msisdn(sheet, ms_client, start_date, end_date)
+        self.handle_sms_delivery_msisdn(sheet, ms_client, ids_client,
+                                        start_date, end_date)
 
         sheet = workbook.add_sheet('OBD Delivery Failure', 4)
         self.handle_obd_delivery_failure(sheet, ms_client, start_date,
@@ -151,6 +153,14 @@ class GenerateReport(Task):
         identity_object = ids_client.get_identity(identity)
         self.identity_cache[identity] = identity_object
         return identity_object
+
+    def get_identity_address(self, ids_client, identity):
+        if identity in self.identity_cache:
+            return self.address_cache[identity]
+
+        address = ids_client.get_identity_address(identity)
+        self.address_cache[identity] = address
+        return address
 
     def get_messageset(self, sbm_client, messageset):
         if messageset in self.messageset_cache:
@@ -351,7 +361,7 @@ class GenerateReport(Task):
             })
 
     def handle_sms_delivery_msisdn(
-            self, sheet, ms_client, start_date, end_date):
+            self, sheet, ms_client, ids_client, start_date, end_date):
 
         outbounds = self.get_outbounds(
             ms_client,
@@ -363,6 +373,11 @@ class GenerateReport(Task):
         count = collections.defaultdict(int)
         for outbound in outbounds:
             if 'voice_speech_url' not in outbound.get('metadata', {}):
+
+                if (not outbound.get('to_addr', '') and
+                        outbound.get('to_identity', '')):
+                    outbound['to_addr'] = self.get_identity_address(
+                        ids_client, outbound['to_identity'])
 
                 count[outbound['to_addr']] += 1
                 data[outbound['to_addr']][outbound['created_at']] = \
@@ -377,7 +392,7 @@ class GenerateReport(Task):
 
             sheet.set_header(header)
 
-            for msisdn, sms_data in data.items():
+            for msisdn, sms_data in sorted(data.items()):
 
                 row = {1: msisdn}
 

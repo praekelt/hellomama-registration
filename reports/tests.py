@@ -163,6 +163,25 @@ class GenerateReportTest(TestCase):
             status=200,
             content_type='application/json')
 
+    def add_identity_address_callback(
+            self, identity='operator_id', msisdn="+27711445511"):
+        responses.add(
+            responses.GET,
+            'http://idstore.example.com/identities/{}/addresses/msisdn?default=True'.format(identity),  # noqa
+            match_querystring=True,
+            json={
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [
+                    {
+                        "address": msisdn
+                    }
+                ]
+            },
+            status=200,
+            content_type='application/json')
+
     def add_blank_subscription_callback(self, next_='?foo=bar'):
         if next_:
             next_ = 'http://sbm.example.com/subscriptions/{}'.format(next_)
@@ -232,17 +251,20 @@ class GenerateReportTest(TestCase):
             status=200,
             content_type='application/json')
 
-    def add_outbound_callback(self, path='?foo=bar', num=1, metadata={}):
+    def add_outbound_callback(
+            self, num=1, metadata={}, options=(('addr', ''), )):
         outbounds = []
 
         for i in range(0, num):
-            outbounds.append({
-                'to_addr': 'addr',
-                'content': 'content',
-                'delivered': True if i % 2 == 0 else False,
-                'created_at': '2016-01-01T10:30:21.{}Z'.format(i),
-                'metadata': metadata
-            })
+            for option in options:
+                outbounds.append({
+                    'to_addr': option[0],
+                    'to_identity': option[1],
+                    'content': 'content',
+                    'delivered': True if i % 2 == 0 else False,
+                    'created_at': '2016-01-01T10:30:21.{}Z'.format(i),
+                    'metadata': metadata
+                })
 
         responses.add(
             responses.GET,
@@ -577,7 +599,11 @@ class GenerateReportTest(TestCase):
 
         self.add_blank_outbound_callback()
 
-        self.add_outbound_callback(num=4)
+        self.add_identity_address_callback('receiver_id', '+2340000000000')
+
+        # Create 4 outbounds with to_addr populated and 4 with to_identity
+        self.add_outbound_callback(
+            num=4, options=(('+2340000001111', ''), ('', 'receiver_id')))
 
         # No opt outs, we're not testing optout by subscription
         self.add_blank_optouts_callback(next_=None)
@@ -597,10 +623,13 @@ class GenerateReportTest(TestCase):
                 'SMS 4'
             ])
 
-        # Assert 1 row is written
+        # Assert 2 rows are written
         self.assertSheetRow(
             tmp_file, 'SMS delivery per MSISDN', 1,
-            ['addr', 'Yes', 'No', 'Yes', 'No'])
+            ['+2340000000000', 'Yes', 'No', 'Yes', 'No'])
+        self.assertSheetRow(
+            tmp_file, 'SMS delivery per MSISDN', 2,
+            ['+2340000001111', 'Yes', 'No', 'Yes', 'No'])
 
     @responses.activate
     @mock.patch("os.remove")
