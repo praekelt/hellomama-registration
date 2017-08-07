@@ -317,10 +317,21 @@ class AddChangeView(generics.CreateAPIView):
         identity = ids_client.get_identity_by_address('msisdn', data['msisdn'])
         data['mother_id'] = identity['results'][0]['id']
 
+        if data['data'].get('household_msisdn'):
+            data['data']['household_msisdn'] = utils.normalize_msisdn(
+                data['data']['household_msisdn'], '234')
+            household = ids_client.get_identity_by_address(
+                'msisdn', data['data']['household_msisdn'])
+            data['data']['household_id'] = household['results'][0]['id']
+
         if 'unsubscribe' in data['action']:
+            identity_id = data['mother_id']
+            if data['action'] == 'unsubscribe_household_only':
+                identity_id = data['data']['household_id']
+
             optout_info = {
                 'optout_type': 'stop',
-                'identity': data['mother_id'],
+                'identity': identity_id,
                 'reason': data['data']['reason'],
                 'address_type': 'msisdn',
                 'address': data['msisdn'],
