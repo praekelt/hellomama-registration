@@ -317,6 +317,22 @@ class AddChangeView(generics.CreateAPIView):
         identity = ids_client.get_identity_by_address('msisdn', data['msisdn'])
         data['mother_id'] = identity['results'][0]['id']
 
+        if ('voice_days' in data['data']):
+            data['data']['voice_days'] = utils.get_voice_days(
+                data['data']['voice_days'])
+
+        if ('voice_times' in data['data']):
+            data['data']['voice_times'] = utils.get_voice_times(
+                data['data']['voice_times'])
+
+        if ('msg_type' in data['data']):
+            data['data']['msg_type'] = utils.get_msg_type(
+                data['data']['msg_type'])
+
+        if ('new_language' in data['data']):
+            data['data']['new_language'] = utils.get_language(
+                data['data']['new_language'])
+
         if data['data'].get('household_msisdn'):
             data['data']['household_msisdn'] = utils.normalize_msisdn(
                 data['data']['household_msisdn'], '234')
