@@ -3469,7 +3469,7 @@ class AddChangeViewsTest(AuthenticatedAPITestCase):
         post_data = {
             "msisdn": "07031221927",
             "action": "change_language",
-            "data": {"test_key1": "test_value1"}
+            "data": {"new_language": "english"}
         }
         # Execute
         response = self.adminclient.post('/api/v1/addchange/',
@@ -3482,7 +3482,44 @@ class AddChangeViewsTest(AuthenticatedAPITestCase):
         self.assertEqual(d.source.name, 'test_ussd_source_adminuser')
         self.assertEqual(d.action, 'change_language')
         self.assertEqual(d.validated, False)
-        self.assertEqual(d.data, {"test_key1": "test_value1"})
+        self.assertEqual(d.data, {"new_language": "eng_NG"})
+        self.assertEqual(d.created_by, self.adminuser)
+
+        self.assertEqual(len(responses.calls), 1)
+
+    @responses.activate
+    def test_add_change_messaging(self):
+        # Setup
+        self.make_source_adminuser()
+        mother_id = "4038a518-2940-4b15-9c5c-2b7b123b8735"
+
+        self.mock_identity_lookup("%2B2347031221927", mother_id)
+        post_data = {
+            "msisdn": "07031221927",
+            "action": "change_messaging",
+            "data":  {
+                "voice_days": "tuesday_and_thursday",
+                "voice_times": "2-5pm",
+                "msg_type": "voice"
+            }
+
+        }
+        # Execute
+        response = self.adminclient.post('/api/v1/addchange/',
+                                         json.dumps(post_data),
+                                         content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        d = Change.objects.last()
+        self.assertEqual(d.source.name, 'test_ussd_source_adminuser')
+        self.assertEqual(d.action, 'change_messaging')
+        self.assertEqual(d.validated, False)
+        self.assertEqual(d.data, {
+            "voice_days": "tue_thu",
+            "voice_times": "2_5",
+            "msg_type": "audio"
+        })
         self.assertEqual(d.created_by, self.adminuser)
 
         self.assertEqual(len(responses.calls), 1)

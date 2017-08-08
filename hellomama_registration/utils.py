@@ -353,3 +353,32 @@ def json_decode(data):
         data = data.decode('utf-8')
 
     return json.loads(data)
+
+
+def get_language(language):
+    return {'english': 'eng_NG',
+            'igbo': 'ibo_NG',
+            'pidgin': 'pcm_NG'}.get(language, language)
+
+
+def get_msg_type(msg_type):
+    return 'audio' if msg_type == 'voice' else msg_type
+
+
+def get_voice_times(time):
+    return {'9-11am': '9_11',
+            '2-5pm': '2_5',
+            '6-8pm': '6_8'}.get(time, time)
+
+
+def get_voice_days(days):
+    return {'monday_and_wednesday': 'mon_wed',
+            'tuesday_and_thursday': 'tue_thu'}.get(days, days)
+
+
+def get_receiver(receiver):
+    return {
+        "mother_and_father": "mother_father",
+        "mother_and_family": "mother_family",
+        "mother_and_friend": "mother_friend",
+    }.get(receiver, receiver)

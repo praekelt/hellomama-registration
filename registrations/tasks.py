@@ -426,30 +426,6 @@ class PullThirdPartyRegistrations(Task):
         identity = utils.create_identity(identity)
         return identity
 
-    def get_language(self, language):
-        return {'english': 'eng_NG',
-                'igbo': 'ibo_NG',
-                'pidgin': 'pcm_NG'}.get(language, language)
-
-    def get_msg_type(self, msg_type):
-        return 'audio' if msg_type == 'voice' else msg_type
-
-    def get_voice_times(self, time):
-        return {'9-11am': '9_11',
-                '2-5pm': '2_5',
-                '6-8pm': '6_8'}.get(time, time)
-
-    def get_voice_days(self, days):
-        return {'monday_and_wednesday': 'mon_wed',
-                'tuesday_and_thursday': 'tue_thu'}.get(days, days)
-
-    def get_receiver(self, receiver):
-        return {
-            "mother_and_father": "mother_father",
-            "mother_and_family": "mother_family",
-            "mother_and_friend": "mother_friend",
-        }.get(receiver, receiver)
-
     def get_data(self):
         url = settings.THIRDPARTY_REGISTRATIONS_URL
         username = settings.THIRDPARTY_REGISTRATIONS_USER
@@ -482,9 +458,9 @@ class PullThirdPartyRegistrations(Task):
         operator_identity = self.get_or_create_identity(
             line['health_worker_phone_number'])
 
-        language = self.get_language(line['preferred_msg_language'])
-        receiver = self.get_receiver(line['message_receiver'])
-        msg_type = self.get_msg_type(line['preferred_msg_type'])
+        language = utils.get_language(line['preferred_msg_language'])
+        receiver = utils.get_receiver(line['message_receiver'])
+        msg_type = utils.get_msg_type(line['preferred_msg_type'])
 
         identity_details = {
             "default_addr_type": "msisdn",
@@ -509,8 +485,8 @@ class PullThirdPartyRegistrations(Task):
         }
 
         if msg_type == 'audio':
-            times = self.get_voice_times(line['message_time'])
-            days = self.get_voice_days(line['message_days'])
+            times = utils.get_voice_times(line['message_time'])
+            days = utils.get_voice_days(line['message_days'])
 
             reg_info['data']['voice_times'] = times
             reg_info['data']['voice_days'] = days
