@@ -397,31 +397,42 @@ repopulate_metrics = RepopulateMetrics()
 
 class PullThirdPartyRegistrations(Task):
 
-    def get_or_create_identity(self, msisdn, details={}):
+    def get_or_create_identity(
+            self, msisdn=None, communicate_through=None, details={}):
 
-        if not msisdn:
+        if not msisdn and not communicate_through:
             return {}
 
-        msisdn = utils.normalize_msisdn(msisdn, '234')
+        if msisdn:
+            msisdn = utils.normalize_msisdn(msisdn, '234')
 
-        params = {"details__addresses__msisdn": msisdn}
-        identities = utils.search_identities(params)
+            params = {"details__addresses__msisdn": msisdn}
+            identities = utils.search_identities(params)
 
-        for identity in identities:
-            if details:
-                identity['details'].update(details)
-                utils.patch_identity(identity['id'], identity['details'])
-            return identity
+            for identity in identities:
+                if details:
+                    identity['details'].update(details)
+                    utils.patch_identity(identity['id'], identity['details'])
+                return identity
 
-        identity = {
-            'details': {
-                'addresses': {
-                    'msisdn': {
-                        msisdn: {'default': True}
+            identity = {
+                'details': {
+                    'addresses': {
+                        'msisdn': {
+                            msisdn: {'default': True}
+                        }
                     }
                 }
             }
-        }
+        else:
+            identity = {
+                "details": {
+                    "default_addr_type": None,
+                    "addresses": {}
+                },
+                "communicate_through": communicate_through
+            }
+
         identity['details'].update(details)
         identity = utils.create_identity(identity)
         return identity
@@ -478,7 +489,7 @@ class PullThirdPartyRegistrations(Task):
 
     def create_registration(self, line, source):
         mother_identity = self.get_or_create_identity(
-            line['mothers_phone_number'], {})
+            line['mothers_phone_number'], details={})
         operator_identity = self.get_or_create_identity(
             line['health_worker_phone_number'])
 
@@ -529,10 +540,15 @@ class PullThirdPartyRegistrations(Task):
 
             receiver_identity = self.get_or_create_identity(
                 line['gatekeeper_phone_number'],
-                receiver_details)
+                details=receiver_details)
             reg_info['data']['receiver_id'] = receiver_identity['id']
 
             identity_details["linked_to"] = receiver_identity['id']
+
+            if receiver in ('father_only', 'family_only', 'friend_only'):
+                mother_identity = self.get_or_create_identity(
+                    None, receiver_identity['id'])
+                reg_info['mother_id'] = mother_identity['id']
 
         if mother_identity:
             mother_identity['details'].update(identity_details)

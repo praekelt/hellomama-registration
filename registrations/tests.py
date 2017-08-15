@@ -3350,6 +3350,22 @@ def override_get_data_mother_only(self):
     }]
 
 
+def override_get_data_father_only(self):
+    return [{
+        "mothers_phone_number": "",
+        "health_worker_phone_number": "11111",
+        "pregnancy_week": "13",
+        "gravida": "2",
+        "preferred_msg_language": "english",
+        "type_of_registration": "prebirth",
+        "preferred_msg_type": "voice",
+        "message_days": "tuesday_and_thursday",
+        "message_time": "2-5pm",
+        "message_receiver": "father_only",
+        "gatekeeper_phone_number": "07031221927"
+    }]
+
+
 def override_get_data_bad(self):
     return [{
         "mothers_phone_number": "",
@@ -3401,6 +3417,18 @@ class TestThirdPartyRegistrations(AuthenticatedAPITestCase):
                     "id": identity_id,
                     "details": {}
                 }]
+            },
+
+        )
+
+    def mock_identity_post(self, identity_id, communicate_through=None):
+        responses.add(
+            responses.POST,
+            'http://localhost:8001/api/v1/identities/',
+            json={
+                "id": identity_id,
+                "details": {},
+                "communicate_through": communicate_through
             },
 
         )
@@ -3630,6 +3658,45 @@ class TestAddRegistrationsAPI(TestThirdPartyRegistrations):
         self.assertEqual(Registration.objects.count(), 1)
 
         reg = Registration.objects.last()
+        self.assertEqual(
+            reg.created_by, User.objects.get(username='testadminuser'))
+        self.assertEqual(
+            reg.updated_by, User.objects.get(username='testadminuser'))
+
+    @responses.activate
+    def test_add_registration_father_only(self):
+        """
+        It should successfully create a father_only registration if the data
+        is valid
+        """
+
+        self.make_source_adminuser()
+
+        father_id = "4038a518-2940-4b15-9c5c-2b7b123b8735"
+        mother_id = "4038a518-2940-4b15-9c5c-skjdfnsjdnff"
+        operator_id = "4038a518-1111-1111-1111-hfud7383gfyt"
+
+        self.mock_identity_lookup("%2B2347031221927", father_id)
+        self.mock_identity_lookup("11111", operator_id)
+        self.mock_identity_post(mother_id, father_id)
+
+        self.mock_identity_patch(mother_id)
+        self.mock_identity_patch(father_id)
+
+        data = override_get_data_father_only(None)[0]
+
+        response = self.adminclient.post('/api/v1/addregistration/',
+                                         json.dumps(data),
+                                         content_type='application/json')
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data['registration_added'], True)
+
+        self.assertEqual(Registration.objects.count(), 1)
+
+        reg = Registration.objects.last()
+        self.assertEqual(reg.mother_id, mother_id)
+        self.assertEqual(reg.data['receiver_id'], father_id)
         self.assertEqual(
             reg.created_by, User.objects.get(username='testadminuser'))
         self.assertEqual(
