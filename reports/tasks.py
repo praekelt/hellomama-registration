@@ -16,7 +16,7 @@ from seed_services_client import (IdentityStoreApiClient,
 
 from registrations.models import Registration
 from reports.utils import (parse_cursor_params, midnight_validator,
-                           generate_random_filename)
+                           generate_random_filename, sizeof_format)
 
 
 class SendEmail(Task):
@@ -26,11 +26,15 @@ class SendEmail(Task):
         recipients = kwargs['recipients']
         file_location = kwargs['file_location']
         file_name = kwargs['file_name']
+        task_status = kwargs['task_status']
 
         email = EmailMessage(subject, '', sender, recipients)
         with open(file_location, 'rb') as fp:
             email.attach(file_name, fp.read(), 'application/vnd.ms-excel')
         email.send()
+
+        task_status.status = 'Done'
+        task_status.save()
 
         try:
             os.remove(file_location)
@@ -84,67 +88,80 @@ class GenerateReport(Task):
     disk and email it to specified recipients
     """
 
-    def run(self, start_date, end_date, email_recipients=[],
+    def run(self, start_date, end_date, task_status, email_recipients=[],
             email_sender=settings.DEFAULT_FROM_EMAIL,
-            email_subject='Seed Control Interface Generated Report',
-            **kwargs):
+            email_subject='Seed Control Interface Generated Report', **kwargs):
 
-        if isinstance(start_date, string_types):
-            start_date = midnight_validator(start_date)
-        if isinstance(end_date, string_types):
-            end_date = midnight_validator(end_date)
+        task_status.status = 'Running'
+        task_status.save()
 
-        end_date = end_date + timedelta(days=1, microseconds=-1)
+        try:
+            if isinstance(start_date, string_types):
+                start_date = midnight_validator(start_date)
+            if isinstance(end_date, string_types):
+                end_date = midnight_validator(end_date)
 
-        self.identity_cache = {}
-        self.messageset_cache = {}
-        self.address_cache = {}
+            end_date = end_date + timedelta(days=1, microseconds=-1)
 
-        ids_client = IdentityStoreApiClient(settings.IDENTITY_STORE_TOKEN,
-                                            settings.IDENTITY_STORE_URL)
-        sbm_client = StageBasedMessagingApiClient(
-            settings.STAGE_BASED_MESSAGING_TOKEN,
-            settings.STAGE_BASED_MESSAGING_URL)
-        ms_client = MessageSenderApiClient(settings.MESSAGE_SENDER_TOKEN,
-                                           settings.MESSAGE_SENDER_URL)
+            self.identity_cache = {}
+            self.messageset_cache = {}
+            self.address_cache = {}
 
-        workbook = self.workbook_class()
-        sheet = workbook.add_sheet('Registrations by date', 0)
-        self.handle_registrations(sheet, ids_client, start_date, end_date)
+            ids_client = IdentityStoreApiClient(settings.IDENTITY_STORE_TOKEN,
+                                                settings.IDENTITY_STORE_URL)
+            sbm_client = StageBasedMessagingApiClient(
+                settings.STAGE_BASED_MESSAGING_TOKEN,
+                settings.STAGE_BASED_MESSAGING_URL)
+            ms_client = MessageSenderApiClient(settings.MESSAGE_SENDER_TOKEN,
+                                               settings.MESSAGE_SENDER_URL)
 
-        sheet = workbook.add_sheet('Health worker registrations', 1)
-        self.handle_health_worker_registrations(
-            sheet, ids_client, start_date, end_date)
+            workbook = self.workbook_class()
+            sheet = workbook.add_sheet('Registrations by date', 0)
+            self.handle_registrations(sheet, ids_client, start_date, end_date)
 
-        sheet = workbook.add_sheet('Enrollments', 2)
-        self.handle_enrollments(sheet, sbm_client, ids_client, start_date,
-                                end_date)
+            sheet = workbook.add_sheet('Health worker registrations', 1)
+            self.handle_health_worker_registrations(
+                sheet, ids_client, start_date, end_date)
 
-        sheet = workbook.add_sheet('SMS delivery per MSISDN', 3)
-        self.handle_sms_delivery_msisdn(sheet, ms_client, ids_client,
-                                        start_date, end_date)
+            sheet = workbook.add_sheet('Enrollments', 2)
+            self.handle_enrollments(sheet, sbm_client, ids_client, start_date,
+                                    end_date)
 
-        sheet = workbook.add_sheet('OBD Delivery Failure', 4)
-        self.handle_obd_delivery_failure(sheet, ms_client, start_date,
-                                         end_date)
+            sheet = workbook.add_sheet('SMS delivery per MSISDN', 3)
+            self.handle_sms_delivery_msisdn(sheet, ms_client, ids_client,
+                                            start_date, end_date)
 
-        sheet = workbook.add_sheet('Opt Outs by Date', 5)
-        self.handle_optouts(
-            sheet, sbm_client, ids_client, start_date, end_date)
+            sheet = workbook.add_sheet('OBD Delivery Failure', 4)
+            self.handle_obd_delivery_failure(sheet, ms_client, start_date,
+                                             end_date)
 
-        output_file = generate_random_filename()
-        workbook.save(output_file)
+            sheet = workbook.add_sheet('Opt Outs by Date', 5)
+            self.handle_optouts(
+                sheet, sbm_client, ids_client, start_date, end_date)
 
-        if email_recipients:
-            file_name = 'report-%s-to-%s.xlsx' % (
-                start_date.strftime('%Y-%m-%d'),
-                end_date.strftime('%Y-%m-%d'))
-            SendEmail.apply_async(kwargs={
-                'subject': email_subject,
-                'file_name': file_name,
-                'file_location': output_file,
-                'sender': email_sender,
-                'recipients': email_recipients})
+            output_file = generate_random_filename()
+            workbook.save(output_file)
+
+            task_status.status = 'Sending'
+            task_status.file_size = sizeof_format(os.path.getsize(output_file))
+            task_status.save()
+
+            if email_recipients:
+                file_name = 'report-%s-to-%s.xlsx' % (
+                    start_date.strftime('%Y-%m-%d'),
+                    end_date.strftime('%Y-%m-%d'))
+                SendEmail.apply_async(kwargs={
+                    'subject': email_subject,
+                    'file_name': file_name,
+                    'file_location': output_file,
+                    'sender': email_sender,
+                    'recipients': email_recipients,
+                    "task_status": task_status})
+        except Exception as error:
+            task_status.status = 'Failed'
+            task_status.error = str(error)
+            task_status.save()
+            raise
 
     def get_identity(self, ids_client, identity):
         if identity in self.identity_cache:

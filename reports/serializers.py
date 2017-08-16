@@ -2,6 +2,7 @@ from django.conf import settings
 from django.utils import timezone
 from rest_framework import serializers
 from reports.utils import midnight, midnight_validator, one_month_after
+from .models import ReportTaskStatus
 
 
 class ReportGenerationSerializer(serializers.Serializer):
@@ -32,3 +33,14 @@ class ReportGenerationSerializer(serializers.Serializer):
 
     def validate_end_date(self, value):
         return self.validate_date(value)
+
+
+class ReportTaskStatusSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = ReportTaskStatus
+        read_only_fields = ('start_date', 'end_date', 'email_subject',
+                            'file_size', 'status', 'error', 'created_at',
+                            'updated_at')
+        fields = ('start_date', 'end_date', 'email_subject', 'file_size',
+                  'status', 'error', 'created_at', 'updated_at')

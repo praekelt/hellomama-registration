@@ -2,6 +2,7 @@ import json
 import pytz
 import responses
 import os
+import openpyxl
 
 try:
     import mock
@@ -26,6 +27,7 @@ from registrations.models import (
     fire_role_metric)
 from .utils import parse_cursor_params, generate_random_filename
 from .tasks import generate_report
+from .models import ReportTaskStatus
 
 
 class mockobj(object):
@@ -347,13 +349,23 @@ class GenerateReportTest(TestCase):
         with mock.patch('random.choice', mockobj.choice):
             filename = generate_random_filename()
 
+            task_status = ReportTaskStatus.objects.create(**{
+                "start_date": self.midnight(datetime.strptime('2016-01-01',
+                                                              '%Y-%m-%d')),
+                "end_date": self.midnight(datetime.strptime('2016-02-01',
+                                                            '%Y-%m-%d')),
+                "email_subject": 'The Email Subject',
+                "status": "Pending"
+            })
+
             generate_report.apply_async(kwargs={
                 'start_date': self.midnight(datetime.strptime('2016-01-01',
                                                               '%Y-%m-%d')),
                 'end_date': self.midnight(datetime.strptime('2016-02-01',
                                                             '%Y-%m-%d')),
                 'email_recipients': ['foo@example.com'],
-                'email_subject': 'The Email Subject'})
+                'email_subject': 'The Email Subject',
+                'task_status': task_status})
 
             return filename
 
@@ -372,6 +384,93 @@ class GenerateReportTest(TestCase):
         self.assertEqual(report_email.subject, 'The Email Subject')
         (file_name, data, mimetype) = report_email.attachments[0]
         self.assertEqual('report-2016-01-01-to-2016-02-01.xlsx', file_name)
+
+    @responses.activate
+    def test_generate_report_status_done(self):
+        """
+        Generating a report should mark the ReportTaskStatus objects as Done if
+        it is successful.
+        """
+        self.add_blank_subscription_callback(next_=None)
+        self.add_blank_outbound_callback(next_=None)
+        self.add_blank_optouts_callback(next_=None)
+        self.trigger_report_generation()
+
+        task_status = ReportTaskStatus.objects.last()
+        self.assertEqual(task_status.status, "Done")
+        self.assertEqual(task_status.file_size, "7.7KiB")
+
+    @mock.patch("reports.tasks.SendEmail.apply_async")
+    @responses.activate
+    def test_generate_report_status_email(self, mock_send):
+        """
+        Generating a report should mark the ReportTaskStatus objects as Sending
+        before it sends the email.
+        """
+        self.add_blank_subscription_callback(next_=None)
+        self.add_blank_outbound_callback(next_=None)
+        self.add_blank_optouts_callback(next_=None)
+        self.trigger_report_generation()
+
+        task_status = ReportTaskStatus.objects.last()
+        self.assertEqual(task_status.status, "Sending")
+        self.assertEqual(task_status.file_size, "7.7KiB")
+
+    @responses.activate
+    @mock.patch("reports.tasks.SendEmail.apply_async")
+    def test_generate_report_status_running(self, mock_send):
+        """
+        Generating a report should mark the ReportTaskStatus objects as Sending
+        before it sends the email.
+        """
+
+        orig = openpyxl.Workbook.save
+
+        def new_save(wb, file):
+            task_status = ReportTaskStatus.objects.last()
+            self.assertEqual(task_status.status, "Running")
+            orig(wb, file)
+
+        self.add_blank_subscription_callback(next_=None)
+        self.add_blank_outbound_callback(next_=None)
+        self.add_blank_optouts_callback(next_=None)
+
+        with mock.patch('openpyxl.Workbook.save', new_save):
+            self.trigger_report_generation()
+
+    @responses.activate
+    def test_generate_report_status_failed(self):
+        """
+        Generating a report should mark the ReportTaskStatus objects as Failed
+        if there is a problem.
+        """
+        self.add_blank_subscription_callback(next_=None)
+        self.add_blank_outbound_callback(next_=None)
+        self.add_blank_optouts_callback(next_=None)
+
+        task_status = ReportTaskStatus.objects.create(**{
+            "start_date": "not_really_a_date",
+            "end_date": self.midnight(datetime.strptime('2016-02-01',
+                                                        '%Y-%m-%d')),
+            "email_subject": 'The Email Subject',
+            "status": "Pending"
+        })
+
+        try:
+            generate_report.apply_async(kwargs={
+                'start_date': "not_really_a_date",
+                'end_date': self.midnight(datetime.strptime('2016-02-01',
+                                                            '%Y-%m-%d')),
+                'email_recipients': ['foo@example.com'],
+                'email_subject': 'The Email Subject',
+                'task_status': task_status})
+        except:
+            pass
+
+        self.assertEqual(task_status.status, "Failed")
+        self.assertEqual(
+            task_status.error,
+            "time data 'not_really_a_date' does not match format '%Y-%m-%d'")
 
     @responses.activate
     @mock.patch("os.remove")
@@ -806,12 +905,17 @@ class ReportsViewTest(TestCase):
         self.assertEqual(request.status_code, 202)
         self.assertEqual(request.data, {"report_generation_requested": True})
 
+        task_status = ReportTaskStatus.objects.last()
+
         mock_generation.assert_called_once_with(kwargs={
             "start_date": '2016-01-01',
             "end_date": '2016-02-01',
             "email_recipients": ['foo@example.com'],
             "email_sender": settings.DEFAULT_FROM_EMAIL,
-            "email_subject": 'The Email Subject'})
+            "email_subject": 'The Email Subject',
+            "task_status": task_status})
+
+        self.assertEqual(task_status.status, "Pending")
 
     def test_response_on_incorrect_date_format(self):
         data = {
@@ -831,3 +935,26 @@ class ReportsViewTest(TestCase):
             'end_date':
                 ["time data '2016:02:01' does not match format '%Y-%m-%d'"]
             })
+
+    def test_report_task_view(self):
+        """
+        This view should only return the last 10 items.
+        """
+        for i in range(15):
+            ReportTaskStatus.objects.create(**{
+                "start_date": self.midnight(datetime.strptime('2016-01-01',
+                                                              '%Y-%m-%d')),
+                "end_date": self.midnight(datetime.strptime('2016-02-01',
+                                                            '%Y-%m-%d')),
+                "email_subject": 'The Email Subject',
+                "status": "Pending"
+            })
+        request = self.normalclient.get('/api/v1/reporttasks/')
+        results = json.loads(request.content)['results']
+
+        self.assertEqual(len(results), 10)
+        self.assertEqual(results[0]['status'], 'Pending')
+        self.assertEqual(results[0]['email_subject'], 'The Email Subject')
+        self.assertEqual(results[0]['start_date'], '2016-01-01 00:00:00+00:00')
+        self.assertEqual(results[0]['end_date'], '2016-02-01 00:00:00+00:00')
+        self.assertEqual(request.status_code, 200)
