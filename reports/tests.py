@@ -365,7 +365,7 @@ class GenerateReportTest(TestCase):
                                                             '%Y-%m-%d')),
                 'email_recipients': ['foo@example.com'],
                 'email_subject': 'The Email Subject',
-                'task_status': task_status})
+                'task_status_id': task_status.id})
 
             return filename
 
@@ -398,7 +398,7 @@ class GenerateReportTest(TestCase):
 
         task_status = ReportTaskStatus.objects.last()
         self.assertEqual(task_status.status, "Done")
-        self.assertEqual(task_status.file_size, "7.7KiB")
+        self.assertEqual(task_status.file_size > 7000, True)
 
     @mock.patch("reports.tasks.SendEmail.apply_async")
     @responses.activate
@@ -414,7 +414,7 @@ class GenerateReportTest(TestCase):
 
         task_status = ReportTaskStatus.objects.last()
         self.assertEqual(task_status.status, "Sending")
-        self.assertEqual(task_status.file_size, "7.7KiB")
+        self.assertEqual(task_status.file_size > 7000, True)
 
     @responses.activate
     @mock.patch("reports.tasks.SendEmail.apply_async")
@@ -439,6 +439,8 @@ class GenerateReportTest(TestCase):
             self.trigger_report_generation()
 
     @responses.activate
+    @override_settings(
+        CELERY_EAGER_PROPAGATES_EXCEPTIONS=False)
     def test_generate_report_status_failed(self):
         """
         Generating a report should mark the ReportTaskStatus objects as Failed
@@ -463,10 +465,11 @@ class GenerateReportTest(TestCase):
                                                             '%Y-%m-%d')),
                 'email_recipients': ['foo@example.com'],
                 'email_subject': 'The Email Subject',
-                'task_status': task_status})
+                'task_status_id': task_status.id})
         except:
             pass
 
+        task_status.refresh_from_db()
         self.assertEqual(task_status.status, "Failed")
         self.assertEqual(
             task_status.error,
@@ -913,7 +916,7 @@ class ReportsViewTest(TestCase):
             "email_recipients": ['foo@example.com'],
             "email_sender": settings.DEFAULT_FROM_EMAIL,
             "email_subject": 'The Email Subject',
-            "task_status": task_status})
+            "task_status_id": task_status.id})
 
         self.assertEqual(task_status.status, "Pending")
 
@@ -947,6 +950,7 @@ class ReportsViewTest(TestCase):
                 "end_date": self.midnight(datetime.strptime('2016-02-01',
                                                             '%Y-%m-%d')),
                 "email_subject": 'The Email Subject',
+                "file_size": 12343,
                 "status": "Pending"
             })
         request = self.normalclient.get('/api/v1/reporttasks/')
@@ -955,6 +959,7 @@ class ReportsViewTest(TestCase):
         self.assertEqual(len(results), 10)
         self.assertEqual(results[0]['status'], 'Pending')
         self.assertEqual(results[0]['email_subject'], 'The Email Subject')
+        self.assertEqual(results[0]['file_size'], 12343)
         self.assertEqual(results[0]['start_date'], '2016-01-01 00:00:00+00:00')
         self.assertEqual(results[0]['end_date'], '2016-02-01 00:00:00+00:00')
         self.assertEqual(request.status_code, 200)

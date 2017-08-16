@@ -7,12 +7,20 @@ class ReportTaskStatus(models.Model):
     """ The status of the report generate tasks
     """
 
+    STATUS_CHOICES = (
+        ('Pending', "Pending"),
+        ('Running', "Running"),
+        ('Sending', "Sending"),
+        ('Done', "Done")
+    )
+
     start_date = models.CharField(max_length=30, null=False, blank=False)
     end_date = models.CharField(max_length=30, null=False, blank=False)
     email_subject = models.CharField(max_length=100, null=False, blank=False)
-    file_size = models.CharField(max_length=30, null=True)
-    status = models.CharField(max_length=30, null=False, blank=False)
-    error = models.CharField(max_length=255, null=True)
+    file_size = models.IntegerField(null=True)
+    status = models.CharField(max_length=30, null=False, blank=False,
+                              choices=STATUS_CHOICES)
+    error = models.TextField(null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

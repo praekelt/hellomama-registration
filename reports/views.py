@@ -3,6 +3,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import viewsets
+from rest_framework.pagination import PageNumberPagination
 
 from reports.tasks import generate_report
 from reports.serializers import (ReportGenerationSerializer,
@@ -32,7 +33,7 @@ class ReportsView(APIView):
         generate_report.apply_async(kwargs={
             "start_date": datetime.strftime(data['start_date'], '%Y-%m-%d'),
             "end_date": datetime.strftime(data['end_date'], '%Y-%m-%d'),
-            "task_status": task_status,
+            "task_status_id": task_status.id,
             "email_recipients": data['email_to'],
             "email_sender": data['email_from'],
             "email_subject": data['email_subject']})
@@ -41,12 +42,19 @@ class ReportsView(APIView):
         return Response(resp, status=status)
 
 
+class SmallResultsSetPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 10
+
+
 class ReportTaskStatusViewSet(viewsets.ReadOnlyModelViewSet):
     """
     API endpoint that allows Registrations to be viewed.
     """
     permission_classes = (IsAuthenticated,)
-    queryset = ReportTaskStatus.objects.all().order_by('-created_at')[:10]
+    queryset = ReportTaskStatus.objects.all()
     serializer_class = ReportTaskStatusSerializer
+    pagination_class = SmallResultsSetPagination
     ordering_fields = ('created_at',)
     ordering = ('-created_at',)
