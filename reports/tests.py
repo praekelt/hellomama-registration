@@ -950,7 +950,7 @@ class ReportsViewTest(TestCase):
                 "status": "Pending"
             })
         request = self.normalclient.get('/api/v1/reporttasks/')
-        results = json.loads(request.content)['results']
+        results = json.loads(request.content.decode('utf8'))['results']
 
         self.assertEqual(len(results), 10)
         self.assertEqual(results[0]['status'], 'Pending')
