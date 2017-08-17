@@ -27,7 +27,7 @@ class ReportsView(APIView):
             "start_date": datetime.strftime(data['start_date'], '%Y-%m-%d'),
             "end_date": datetime.strftime(data['end_date'], '%Y-%m-%d'),
             "email_subject": data['email_subject'],
-            "status": "Pending"
+            "status": ReportTaskStatus.PENDING
         })
 
         generate_report.apply_async(kwargs={

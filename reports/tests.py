@@ -355,7 +355,7 @@ class GenerateReportTest(TestCase):
                 "end_date": self.midnight(datetime.strptime('2016-02-01',
                                                             '%Y-%m-%d')),
                 "email_subject": 'The Email Subject',
-                "status": "Pending"
+                "status": ReportTaskStatus.PENDING
             })
 
             generate_report.apply_async(kwargs={
@@ -397,7 +397,7 @@ class GenerateReportTest(TestCase):
         self.trigger_report_generation()
 
         task_status = ReportTaskStatus.objects.last()
-        self.assertEqual(task_status.status, "Done")
+        self.assertEqual(task_status.status, ReportTaskStatus.DONE)
         self.assertEqual(task_status.file_size > 7000, True)
 
     @mock.patch("reports.tasks.SendEmail.apply_async")
@@ -413,7 +413,7 @@ class GenerateReportTest(TestCase):
         self.trigger_report_generation()
 
         task_status = ReportTaskStatus.objects.last()
-        self.assertEqual(task_status.status, "Sending")
+        self.assertEqual(task_status.status, ReportTaskStatus.SENDING)
         self.assertEqual(task_status.file_size > 7000, True)
 
     @responses.activate
@@ -428,7 +428,7 @@ class GenerateReportTest(TestCase):
 
         def new_save(wb, file):
             task_status = ReportTaskStatus.objects.last()
-            self.assertEqual(task_status.status, "Running")
+            self.assertEqual(task_status.status, ReportTaskStatus.RUNNING)
             orig(wb, file)
 
         self.add_blank_subscription_callback(next_=None)
@@ -455,7 +455,7 @@ class GenerateReportTest(TestCase):
             "end_date": self.midnight(datetime.strptime('2016-02-01',
                                                         '%Y-%m-%d')),
             "email_subject": 'The Email Subject',
-            "status": "Pending"
+            "status": ReportTaskStatus.PENDING
         })
 
         try:
@@ -470,7 +470,7 @@ class GenerateReportTest(TestCase):
             pass
 
         task_status.refresh_from_db()
-        self.assertEqual(task_status.status, "Failed")
+        self.assertEqual(task_status.status, ReportTaskStatus.FAILED)
         self.assertEqual(
             task_status.error,
             "time data 'not_really_a_date' does not match format '%Y-%m-%d'")
@@ -918,7 +918,7 @@ class ReportsViewTest(TestCase):
             "email_subject": 'The Email Subject',
             "task_status_id": task_status.id})
 
-        self.assertEqual(task_status.status, "Pending")
+        self.assertEqual(task_status.status, ReportTaskStatus.PENDING)
 
     def test_response_on_incorrect_date_format(self):
         data = {
@@ -951,13 +951,13 @@ class ReportsViewTest(TestCase):
                                                             '%Y-%m-%d')),
                 "email_subject": 'The Email Subject',
                 "file_size": 12343,
-                "status": "Pending"
+                "status": ReportTaskStatus.PENDING
             })
         request = self.normalclient.get('/api/v1/reporttasks/')
         results = json.loads(request.content.decode('utf8'))['results']
 
         self.assertEqual(len(results), 10)
-        self.assertEqual(results[0]['status'], 'Pending')
+        self.assertEqual(results[0]['status'], ReportTaskStatus.PENDING)
         self.assertEqual(results[0]['email_subject'], 'The Email Subject')
         self.assertEqual(results[0]['file_size'], 12343)
         self.assertEqual(results[0]['start_date'], '2016-01-01 00:00:00+00:00')

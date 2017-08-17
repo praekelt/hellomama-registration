@@ -27,7 +27,7 @@ class BaseTask(Task):
             task_status = ReportTaskStatus.objects.get(
                 id=kwargs['task_status_id'])
 
-            task_status.status = 'Failed'
+            task_status.status = ReportTaskStatus.FAILED
             task_status.error = exc
             task_status.save()
             super(BaseTask, self).on_failure(exc, task_id, args, kwargs, einfo)
@@ -49,7 +49,7 @@ class SendEmail(BaseTask):
         email.send()
 
         task_status = ReportTaskStatus.objects.get(id=task_status_id)
-        task_status.status = 'Done'
+        task_status.status = ReportTaskStatus.DONE
         task_status.save()
 
         try:
@@ -109,7 +109,7 @@ class GenerateReport(BaseTask):
             email_subject='Seed Control Interface Generated Report', **kwargs):
 
         task_status = ReportTaskStatus.objects.get(id=task_status_id)
-        task_status.status = 'Running'
+        task_status.status = ReportTaskStatus.RUNNING
         task_status.save()
 
         if isinstance(start_date, string_types):
@@ -158,7 +158,7 @@ class GenerateReport(BaseTask):
         output_file = generate_random_filename()
         workbook.save(output_file)
 
-        task_status.status = 'Sending'
+        task_status.status = ReportTaskStatus.SENDING
         task_status.file_size = os.path.getsize(output_file)
         task_status.save()
 
