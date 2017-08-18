@@ -957,7 +957,7 @@ class ReportsViewTest(TestCase):
         results = json.loads(request.content.decode('utf8'))['results']
 
         self.assertEqual(len(results), 10)
-        self.assertEqual(results[0]['status'], ReportTaskStatus.PENDING)
+        self.assertEqual(results[0]['status'], 'Pending')
         self.assertEqual(results[0]['email_subject'], 'The Email Subject')
         self.assertEqual(results[0]['file_size'], 12343)
         self.assertEqual(results[0]['start_date'], '2016-01-01 00:00:00+00:00')

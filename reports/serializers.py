@@ -37,6 +37,8 @@ class ReportGenerationSerializer(serializers.Serializer):
 
 class ReportTaskStatusSerializer(serializers.ModelSerializer):
 
+    status = serializers.SerializerMethodField()
+
     class Meta:
         model = ReportTaskStatus
         read_only_fields = ('start_date', 'end_date', 'email_subject',
@@ -44,3 +46,6 @@ class ReportTaskStatusSerializer(serializers.ModelSerializer):
                             'updated_at')
         fields = ('start_date', 'end_date', 'email_subject', 'file_size',
                   'status', 'error', 'created_at', 'updated_at')
+
+    def get_status(self, obj):
+        return obj.get_status_display()
