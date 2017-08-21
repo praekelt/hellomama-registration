@@ -3,7 +3,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import viewsets
-from rest_framework.pagination import PageNumberPagination
+from rest_framework.pagination import CursorPagination
 
 from reports.tasks import generate_report
 from reports.serializers import (ReportGenerationSerializer,
@@ -42,7 +42,8 @@ class ReportsView(APIView):
         return Response(resp, status=status)
 
 
-class SmallResultsSetPagination(PageNumberPagination):
+class SmallResultsSetPagination(CursorPagination):
+    ordering = '-created_at'
     page_size = 10
     page_size_query_param = 'page_size'
     max_page_size = 10
@@ -57,4 +58,3 @@ class ReportTaskStatusViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = ReportTaskStatusSerializer
     pagination_class = SmallResultsSetPagination
     ordering_fields = ('created_at',)
-    ordering = ('-created_at',)
