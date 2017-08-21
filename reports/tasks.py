@@ -17,20 +17,40 @@ from seed_services_client import (IdentityStoreApiClient,
 from registrations.models import Registration
 from reports.utils import (parse_cursor_params, midnight_validator,
                            generate_random_filename)
+from reports.models import ReportTaskStatus
 
 
-class SendEmail(Task):
+class BaseTask(Task):
+
+    def on_failure(self, exc, task_id, args, kwargs, einfo):
+        if kwargs.get('task_status_id'):
+            task_status = ReportTaskStatus.objects.get(
+                id=kwargs['task_status_id'])
+
+            task_status.status = ReportTaskStatus.FAILED
+            task_status.error = exc
+            task_status.save()
+            super(BaseTask, self).on_failure(exc, task_id, args, kwargs, einfo)
+
+
+class SendEmail(BaseTask):
+
     def run(self, **kwargs):
         subject = kwargs['subject']
         sender = kwargs['sender']
         recipients = kwargs['recipients']
         file_location = kwargs['file_location']
         file_name = kwargs['file_name']
+        task_status_id = kwargs['task_status_id']
 
         email = EmailMessage(subject, '', sender, recipients)
         with open(file_location, 'rb') as fp:
             email.attach(file_name, fp.read(), 'application/vnd.ms-excel')
         email.send()
+
+        task_status = ReportTaskStatus.objects.get(id=task_status_id)
+        task_status.status = ReportTaskStatus.DONE
+        task_status.save()
 
         try:
             os.remove(file_location)
@@ -78,16 +98,19 @@ class ExportWorkbook(object):
         return self._workbook.save(file_name)
 
 
-class GenerateReport(Task):
+class GenerateReport(BaseTask):
     workbook_class = ExportWorkbook
     """ Generate an XLS spreadsheet report on registrations, write it to
     disk and email it to specified recipients
     """
 
-    def run(self, start_date, end_date, email_recipients=[],
+    def run(self, start_date, end_date, task_status_id, email_recipients=[],
             email_sender=settings.DEFAULT_FROM_EMAIL,
-            email_subject='Seed Control Interface Generated Report',
-            **kwargs):
+            email_subject='Seed Control Interface Generated Report', **kwargs):
+
+        task_status = ReportTaskStatus.objects.get(id=task_status_id)
+        task_status.status = ReportTaskStatus.RUNNING
+        task_status.save()
 
         if isinstance(start_date, string_types):
             start_date = midnight_validator(start_date)
@@ -135,6 +158,10 @@ class GenerateReport(Task):
         output_file = generate_random_filename()
         workbook.save(output_file)
 
+        task_status.status = ReportTaskStatus.SENDING
+        task_status.file_size = os.path.getsize(output_file)
+        task_status.save()
+
         if email_recipients:
             file_name = 'report-%s-to-%s.xlsx' % (
                 start_date.strftime('%Y-%m-%d'),
@@ -144,7 +171,8 @@ class GenerateReport(Task):
                 'file_name': file_name,
                 'file_location': output_file,
                 'sender': email_sender,
-                'recipients': email_recipients})
+                'recipients': email_recipients,
+                'task_status_id': task_status_id})
 
     def get_identity(self, ids_client, identity):
         if identity in self.identity_cache:
