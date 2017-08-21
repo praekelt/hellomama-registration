@@ -2,6 +2,7 @@ import django_filters
 from .models import Source, Change
 from registrations.models import Registration, get_or_incr_cache
 from rest_framework import viewsets, mixins, generics, filters, status
+from rest_framework.pagination import CursorPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from .serializers import ChangeSerializer
@@ -13,6 +14,10 @@ from .serializers import AdminChangeSerializer, AddChangeSerializer
 from seed_services_client import IdentityStoreApiClient
 
 import six
+
+
+class CreatedAtCursorPagination(CursorPagination):
+    ordering = "-created_at"
 
 
 class ChangePost(mixins.CreateModelMixin, generics.GenericAPIView):
@@ -56,6 +61,7 @@ class ChangeGetViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Change.objects.all()
     serializer_class = ChangeSerializer
     filter_class = ChangeFilter
+    pagination_class = CreatedAtCursorPagination
 
 
 class ReceiveIdentityStoreOptout(mixins.CreateModelMixin,

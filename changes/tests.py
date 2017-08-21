@@ -405,16 +405,33 @@ class TestChangeListAPI(AuthenticatedAPITestCase):
         # Setup
         change1 = self.make_change_adminuser()
         change2 = self.make_change_normaluser()
+        change3 = self.make_change_normaluser()
         # Execute
         response = self.adminclient.get(
             '/api/v1/changes/',
             content_type='application/json')
         # Check
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["count"], 2)
-        result1, result2 = response.data["results"]
-        self.assertEqual(result1["id"], str(change1.id))
-        self.assertEqual(result2["id"], str(change2.id))
+        body = response.json()
+        self.assertEqual(len(body["results"]), 2)
+        self.assertEqual(body["results"][0]["id"], str(change3.id))
+        self.assertEqual(body["results"][1]["id"], str(change2.id))
+        self.assertIsNone(body["previous"])
+        self.assertIsNotNone(body["next"])
+
+        # Check pagination
+        body = self.adminclient.get(body["next"]).json()
+        self.assertEqual(len(body["results"]), 1)
+        self.assertEqual(body["results"][0]["id"], str(change1.id))
+        self.assertIsNotNone(body["previous"])
+        self.assertIsNone(body["next"])
+
+        body = self.adminclient.get(body["previous"]).json()
+        self.assertEqual(len(body["results"]), 2)
+        self.assertEqual(body["results"][0]["id"], str(change3.id))
+        self.assertEqual(body["results"][1]["id"], str(change2.id))
+        self.assertIsNone(body["previous"])
+        self.assertIsNotNone(body["next"])
 
     def test_list_changes_filtered(self):
         # Setup
@@ -426,7 +443,7 @@ class TestChangeListAPI(AuthenticatedAPITestCase):
             content_type='application/json')
         # Check
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(len(response.data["results"]), 1)
         result = response.data["results"][0]
         self.assertEqual(result["id"], str(change2.id))
 
