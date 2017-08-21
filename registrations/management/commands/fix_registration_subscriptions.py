@@ -70,7 +70,7 @@ class Command(BaseCommand):
             sub_response = client.get_subscriptions({
                 'identity': receiver_id,
             })
-            if sub_response['count']:
+            if len(sub_response['results']):
                 subscriptions[receiver_id] = sub_response['results']
 
         # Make sure the registration has the data for the correct stage
