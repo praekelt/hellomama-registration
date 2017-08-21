@@ -19,7 +19,7 @@ try:
 except ImportError:
     from unittest import mock
 
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 from django.test import TestCase, override_settings
 from django.db.models.signals import post_save
 from django.conf import settings
@@ -378,6 +378,68 @@ class TestLogin(AuthenticatedAPITestCase):
             token, "Could not receive authentication token on login post.")
         self.assertEqual(request.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_list_users(self):
+
+        response = self.adminclient.get('/api/v1/user/',
+                                        content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        body = response.json()
+        self.assertEqual(len(body["results"]), 2)
+        self.assertEqual(body["results"][0]["username"],
+                         self.emailusername)
+        self.assertEqual(body["results"][1]["username"],
+                         self.normaluser.username)
+        self.assertIsNone(body["previous"])
+        self.assertIsNotNone(body["next"])
+
+        # Check pagination
+        body = self.adminclient.get(body["next"]).json()
+        self.assertEqual(len(body["results"]), 1)
+        self.assertEqual(body["results"][0]["username"],
+                         self.adminuser.username)
+        self.assertIsNotNone(body["previous"])
+        self.assertIsNone(body["next"])
+
+        body = self.adminclient.get(body["previous"]).json()
+        self.assertEqual(len(body["results"]), 2)
+        self.assertEqual(body["results"][0]["username"],
+                         self.emailusername)
+        self.assertEqual(body["results"][1]["username"],
+                         self.normaluser.username)
+        self.assertIsNone(body["previous"])
+        self.assertIsNotNone(body["next"])
+
+    def test_list_group(self):
+        groups = []
+        for i in range(1, 4):
+            groups.append(Group.objects.create(name='group_%s' % i))
+
+        response = self.adminclient.get('/api/v1/group/',
+                                        content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        body = response.json()
+        self.assertEqual(len(body["results"]), 2)
+        self.assertEqual(body["results"][0]["name"], groups[0].name)
+        self.assertEqual(body["results"][1]["name"], groups[1].name)
+        self.assertIsNone(body["previous"])
+        self.assertIsNotNone(body["next"])
+
+        # Check pagination
+        body = self.adminclient.get(body["next"]).json()
+        self.assertEqual(len(body["results"]), 1)
+        self.assertEqual(body["results"][0]["name"], groups[2].name)
+        self.assertIsNotNone(body["previous"])
+        self.assertIsNone(body["next"])
+
+        body = self.adminclient.get(body["previous"]).json()
+        self.assertEqual(len(body["results"]), 2)
+        self.assertEqual(body["results"][0]["name"], groups[0].name)
+        self.assertEqual(body["results"][1]["name"], groups[1].name)
+        self.assertIsNone(body["previous"])
+        self.assertIsNotNone(body["next"])
+
 
 class TestSourceAPI(AuthenticatedAPITestCase):
 
@@ -434,6 +496,36 @@ class TestSourceAPI(AuthenticatedAPITestCase):
                                           content_type='application/json')
         # Check
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_list_source(self):
+        source1 = self.make_source_adminuser()
+        source2 = self.make_source_normaluser()
+        source3 = self.make_source_normaluser()
+
+        response = self.adminclient.get('/api/v1/source/',
+                                        content_type='application/json')
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        body = response.json()
+        self.assertEqual(len(body["results"]), 2)
+        self.assertEqual(body["results"][0]["id"], source1.id)
+        self.assertEqual(body["results"][1]["id"], source2.id)
+        self.assertIsNone(body["previous"])
+        self.assertIsNotNone(body["next"])
+
+        # Check pagination
+        body = self.adminclient.get(body["next"]).json()
+        self.assertEqual(len(body["results"]), 1)
+        self.assertEqual(body["results"][0]["id"], source3.id)
+        self.assertIsNotNone(body["previous"])
+        self.assertIsNone(body["next"])
+
+        body = self.adminclient.get(body["previous"]).json()
+        self.assertEqual(len(body["results"]), 2)
+        self.assertEqual(body["results"][0]["id"], source1.id)
+        self.assertEqual(body["results"][1]["id"], source2.id)
+        self.assertIsNone(body["previous"])
+        self.assertIsNotNone(body["next"])
 
 
 class TestRegistrationAPI(AuthenticatedAPITestCase):
@@ -590,15 +682,31 @@ class TestRegistrationAPI(AuthenticatedAPITestCase):
         # Setup
         registration1 = self.make_registration_normaluser()
         registration2 = self.make_registration_adminuser()
+        registration3 = self.make_registration_normaluser()
         # Execute
         response = self.normalclient.get(
             '/api/v1/registrations/', content_type='application/json')
         # Check
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["count"], 2)
-        result1, result2 = response.data["results"]
-        self.assertEqual(result1["id"], str(registration1.id))
-        self.assertEqual(result2["id"], str(registration2.id))
+        body = response.json()
+        self.assertEqual(len(body["results"]), 2)
+        self.assertEqual(body["results"][0]["id"], str(registration3.id))
+        self.assertEqual(body["results"][1]["id"], str(registration2.id))
+        self.assertIsNone(body["previous"])
+        self.assertIsNotNone(body["next"])
+
+        body = self.normalclient.get(body["next"]).json()
+        self.assertEqual(len(body["results"]), 1)
+        self.assertEqual(body["results"][0]["id"], str(registration1.id))
+        self.assertIsNotNone(body["previous"])
+        self.assertIsNone(body["next"])
+
+        body = self.normalclient.get(body["previous"]).json()
+        self.assertEqual(len(body["results"]), 2)
+        self.assertEqual(body["results"][0]["id"], str(registration3.id))
+        self.assertEqual(body["results"][1]["id"], str(registration2.id))
+        self.assertIsNone(body["previous"])
+        self.assertIsNotNone(body["next"])
 
     def make_different_registrations(self):
         self.make_source_adminuser()
@@ -630,7 +738,7 @@ class TestRegistrationAPI(AuthenticatedAPITestCase):
             content_type='application/json')
         # Check
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(len(response.data["results"]), 1)
         result = response.data["results"][0]
         self.assertEqual(result["id"], str(registration1.id))
 
@@ -643,7 +751,7 @@ class TestRegistrationAPI(AuthenticatedAPITestCase):
             content_type='application/json')
         # Check
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(len(response.data["results"]), 1)
         result = response.data["results"][0]
         self.assertEqual(result["id"], str(registration2.id))
 
@@ -656,7 +764,7 @@ class TestRegistrationAPI(AuthenticatedAPITestCase):
             content_type='application/json')
         # Check
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(len(response.data["results"]), 1)
         result = response.data["results"][0]
         self.assertEqual(result["id"], str(registration1.id))
 
@@ -669,7 +777,7 @@ class TestRegistrationAPI(AuthenticatedAPITestCase):
             content_type='application/json')
         # Check
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(len(response.data["results"]), 1)
         result = response.data["results"][0]
         self.assertEqual(result["id"], str(registration2.id))
 
@@ -686,7 +794,7 @@ class TestRegistrationAPI(AuthenticatedAPITestCase):
             content_type='application/json')
         # Check
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(len(response.data["results"]), 1)
         result = response.data["results"][0]
         self.assertEqual(result["id"], str(registration2.id))
 
@@ -703,7 +811,7 @@ class TestRegistrationAPI(AuthenticatedAPITestCase):
             content_type='application/json')
         # Check
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(len(response.data["results"]), 1)
         result = response.data["results"][0]
         self.assertEqual(result["id"], str(registration1.id))
 
@@ -716,7 +824,7 @@ class TestRegistrationAPI(AuthenticatedAPITestCase):
             content_type='application/json')
         # Check
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["count"], 0)
+        self.assertEqual(len(response.data["results"]), 0)
 
     def test_filter_registration_unknown_filter(self):
         # Setup
@@ -727,7 +835,7 @@ class TestRegistrationAPI(AuthenticatedAPITestCase):
             content_type='application/json')
         # Check
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["count"], 2)
+        self.assertEqual(len(response.data["results"]), 2)
 
 
 class TestFieldValidation(AuthenticatedAPITestCase):
@@ -964,7 +1072,6 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -982,7 +1089,6 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -1013,7 +1119,7 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8001/api/v1/identities/mother00-9d89-4aa6-99ff-13c225365b5d/addresses/msisdn?default=True',  # noqa
             json={
-                "count": 1, "next": None, "previous": None,
+                "next": None, "previous": None,
                 "results": [{"address": "+234123"}]
             },
             status=200, content_type='application/json',
@@ -1024,7 +1130,7 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8001/api/v1/identities/friend00-73a2-4d89-b045-d52004c025fe/addresses/msisdn?default=True',  # noqa
             json={
-                "count": 1, "next": None, "previous": None,
+                "next": None, "previous": None,
                 "results": [{"address": "+234124"}]
             },
             status=200, content_type='application/json',
@@ -1168,7 +1274,6 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -1199,7 +1304,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8001/api/v1/identities/mother00-9d89-4aa6-99ff-13c225365b5d/addresses/msisdn?default=True',  # noqa
             json={
-                "count": 1, "next": None, "previous": None,
+                "next": None, "previous": None,
                 "results": [{"address": "+234123"}]
             },
             status=200, content_type='application/json',
@@ -1245,7 +1350,6 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -1299,7 +1403,6 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -1317,7 +1420,6 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -1348,7 +1450,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8001/api/v1/identities/mother00-9d89-4aa6-99ff-13c225365b5d/addresses/msisdn?default=True',  # noqa
             json={
-                "count": 1, "next": None, "previous": None,
+                "next": None, "previous": None,
                 "results": [{"address": "+234123"}]
             },
             status=200, content_type='application/json',
@@ -1360,7 +1462,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8001/api/v1/identities/friend00-73a2-4d89-b045-d52004c025fe/addresses/msisdn?default=True',  # noqa
             json={
-                "count": 1, "next": None, "previous": None,
+                "next": None, "previous": None,
                 "results": [{"address": "+234123"}]
             },
             status=200, content_type='application/json',
@@ -1416,7 +1518,6 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -1434,7 +1535,6 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -1512,7 +1612,6 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -1530,7 +1629,6 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -1562,7 +1660,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8001/api/v1/identities/mother00-9d89-4aa6-99ff-13c225365b5d/addresses/msisdn?default=True',  # noqa
             json={
-                "count": 1, "next": None, "previous": None,
+                "next": None, "previous": None,
                 "results": [{"address": "+234123"}]
             },
             status=200, content_type='application/json',
@@ -1574,7 +1672,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8001/api/v1/identities/family00-73a2-4d89-b045-d52004c025fe/addresses/msisdn?default=True',  # noqa
             json={
-                "count": 1, "next": None, "previous": None,
+                "next": None, "previous": None,
                 "results": [{"address": "+234124"}]
             },
             status=200, content_type='application/json',
@@ -1631,7 +1729,6 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -1649,7 +1746,6 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -1680,7 +1776,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8001/api/v1/identities/mother00-9d89-4aa6-99ff-13c225365b5d/addresses/msisdn?default=True',  # noqa
             json={
-                "count": 1, "next": None, "previous": None,
+                "next": None, "previous": None,
                 "results": [{"address": "+234123"}]
             },
             status=200, content_type='application/json',
@@ -1691,7 +1787,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8001/api/v1/identities/father00-73a2-4d89-b045-d52004c025fe/addresses/msisdn?default=True',  # noqa
             json={
-                "count": 1, "next": None, "previous": None,
+                "next": None, "previous": None,
                 "results": [{"address": "+234124"}]
             },
             status=200, content_type='application/json',
@@ -1749,7 +1845,6 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -1767,7 +1862,6 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -1798,7 +1892,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8001/api/v1/identities/mother00-9d89-4aa6-99ff-13c225365b5d/addresses/msisdn?default=True',  # noqa
             json={
-                "count": 1, "next": None, "previous": None,
+                "next": None, "previous": None,
                 "results": [{"address": "+234123"}]
             },
             status=200, content_type='application/json',
@@ -1810,7 +1904,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8001/api/v1/identities/family00-73a2-4d89-b045-d52004c025fe/addresses/msisdn?default=True',  # noqa
             json={
-                "count": 1, "next": None, "previous": None,
+                "next": None, "previous": None,
                 "results": [{"address": "+234124"}]
             },
             status=200, content_type='application/json',
@@ -2387,7 +2481,6 @@ class TestMetrics(AuthenticatedAPITestCase):
     def identity_search_callback(self, request):
         headers = {'Content-Type': "application/json"}
         resp = {
-            "count": 1,
             "next": None,
             "previous": None,
             "results": [{
@@ -2611,7 +2704,6 @@ class ManagementTaskTestCase(TestCase):
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -2630,7 +2722,6 @@ class ManagementTaskTestCase(TestCase):
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -2649,7 +2740,6 @@ class ManagementTaskTestCase(TestCase):
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -2675,7 +2765,7 @@ class ManagementTaskTestCase(TestCase):
             responses.GET,
             'http://localhost:8001/api/v1/identities/mother00-9d89-4aa6-99ff-13c225365b5d/addresses/msisdn?default=True',  # noqa
             json={
-                "count": 1, "next": None, "previous": None,
+                "next": None, "previous": None,
                 "results": [{"address": "+234123"}]
             },
             status=200, content_type='application/json',
@@ -2695,7 +2785,7 @@ class ManagementTaskTestCase(TestCase):
             responses.GET,
             'http://localhost:8001/api/v1/identities/father00-73a2-4d89-b045-d52004c025fe/addresses/msisdn?default=True',  # noqa
             json={
-                "count": 1, "next": None, "previous": None,
+                "next": None, "previous": None,
                 "results": [{"address": "+234124"}]
             },
             status=200, content_type='application/json',
@@ -2772,12 +2862,11 @@ class ManagementTaskTestCase(TestCase):
                      stdout=stdout, stderr=stderr)
         return stdout, stderr
 
-    def load_subscriptions(self, identity, count=0, results=None):
+    def load_subscriptions(self, identity, results=None):
         responses.add(
             responses.GET,
             'http://example.com/subscriptions/?identity=%s' % (identity,),
             json={
-                "count": count,
                 "next": None,
                 "previous": None,
                 "results": results or [],
@@ -2870,7 +2959,7 @@ class FixRegistrationSubscriptionsTest(ManagementTaskTestCase):
             "active": True,
             "next_sequence_number": 1,
         }]
-        self.load_subscriptions(reg1.mother_id, count=1, results=results)
+        self.load_subscriptions(reg1.mother_id, results=results)
 
         stdout, stderr = self.do_call_command(
             'fix_registration_subscriptions', reg1.id.hex)
@@ -2895,7 +2984,7 @@ class FixRegistrationSubscriptionsTest(ManagementTaskTestCase):
         reg1.validated = True
         reg1.save()
 
-        self.load_subscriptions(reg1.mother_id, count=0)
+        self.load_subscriptions(reg1.mother_id)
 
         stdout, stderr = self.do_call_command(
             'fix_registration_subscriptions', reg1.id.hex)
@@ -2921,7 +3010,7 @@ class FixRegistrationSubscriptionsTest(ManagementTaskTestCase):
         reg1.save()
         sub1 = self.mk_subscription_request(reg1)
 
-        self.load_subscriptions(reg1.mother_id, count=0)
+        self.load_subscriptions(reg1.mother_id)
 
         stdout, stderr = self.do_call_command(
             'fix_registration_subscriptions', reg1.id.hex)
@@ -2967,7 +3056,7 @@ class FixRegistrationSubscriptionsTest(ManagementTaskTestCase):
             "active": False,
             "next_sequence_number": 1,
         }]
-        self.load_subscriptions(reg1.mother_id, count=1, results=results)
+        self.load_subscriptions(reg1.mother_id, results=results)
 
         stdout, stderr = self.do_call_command(
             'fix_registration_subscriptions', reg1.id.hex)
@@ -2999,7 +3088,7 @@ class FixRegistrationSubscriptionsTest(ManagementTaskTestCase):
             "active": True,
             "next_sequence_number": 50,
         }]
-        self.load_subscriptions(reg1.mother_id, count=1, results=results)
+        self.load_subscriptions(reg1.mother_id, results=results)
 
         stdout, stderr = self.do_call_command(
             'fix_registration_subscriptions', reg1.id.hex)
@@ -3050,7 +3139,7 @@ class FixRegistrationSubscriptionsTest(ManagementTaskTestCase):
         sub1.next_sequence_number = 1
         sub1.save()
 
-        self.load_subscriptions(reg1.mother_id, count=0)
+        self.load_subscriptions(reg1.mother_id)
 
         stdout, stderr = self.do_call_command(
             'fix_registration_subscriptions', reg1.id.hex)
@@ -3104,8 +3193,8 @@ class FixRegistrationSubscriptionsTest(ManagementTaskTestCase):
         sub2.next_sequence_number = 1
         sub2.save()
 
-        self.load_subscriptions(reg1.data['receiver_id'], count=0)
-        self.load_subscriptions(reg1.mother_id, count=0)
+        self.load_subscriptions(reg1.data['receiver_id'])
+        self.load_subscriptions(reg1.mother_id)
 
         stdout, stderr = self.do_call_command(
             'fix_registration_subscriptions', reg1.id.hex)
@@ -3170,7 +3259,7 @@ class FixRegistrationSubscriptionsTest(ManagementTaskTestCase):
             identity=reg1.mother_id, messageset=5, next_sequence_number=3,
             lang=reg1.data['language'], schedule=1)
 
-        self.load_subscriptions(reg1.mother_id, count=0)
+        self.load_subscriptions(reg1.mother_id)
 
         stdout, stderr = self.do_call_command(
             'fix_registration_subscriptions', reg1.id.hex)
@@ -3192,7 +3281,7 @@ class FixRegistrationSubscriptionsTest(ManagementTaskTestCase):
         reg1.validated = True
         reg1.save()
 
-        self.load_subscriptions(reg1.mother_id, count=0)
+        self.load_subscriptions(reg1.mother_id)
 
         stdout, stderr = self.do_call_command(
             'fix_registration_subscriptions', reg1.id.hex)
@@ -3240,7 +3329,7 @@ class FixRegistrationSubscriptionsTest(ManagementTaskTestCase):
             "active": True,
             "next_sequence_number": 5,
         }]
-        self.load_subscriptions(reg1.mother_id, count=1, results=results)
+        self.load_subscriptions(reg1.mother_id, results=results)
 
         stdout, stderr = self.do_call_command(
             'fix_registration_subscriptions', reg1.id.hex, '--today',
@@ -3456,7 +3545,7 @@ class TestThirdPartyRegistrations(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8001/api/v1/identities/search/?details__addresses__msisdn=%s' % msisdn,  # noqa
             json={
-                "count": 1, "next": None, "previous": None,
+                "next": None, "previous": None,
                 "results": [{
                     "id": identity_id,
                     "details": {}
@@ -3471,7 +3560,7 @@ class TestThirdPartyRegistrations(AuthenticatedAPITestCase):
             responses.PATCH,
             'http://localhost:8001/api/v1/identities/%s/' % identity_id,
             json={
-                "count": 1, "next": None, "previous": None,
+                "next": None, "previous": None,
                 "results": [{
                     "id": identity_id,
                     "details": {}
