@@ -3438,7 +3438,7 @@ class AddChangeViewsTest(AuthenticatedAPITestCase):
     """
     Tests related to the adding of changes view.
     """
-    def mock_identity_lookup(self, msisdn, identity_id):
+    def mock_identity_lookup(self, msisdn, identity_id, details={}):
         responses.add(
             responses.GET,
             'http://localhost:8001/api/v1/identities/search/?details__addresses__msisdn=%s' % msisdn,  # noqa
@@ -3446,7 +3446,7 @@ class AddChangeViewsTest(AuthenticatedAPITestCase):
                 "count": 1, "next": None, "previous": None,
                 "results": [{
                     "id": identity_id,
-                    "details": {}
+                    "details": details
                 }]
             },
             status=200, content_type='application/json',
@@ -3593,10 +3593,50 @@ class AddChangeViewsTest(AuthenticatedAPITestCase):
         self.assertEqual(len(responses.calls), 3)
 
     @responses.activate
+    def test_add_change_unsubscribe_household_no_msisdn(self):
+        # Setup
+        self.make_source_adminuser()
+        mother_id = "4038a518-2940-4b15-9c5c-2b7b123b8735"
+        household_id = "4038a518-2940-4b15-9c5c-9ix9cvx09cv8"
+
+        details = {
+            'linked_to': mother_id
+        }
+
+        self.mock_identity_lookup("%2B2347031221928", household_id, details)
+        self.mock_identity_optout()
+
+        post_data = {
+            "action": "unsubscribe_household_only",
+            "data": {
+                "reason": "not_useful",
+                "household_msisdn": "07031221928"
+            }
+        }
+        # Execute
+        response = self.adminclient.post('/api/v1/addchange/',
+                                         json.dumps(post_data),
+                                         content_type='application/json')
+
+        # Check
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        d = Change.objects.last()
+        self.assertEqual(d.source.name, 'test_ussd_source_adminuser')
+        self.assertEqual(d.action, 'unsubscribe_household_only')
+        self.assertEqual(d.validated, False)
+        self.assertEqual(d.data["reason"], "not_useful")
+        self.assertEqual(d.data["household_id"], household_id)
+        self.assertEqual(d.mother_id, mother_id)
+        self.assertEqual(d.created_by, self.adminuser)
+
+        self.assertEqual(len(responses.calls), 2)
+
+    @responses.activate
     def test_add_change_missing_field(self):
         # Setup
         post_data = {
-            "action": "change_language",
+            "msisdn": "07031221927",
             "data": {"test_key1": "test_value1"}
         }
         # Execute
@@ -3607,7 +3647,7 @@ class AddChangeViewsTest(AuthenticatedAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(
             utils.json_decode(response.content),
-            {"msisdn": ["This field is required."]})
+            {"action": ["This field is required."]})
 
         self.assertEqual(len(responses.calls), 0)
 

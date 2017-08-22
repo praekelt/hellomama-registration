@@ -412,7 +412,9 @@ class PullThirdPartyRegistrations(Task):
             for identity in identities:
                 if details:
                     identity['details'].update(details)
-                    utils.patch_identity(identity['id'], identity['details'])
+                    utils.patch_identity(
+                        identity['id'],
+                        {'details': identity['details']})
                 return identity
 
             identity = {
@@ -529,7 +531,7 @@ class PullThirdPartyRegistrations(Task):
         if mother_identity:
             mother_identity['details'].update(identity_details)
             utils.patch_identity(mother_identity['id'],
-                                 mother_identity['details'])
+                                 {'details': mother_identity['details']})
 
         if line['type_of_registration'] == 'prebirth':
             reg_info['data']['last_period_date'] = \
