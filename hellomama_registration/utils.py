@@ -103,10 +103,14 @@ def get_identity_address(identity):
         return None
 
 
-def search_identities(params):
-    """ Returns the identities matching the given parameters
+def search_identities(search_key, search_value):
+    """
+    Returns the identities matching the given parameters
+    FIXME: This should be handled by identity_store_client when
+    it supports pagination
     """
     url = "%s/%s/search/" % (settings.IDENTITY_STORE_URL, "identities")
+    params = {search_key: search_value}
     headers = {
         'Authorization': 'Token %s' % settings.IDENTITY_STORE_TOKEN,
         'Content-Type': 'application/json'
