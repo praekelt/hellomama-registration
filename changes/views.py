@@ -313,9 +313,12 @@ class AddChangeView(generics.CreateAPIView):
 
         ids_client = IdentityStoreApiClient(
             settings.IDENTITY_STORE_TOKEN, settings.IDENTITY_STORE_URL)
-        data['msisdn'] = utils.normalize_msisdn(data['msisdn'], '234')
-        identity = ids_client.get_identity_by_address('msisdn', data['msisdn'])
-        data['mother_id'] = identity['results'][0]['id']
+
+        if data.get('msisdn'):
+            data['msisdn'] = utils.normalize_msisdn(data['msisdn'], '234')
+            identity = ids_client.get_identity_by_address('msisdn',
+                                                          data['msisdn'])
+            data['mother_id'] = identity['results'][0]['id']
 
         if ('voice_days' in data['data']):
             data['data']['voice_days'] = utils.get_voice_days(
@@ -337,20 +340,26 @@ class AddChangeView(generics.CreateAPIView):
             data['data']['household_msisdn'] = utils.normalize_msisdn(
                 data['data']['household_msisdn'], '234')
             household = ids_client.get_identity_by_address(
-                'msisdn', data['data']['household_msisdn'])
-            data['data']['household_id'] = household['results'][0]['id']
+                'msisdn', data['data']['household_msisdn'])['results'][0]
+            data['data']['household_id'] = household['id']
+
+            if (not data.get('msisdn') and
+                    household['details'].get('linked_to')):
+                data['mother_id'] = household['details']['linked_to']
 
         if 'unsubscribe' in data['action']:
             identity_id = data['mother_id']
+            msisdn = data.get('msisdn')
             if data['action'] == 'unsubscribe_household_only':
                 identity_id = data['data']['household_id']
+                msisdn = data.get('household_msisdn')
 
             optout_info = {
                 'optout_type': 'stop',
                 'identity': identity_id,
                 'reason': data['data']['reason'],
                 'address_type': 'msisdn',
-                'address': data['msisdn'],
+                'address': msisdn,
                 'request_source': source.name,
                 'requestor_source_id': source.id
             }

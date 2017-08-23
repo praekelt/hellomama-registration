@@ -81,7 +81,8 @@ class AdminChangeSerializer(serializers.Serializer):
 
 
 class AddChangeSerializer(serializers.ModelSerializer):
-    msisdn = serializers.CharField(required=True)
+    msisdn = serializers.CharField(required=False, allow_null=True,
+                                   allow_blank=True)
 
     class Meta:
         model = Change

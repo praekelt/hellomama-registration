@@ -270,6 +270,21 @@ class AuthenticatedAPITestCase(APITestCase):
         }
         return Registration.objects.create(**data)
 
+    def _check_request(
+            self, request, method, params=None, data=None, headers=None):
+        self.assertEqual(request.method, method)
+        if params is not None:
+            url = urlparse.urlparse(request.url)
+            qs = urlparse.parse_qsl(url.query)
+            self.assertEqual(dict(qs), params)
+        if headers is not None:
+            for key, value in headers.items():
+                self.assertEqual(request.headers[key], value)
+        if data is None:
+            self.assertEqual(request.body, None)
+        else:
+            self.assertEqual(json.loads(request.body), data)
+
     def setUp(self):
         super(AuthenticatedAPITestCase, self).setUp()
         self._replace_post_save_hooks()
@@ -2064,21 +2079,6 @@ class TestHealthcheckAPI(AuthenticatedAPITestCase):
 
 class TestMetrics(AuthenticatedAPITestCase):
 
-    def _check_request(
-            self, request, method, params=None, data=None, headers=None):
-        self.assertEqual(request.method, method)
-        if params is not None:
-            url = urlparse.urlparse(request.url)
-            qs = urlparse.parse_qsl(url.query)
-            self.assertEqual(dict(qs), params)
-        if headers is not None:
-            for key, value in headers.items():
-                self.assertEqual(request.headers[key], value)
-        if data is None:
-            self.assertEqual(request.body, None)
-        else:
-            self.assertEqual(json.loads(request.body), data)
-
     def add_metrics_callback(self):
         responses.add(
             responses.POST, "http://metrics-url/metrics/",
@@ -3567,29 +3567,33 @@ class TestThirdPartyRegistrations(AuthenticatedAPITestCase):
         self.assertEqual(
             json.loads(patch_father),
             {
-                "operator_id": "4038a518-1111-1111-1111-hfud7383gfyt",
-                "gravida": "2",
-                "preferred_language": "eng_NG",
-                "preferred_msg_days": "tue_thu",
-                "preferred_msg_type": "audio",
-                "household_msgs_only": True,
-                "receiver_role": "father",
-                "default_addr_type": "msisdn",
-                "linked_to": "4038a518-2940-4b15-9c5c-2b7b123b8735",
-                "preferred_msg_times": "2_5"
+                'details': {
+                    "operator_id": "4038a518-1111-1111-1111-hfud7383gfyt",
+                    "gravida": "2",
+                    "preferred_language": "eng_NG",
+                    "preferred_msg_days": "tue_thu",
+                    "preferred_msg_type": "audio",
+                    "household_msgs_only": True,
+                    "receiver_role": "father",
+                    "default_addr_type": "msisdn",
+                    "linked_to": "4038a518-2940-4b15-9c5c-2b7b123b8735",
+                    "preferred_msg_times": "2_5"
+                }
             })
         self.assertEqual(
             json.loads(patch_mother),
             {
-                "operator_id": "4038a518-1111-1111-1111-hfud7383gfyt",
-                "gravida": "2",
-                "preferred_language": "eng_NG",
-                "preferred_msg_days": "tue_thu",
-                "preferred_msg_type": "audio",
-                "receiver_role": "mother",
-                "default_addr_type": "msisdn",
-                "linked_to": "4038a518-2940-4b15-9c5c-829385793255",
-                "preferred_msg_times": "2_5"
+                'details': {
+                    "operator_id": "4038a518-1111-1111-1111-hfud7383gfyt",
+                    "gravida": "2",
+                    "preferred_language": "eng_NG",
+                    "preferred_msg_days": "tue_thu",
+                    "preferred_msg_type": "audio",
+                    "receiver_role": "mother",
+                    "default_addr_type": "msisdn",
+                    "linked_to": "4038a518-2940-4b15-9c5c-829385793255",
+                    "preferred_msg_times": "2_5"
+                }
             })
 
     @responses.activate
@@ -3629,14 +3633,16 @@ class TestThirdPartyRegistrations(AuthenticatedAPITestCase):
         self.assertEqual(
             json.loads(patch_mother),
             {
-                "operator_id": "4038a518-1111-1111-1111-hfud7383gfyt",
-                "gravida": "2",
-                "preferred_language": "eng_NG",
-                "preferred_msg_days": "tue_thu",
-                "preferred_msg_type": "audio",
-                "receiver_role": "mother",
-                "default_addr_type": "msisdn",
-                "preferred_msg_times": "2_5"
+                'details': {
+                    "operator_id": "4038a518-1111-1111-1111-hfud7383gfyt",
+                    "gravida": "2",
+                    "preferred_language": "eng_NG",
+                    "preferred_msg_days": "tue_thu",
+                    "preferred_msg_type": "audio",
+                    "receiver_role": "mother",
+                    "default_addr_type": "msisdn",
+                    "preferred_msg_times": "2_5"
+                }
             })
 
     @responses.activate
@@ -3721,6 +3727,27 @@ class TestAddRegistrationsAPI(TestThirdPartyRegistrations):
             reg.created_by, User.objects.get(username='testadminuser'))
         self.assertEqual(
             reg.updated_by, User.objects.get(username='testadminuser'))
+
+        patch_identity = responses.calls[2]
+
+        self.assertEqual(
+            patch_identity.request.url,
+            'http://localhost:8001/api/v1/identities/%s/' % mother_id)
+        self._check_request(
+            patch_identity.request, 'PATCH',
+            data={
+                'details': {
+                    'default_addr_type': 'msisdn',
+                    'gravida': '2',
+                    'operator_id': '4038a518-1111-1111-1111-hfud7383gfyt',
+                    'preferred_language': 'eng_NG',
+                    'preferred_msg_days': 'tue_thu',
+                    'preferred_msg_times': '2_5',
+                    'preferred_msg_type': 'audio',
+                    'receiver_role': 'mother'
+                }
+            }
+        )
 
     @responses.activate
     def test_add_registration_father_only(self):
