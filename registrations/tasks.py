@@ -525,10 +525,15 @@ class PullThirdPartyRegistrations(Task):
 
             if receiver in ('father_only', 'family_only', 'friend_only'):
                 mother_identity = self.get_or_create_identity(
-                    None, receiver_identity['id'])
+                    None, receiver_identity['id'], identity_details)
                 reg_info['mother_id'] = mother_identity['id']
 
-        if mother_identity:
+                receiver_details["linked_to"] = mother_identity['id']
+                utils.patch_identity(receiver_identity['id'],
+                                     {'details': receiver_details})
+
+        if (mother_identity and
+                receiver not in ('father_only', 'family_only', 'friend_only')):
             mother_identity['details'].update(identity_details)
             utils.patch_identity(mother_identity['id'],
                                  {'details': mother_identity['details']})
