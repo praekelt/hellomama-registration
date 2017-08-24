@@ -6,7 +6,11 @@ import six
 from django.conf import settings
 from registrations.models import Source
 from datetime import timedelta
-from seed_services_client import IdentityStoreApiClient
+from seed_services_client import (
+    IdentityStoreApiClient,
+    MessageSenderApiClient,
+    StageBasedMessagingApiClient,
+)
 
 session = requests.Session()
 http = requests.adapters.HTTPAdapter(max_retries=5)
@@ -17,6 +21,18 @@ session.mount('https://', https)
 identity_store_client = IdentityStoreApiClient(
     api_url=settings.IDENTITY_STORE_URL,
     auth_token=settings.IDENTITY_STORE_TOKEN,
+    retries=5,
+)
+
+stage_based_messaging_client = StageBasedMessagingApiClient(
+    api_url=settings.STAGE_BASED_MESSAGING_URL,
+    auth_token=settings.STAGE_BASED_MESSAGING_TOKEN,
+    retries=5,
+)
+
+message_sender_client = MessageSenderApiClient(
+    api_url=settings.MESSAGE_SENDER_URL,
+    auth_token=settings.MESSAGE_SENDER_TOKEN,
     retries=5,
 )
 
@@ -89,18 +105,7 @@ def get_identity(identity):
 
 
 def get_identity_address(identity):
-    url = "%s/%s/%s/addresses/msisdn" % (settings.IDENTITY_STORE_URL,
-                                         "identities", identity)
-    params = {"default": True}
-    headers = {
-        'Authorization': 'Token %s' % settings.IDENTITY_STORE_TOKEN,
-        'Content-Type': 'application/json'
-    }
-    r = session.get(url, params=params, headers=headers).json()
-    if len(r["results"]) > 0:
-        return r["results"][0]["address"]
-    else:
-        return None
+    return identity_store_client.get_identity_address(identity)
 
 
 def search_identities(search_key, search_value):
@@ -133,32 +138,20 @@ def search_identities(search_key, search_value):
 def patch_identity(identity, data):
     """ Patches the given identity with the data provided
     """
-    url = "%s/%s/%s/" % (settings.IDENTITY_STORE_URL, "identities", identity)
-    data = data
-    headers = {
-        'Authorization': 'Token %s' % settings.IDENTITY_STORE_TOKEN,
-        'Content-Type': 'application/json'
-    }
-    r = session.patch(url, data=json.dumps(data), headers=headers)
-    r.raise_for_status()
-    return r.json()
+    return identity_store_client.update_identity(identity, data=data)
 
 
 def create_identity(data):
     """ Creates the identity with the data provided
     """
-    url = "%s/identities/" % (settings.IDENTITY_STORE_URL)
-    headers = {
-        'Authorization': 'Token %s' % settings.IDENTITY_STORE_TOKEN,
-        'Content-Type': 'application/json'
-    }
-    r = session.post(url, data=json.dumps(data), headers=headers)
-    r.raise_for_status()
-    return r.json()
+    return identity_store_client.create_identity(data)
 
 
 def search_optouts(params=None):
-    """ Returns the optouts matching the given parameters
+    """
+    Returns the optouts matching the given parameters
+    FIXME: This should be handled by identity_store_client when
+    it supports pagination
     """
     url = "%s/%s/search/" % (settings.IDENTITY_STORE_URL, "optouts")
     headers = {
@@ -176,64 +169,32 @@ def search_optouts(params=None):
 
 
 def get_messageset_by_shortname(short_name):
-    url = "%s/%s/" % (settings.STAGE_BASED_MESSAGING_URL, "messageset")
     params = {'short_name': short_name}
-    headers = {
-        'Authorization': 'Token %s' % settings.STAGE_BASED_MESSAGING_TOKEN,
-        'Content-Type': 'application/json'
-    }
-    r = session.get(url, params=params, headers=headers)
-    return r.json()["results"][0]  # messagesets should be unique, return 1st
+    r = stage_based_messaging_client.get_messagesets(params=params)
+    return r["results"][0]  # messagesets should be unique, return 1st
 
 
 def get_messageset(messageset_id):
-    url = "%s/%s/%s/" % (settings.STAGE_BASED_MESSAGING_URL, "messageset",
-                         messageset_id)
-    headers = {
-        'Authorization': 'Token %s' % settings.STAGE_BASED_MESSAGING_TOKEN,
-        'Content-Type': 'application/json'
-    }
-    r = session.get(url, headers=headers)
-    return r.json()
+    return stage_based_messaging_client.get_messageset(messageset_id)
 
 
 def get_schedule(schedule_id):
-    url = "%s/%s/%s/" % (settings.STAGE_BASED_MESSAGING_URL,
-                         "schedule", schedule_id)
-    headers = {
-        'Authorization': 'Token %s' % settings.STAGE_BASED_MESSAGING_TOKEN,
-        'Content-Type': 'application/json'
-    }
-    r = session.get(url, headers=headers)
-    return r.json()
+    return stage_based_messaging_client.get_schedule(schedule_id)
 
 
 def get_subscriptions(identity):
     """ Gets the active subscriptions for an identity
     """
-    url = "%s/%s/" % (settings.STAGE_BASED_MESSAGING_URL, "subscriptions")
     params = {'identity': identity, 'active': True}
-    headers = {
-        'Authorization': 'Token %s' % settings.STAGE_BASED_MESSAGING_TOKEN,
-        'Content-Type': 'application/json'
-    }
-    r = session.get(url, params=params, headers=headers)
-    return r.json()["results"]
+    r = stage_based_messaging_client.get_subscriptions(params=params)
+    return r["results"]
 
 
 def patch_subscription(subscription, data):
     """ Patches the given subscription with the data provided
     """
-    url = "%s/%s/%s/" % (settings.STAGE_BASED_MESSAGING_URL,
-                         "subscriptions", subscription["id"])
-    data = json.dumps(data)
-    headers = {
-        'Authorization':
-        'Token %s' % settings.STAGE_BASED_MESSAGING_TOKEN,
-        'Content-Type': 'application/json'
-    }
-    r = session.patch(url, data=data, headers=headers)
-    return r.json()
+    return stage_based_messaging_client.update_subscription(
+        subscription["id"], data)
 
 
 def deactivate_subscription(subscription):
@@ -306,16 +267,7 @@ def get_messageset_schedule_sequence(short_name, weeks):
 
 
 def post_message(payload):
-    result = session.post(
-        url="%s/outbound/" % settings.MESSAGE_SENDER_URL,
-        data=json.dumps(payload),
-        headers={
-            'Content-Type': 'application/json',
-            'Authorization': 'Token %s' % (
-                settings.MESSAGE_SENDER_TOKEN,)
-        }
-    ).json()
-    return result
+    return message_sender_client.create_outbound(payload)
 
 
 def get_available_metrics():
