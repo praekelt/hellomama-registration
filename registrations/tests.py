@@ -3459,7 +3459,13 @@ class TestThirdPartyRegistrations(AuthenticatedAPITestCase):
                 "count": 1, "next": None, "previous": None,
                 "results": [{
                     "id": identity_id,
-                    "details": {}
+                    "details": {
+                        "addresses": {
+                            'msisdn': {
+                                msisdn.replace('%2B', '+'): {'default': True}
+                            }
+                        }
+                    }
                 }]
             },
             status=200, content_type='application/json',
@@ -3577,7 +3583,12 @@ class TestThirdPartyRegistrations(AuthenticatedAPITestCase):
                     "receiver_role": "father",
                     "default_addr_type": "msisdn",
                     "linked_to": "4038a518-2940-4b15-9c5c-2b7b123b8735",
-                    "preferred_msg_times": "2_5"
+                    "preferred_msg_times": "2_5",
+                    "addresses": {
+                        "msisdn": {
+                            "+2347031221928": {"default": True}
+                        }
+                    }
                 }
             })
         self.assertEqual(
@@ -3592,7 +3603,12 @@ class TestThirdPartyRegistrations(AuthenticatedAPITestCase):
                     "receiver_role": "mother",
                     "default_addr_type": "msisdn",
                     "linked_to": "4038a518-2940-4b15-9c5c-829385793255",
-                    "preferred_msg_times": "2_5"
+                    "preferred_msg_times": "2_5",
+                    "addresses": {
+                        "msisdn": {
+                            "+2347031221927": {"default": True}
+                        }
+                    }
                 }
             })
 
@@ -3641,7 +3657,12 @@ class TestThirdPartyRegistrations(AuthenticatedAPITestCase):
                     "preferred_msg_type": "audio",
                     "receiver_role": "mother",
                     "default_addr_type": "msisdn",
-                    "preferred_msg_times": "2_5"
+                    "preferred_msg_times": "2_5",
+                    "addresses": {
+                        "msisdn": {
+                            "+2347031221927": {"default": True}
+                        }
+                    }
                 }
             })
 
@@ -3744,7 +3765,12 @@ class TestAddRegistrationsAPI(TestThirdPartyRegistrations):
                     'preferred_msg_days': 'tue_thu',
                     'preferred_msg_times': '2_5',
                     'preferred_msg_type': 'audio',
-                    'receiver_role': 'mother'
+                    'receiver_role': 'mother',
+                    'addresses': {
+                        'msisdn': {
+                            '+2347031221927': {'default': True}
+                        }
+                    }
                 }
             }
         )
@@ -3801,7 +3827,12 @@ class TestAddRegistrationsAPI(TestThirdPartyRegistrations):
                     'preferred_msg_times': '2_5',
                     'preferred_msg_type': 'audio',
                     'receiver_role': 'father',
-                    'linked_to': mother_id
+                    'linked_to': mother_id,
+                    'addresses': {
+                        'msisdn': {
+                            '+2347031221927': {'default': True}
+                        }
+                    }
                 }
             }
         )
