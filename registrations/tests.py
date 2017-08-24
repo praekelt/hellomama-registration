@@ -3788,6 +3788,24 @@ class TestAddRegistrationsAPI(TestThirdPartyRegistrations):
         self.assertEqual(
             reg.updated_by, User.objects.get(username='testadminuser'))
 
+        mother_patch = responses.calls[4]
+        self._check_request(
+            mother_patch.request, 'PATCH',
+            data={
+                'details': {
+                    'default_addr_type': 'msisdn',
+                    'gravida': '2',
+                    'operator_id': operator_id,
+                    'preferred_language': 'eng_NG',
+                    'preferred_msg_days': 'tue_thu',
+                    'preferred_msg_times': '2_5',
+                    'preferred_msg_type': 'audio',
+                    'receiver_role': 'father',
+                    'linked_to': mother_id
+                }
+            }
+        )
+
     @responses.activate
     def test_add_registration_no_source(self):
         """
