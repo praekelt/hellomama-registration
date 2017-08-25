@@ -3960,9 +3960,7 @@ class TestPersonnelCodeView(AuthenticatedAPITestCase):
                                          content_type='application/json')
 
         self.assertEqual(response.status_code, 200)
-
-        results = json.loads(response.content)['results']
-        self.assertEqual(results, ['11111', '22222'])
+        self.assertEqual(response.data['results'], ['11111', '22222'])
 
     @responses.activate
     def test_return_personnel_codes_post(self):
