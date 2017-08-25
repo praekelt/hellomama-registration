@@ -10,7 +10,7 @@ from rest_framework.authtoken.models import Token
 from .serializers import (UserSerializer, GroupSerializer,
                           SourceSerializer, RegistrationSerializer,
                           HookSerializer, CreateUserSerializer)
-from hellomama_registration.utils import get_available_metrics
+from hellomama_registration import utils
 # Uncomment line below if scheduled metrics are added
 # from .tasks import scheduled_metrics
 from .tasks import pull_third_party_registrations
@@ -92,7 +92,7 @@ class MetricsView(APIView):
     def get(self, request, *args, **kwargs):
         status = 200
         resp = {
-            "metrics_available": get_available_metrics()
+            "metrics_available": utils.get_available_metrics()
         }
         return Response(resp, status=status)
 
@@ -211,5 +211,25 @@ class AddRegistrationView(APIView):
             resp['registration_added'] = False
             resp['error'] = str(error)
             status = 400
+
+        return Response(resp, status=status)
+
+
+class PersonnelCodeView(APIView):
+
+    """ PersonnelCodeView Interaction
+        GET - returns a list of identities with personnel codes
+    """
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request, *args, **kwargs):
+        status = 200
+        resp = {"results": []}
+
+        identities = utils.search_identities(
+            {"details__has_key": "personnel_code"})
+
+        for identity in identities:
+            resp["results"].append(identity['details'].get('personnel_code'))
 
         return Response(resp, status=status)
