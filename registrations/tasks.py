@@ -406,8 +406,8 @@ class PullThirdPartyRegistrations(Task):
         if msisdn:
             msisdn = utils.normalize_msisdn(msisdn, '234')
 
-            params = {"details__addresses__msisdn": msisdn}
-            identities = utils.search_identities(params)
+            identities = utils.search_identities(
+                "details__addresses__msisdn", msisdn)
 
             for identity in identities:
                 if details:
