@@ -23,4 +23,6 @@ urlpatterns = [
         views.ThirdPartyRegistrationView.as_view()),
     url(r'^api/v1/addregistration/$',
         views.AddRegistrationView.as_view()),
+    url(r'^api/v1/personnelcode/$',
+        views.PersonnelCodeView.as_view()),
 ]

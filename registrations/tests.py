@@ -3924,3 +3924,40 @@ class TestAddRegistrationsAPI(TestThirdPartyRegistrations):
             response.data['error'].find("This field may not be null") != -1)
 
         self.assertEqual(Registration.objects.count(), 0)
+
+
+class TestPersonnelCodeView(AuthenticatedAPITestCase):
+
+    def mock_identity_search(self, identities=[]):
+        responses.add(
+            responses.GET,
+            'http://localhost:8001/api/v1/identities/search/?details__has_key=personnel_code',  # noqa
+            json={
+                "count": len(identities), "next": None, "previous": None,
+                "results": identities
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+
+    @responses.activate
+    def test_return_personnel_codes(self):
+        """
+        It should return ids and codes of personnel
+        """
+
+        identities = [{
+            "id": "4038a518-2940-4b15-9c5c-2b7b123b8735",
+            "details": {"personnel_code": "11111"}
+        }, {
+            "id": "4038a518-1111-1111-1111-hfud7383gfyt",
+            "details": {"personnel_code": "22222"}
+        }]
+
+        self.mock_identity_search(identities)
+
+        response = self.normalclient.get('/api/v1/personnelcode/',
+                                         content_type='application/json')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(sorted(response.data['results']), ['11111', '22222'])
