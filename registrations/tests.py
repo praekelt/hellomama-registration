@@ -3961,25 +3961,3 @@ class TestPersonnelCodeView(AuthenticatedAPITestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['results'], ['11111', '22222'])
-
-    @responses.activate
-    def test_return_personnel_codes_post(self):
-        """
-        It should not allow POST method
-        """
-
-        response = self.normalclient.post('/api/v1/personnelcode/', {},
-                                          content_type='application/json')
-
-        self.assertEqual(response.status_code, 405)
-
-    @responses.activate
-    def test_return_personnel_codes_patch(self):
-        """
-        It should not allow PATCH method
-        """
-
-        response = self.normalclient.patch('/api/v1/personnelcode/', {},
-                                           content_type='application/json')
-
-        self.assertEqual(response.status_code, 405)

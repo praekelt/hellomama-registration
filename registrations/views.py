@@ -218,18 +218,16 @@ class AddRegistrationView(APIView):
 class PersonnelCodeView(APIView):
 
     """ PersonnelCodeView Interaction
-        GET - returns a list of identities with personnel codes
+        GET - returns a list of personnel codes
     """
     permission_classes = (IsAuthenticated,)
 
     def get(self, request, *args, **kwargs):
-        status = 200
-        resp = {"results": []}
-
         identities = utils.search_identities(
             {"details__has_key": "personnel_code"})
 
+        codes = set()
         for identity in identities:
-            resp["results"].append(identity['details'].get('personnel_code'))
+            codes.add(identity['details'].get('personnel_code'))
 
-        return Response(resp, status=status)
+        return Response({"results": list(codes)}, status=200)
