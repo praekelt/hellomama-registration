@@ -3960,4 +3960,4 @@ class TestPersonnelCodeView(AuthenticatedAPITestCase):
                                          content_type='application/json')
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data['results'], ['11111', '22222'])
+        self.assertEqual(sorted(response.data['results']), ['11111', '22222'])
