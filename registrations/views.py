@@ -224,7 +224,7 @@ class PersonnelCodeView(APIView):
 
     def get(self, request, *args, **kwargs):
         identities = utils.search_identities(
-            {"details__has_key": "personnel_code"})
+            "details__has_key", "personnel_code")
 
         codes = set()
         for identity in identities:
