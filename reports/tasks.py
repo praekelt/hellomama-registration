@@ -15,8 +15,7 @@ from seed_services_client import (IdentityStoreApiClient,
                                   MessageSenderApiClient)
 
 from registrations.models import Registration
-from reports.utils import (parse_cursor_params, midnight_validator,
-                           generate_random_filename)
+from reports.utils import midnight_validator, generate_random_filename
 from reports.models import ReportTaskStatus
 
 
