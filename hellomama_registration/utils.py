@@ -171,7 +171,7 @@ def search_optouts(params=None):
 def get_messageset_by_shortname(short_name):
     params = {'short_name': short_name}
     r = stage_based_messaging_client.get_messagesets(params=params)
-    return r["results"][0]  # messagesets should be unique, return 1st
+    return next(r["results"])  # messagesets should be unique, return 1st
 
 
 def get_messageset(messageset_id):

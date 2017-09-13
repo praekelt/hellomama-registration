@@ -205,37 +205,16 @@ class GenerateReport(BaseTask):
 
     def get_subscriptions(self, sbm_client, **kwargs):
         subscriptions = sbm_client.get_subscriptions(kwargs)
-        cursor = subscriptions['next']
-        while cursor:
-            for result in subscriptions['results']:
-                yield result
-            params = parse_cursor_params(cursor)
-            subscriptions = sbm_client.get_subscriptions(params)
-            cursor = subscriptions['next']
         for result in subscriptions['results']:
             yield result
 
     def get_outbounds(self, ms_client, **kwargs):
         outbounds = ms_client.get_outbounds(kwargs)
-        cursor = outbounds['next']
-        while cursor:
-            for result in outbounds['results']:
-                yield result
-            params = parse_cursor_params(cursor)
-            outbounds = ms_client.get_outbounds(params)
-            cursor = outbounds['next']
         for result in outbounds['results']:
             yield result
 
     def get_optouts(self, ids_client, **kwargs):
         optouts = ids_client.get_optouts(kwargs)
-        cursor = optouts['next']
-        while cursor:
-            for result in optouts['results']:
-                yield result
-            params = parse_cursor_params(cursor)
-            optouts = ids_client.get_optouts(params)
-            cursor = optouts['next']
         for result in optouts['results']:
             yield result
 

@@ -95,5 +95,5 @@ class Command(BaseCommand):
             subscriptions = sbm_client.get_subscriptions({
                 'identity': receiver,
             })
-            count += int(subscriptions['count'])
+            count += len(list(subscriptions['results']))
         return count

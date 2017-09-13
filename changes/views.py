@@ -318,7 +318,12 @@ class AddChangeView(generics.CreateAPIView):
             data['msisdn'] = utils.normalize_msisdn(data['msisdn'], '234')
             identity = ids_client.get_identity_by_address('msisdn',
                                                           data['msisdn'])
-            data['mother_id'] = identity['results'][0]['id']
+            try:
+                mother_identity = next(identity['results'])
+            except StopIteration:
+                return Response({"msisdn": ["No identity for this number."]},
+                                status=status.HTTP_400_BAD_REQUEST)
+            data['mother_id'] = mother_identity['id']
 
         if ('voice_days' in data['data']):
             data['data']['voice_days'] = utils.get_voice_days(
@@ -339,8 +344,14 @@ class AddChangeView(generics.CreateAPIView):
         if data['data'].get('household_msisdn'):
             data['data']['household_msisdn'] = utils.normalize_msisdn(
                 data['data']['household_msisdn'], '234')
-            household = ids_client.get_identity_by_address(
-                'msisdn', data['data']['household_msisdn'])['results'][0]
+            households = ids_client.get_identity_by_address(
+                'msisdn', data['data']['household_msisdn'])['results']
+            try:
+                household = next(households)
+            except StopIteration:
+                return Response({"household_msisdn":
+                                ["No identity for this number."]},
+                                status=status.HTTP_400_BAD_REQUEST)
             data['data']['household_id'] = household['id']
 
             if (not data.get('msisdn') and
