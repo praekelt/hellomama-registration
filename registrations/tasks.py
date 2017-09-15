@@ -406,13 +406,15 @@ class PullThirdPartyRegistrations(Task):
         if msisdn:
             msisdn = utils.normalize_msisdn(msisdn, '234')
 
-            params = {"details__addresses__msisdn": msisdn}
-            identities = utils.search_identities(params)
+            identities = utils.search_identities(
+                "details__addresses__msisdn", msisdn)
 
             for identity in identities:
                 if details:
                     identity['details'].update(details)
-                    utils.patch_identity(identity['id'], identity['details'])
+                    utils.patch_identity(
+                        identity['id'],
+                        {'details': identity['details']})
                 return identity
 
             identity = {
@@ -523,13 +525,20 @@ class PullThirdPartyRegistrations(Task):
 
             if receiver in ('father_only', 'family_only', 'friend_only'):
                 mother_identity = self.get_or_create_identity(
-                    None, receiver_identity['id'])
+                    None, receiver_identity['id'], identity_details)
                 reg_info['mother_id'] = mother_identity['id']
 
-        if mother_identity:
+                receiver_identity['details'].update(
+                    {"linked_to": mother_identity['id']})
+
+                utils.patch_identity(receiver_identity['id'],
+                                     {'details': receiver_identity['details']})
+
+        if (mother_identity and
+                receiver not in ('father_only', 'family_only', 'friend_only')):
             mother_identity['details'].update(identity_details)
             utils.patch_identity(mother_identity['id'],
-                                 mother_identity['details'])
+                                 {'details': mother_identity['details']})
 
         if line['type_of_registration'] == 'prebirth':
             reg_info['data']['last_period_date'] = \

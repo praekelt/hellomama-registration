@@ -52,7 +52,6 @@ class ManagementCommandsTests(AuthenticatedAPITestCase):
             'http://localhost:8005/api/v1/subscriptions/?identity=%s' %
             registration.mother_id,
             json={
-                "count": 0,
                 "next": None,
                 "previous": None,
                 "results": []
@@ -105,7 +104,6 @@ class ManagementCommandsTests(AuthenticatedAPITestCase):
             'http://localhost:8005/api/v1/subscriptions/?identity=%s' %
             registration.mother_id,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -158,7 +156,6 @@ class ManagementCommandsTests(AuthenticatedAPITestCase):
             'http://localhost:8005/api/v1/subscriptions/?identity=%s' %
             registration1.mother_id,
             json={
-                "count": 0,
                 "next": None,
                 "previous": None,
                 "results": []
@@ -213,7 +210,6 @@ class UpdateInitialSequenceCommand(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/',
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -271,7 +267,6 @@ class UpdateInitialSequenceCommand(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/',
             json={
-                "count": 0,
                 "next": None,
                 "previous": None,
                 "results": []

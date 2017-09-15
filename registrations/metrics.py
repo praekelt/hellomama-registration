@@ -187,28 +187,24 @@ class MetricGenerator(object):
             .count()
 
     def registrations_state_sum(self, state, start, end):
-        return registrations_for_identity_field(
-            {"details__state": state})\
+        return registrations_for_identity_field("details__state", state)\
             .filter(created_at__gt=start)\
             .filter(created_at__lte=end)\
             .count()
 
     def registrations_state_total_last(self, state, start, end):
-        return registrations_for_identity_field(
-            {"details__state": state})\
+        return registrations_for_identity_field("details__state", state)\
             .filter(created_at__lte=end)\
             .count()
 
     def registrations_role_sum(self, role, start, end):
-        return registrations_for_identity_field(
-            {"details__role": role})\
+        return registrations_for_identity_field("details__role", role)\
             .filter(created_at__gt=start)\
             .filter(created_at__lte=end)\
             .count()
 
     def registrations_role_total_last(self, role, start, end):
-        return registrations_for_identity_field(
-            {"details__role": role})\
+        return registrations_for_identity_field("details__role", role)\
             .filter(created_at__lte=end)\
             .count()
 
