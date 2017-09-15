@@ -172,7 +172,6 @@ class GenerateReportTest(TestCase):
             'http://idstore.example.com/identities/{}/addresses/msisdn?default=True'.format(identity),  # noqa
             match_querystring=True,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [
@@ -194,7 +193,6 @@ class GenerateReportTest(TestCase):
              "created_before=2016-02-01T23%3A59%3A59.999999%2B00%3A00"),
             match_querystring=True,
             json={
-                'count': 0,
                 'next': next_,
                 'results': [],
             },
@@ -228,7 +226,6 @@ class GenerateReportTest(TestCase):
             'http://sbm.example.com/subscriptions/{}'.format(path),
             match_querystring=True,
             json={
-                'count': num,
                 'next': None,
                 'results': subscriptions,
             },
@@ -246,7 +243,6 @@ class GenerateReportTest(TestCase):
              "&after=2016-01-01T00%3A00%3A00%2B00%3A00"),
             match_querystring=True,
             json={
-                'count': 0,
                 'next': next_,
                 'results': [],
             },
@@ -273,7 +269,6 @@ class GenerateReportTest(TestCase):
             'http://ms.example.com/outbound/?foo=bar',
             match_querystring=True,
             json={
-                'count': num,
                 'next': None,
                 'results': outbounds,
             },
@@ -309,7 +304,6 @@ class GenerateReportTest(TestCase):
              "created_at__gte=2016-01-01T00%3A00%3A00%2B00%3A00"),
             match_querystring=True,
             json={
-                'count': 0,
                 'next': next_,
                 'results': [],
             },
@@ -334,7 +328,6 @@ class GenerateReportTest(TestCase):
             'http://idstore.example.com/optouts/search/{}'.format(path),
             match_querystring=True,
             json={
-                'count': num,
                 'next': None,
                 'results': optouts,
             },

@@ -116,7 +116,7 @@ class ImplementAction(Task):
     def change_messaging(self, change):
         # Get mother's current subscriptions
         subscriptions = utils.get_subscriptions(change.mother_id)
-        current_sub = subscriptions[0]  # necessary assumption
+        current_sub = next(subscriptions)  # necessary assumption
         current_nsn = current_sub["next_sequence_number"]
 
         # get current subscription's messageset
@@ -128,6 +128,7 @@ class ImplementAction(Task):
         current_rate = len(current_days.split(','))  # msgs per week
 
         # Deactivate subscriptions
+        utils.deactivate_subscription(current_sub)
         for subscription in subscriptions:
             utils.deactivate_subscription(subscription)
 

@@ -411,7 +411,7 @@ class TestChangeListAPI(AuthenticatedAPITestCase):
             content_type='application/json')
         # Check
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["count"], 2)
+        self.assertEqual(len(response.data["results"]), 2)
         result1, result2 = response.data["results"]
         self.assertEqual(result1["id"], str(change1.id))
         self.assertEqual(result2["id"], str(change2.id))
@@ -426,7 +426,7 @@ class TestChangeListAPI(AuthenticatedAPITestCase):
             content_type='application/json')
         # Check
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(len(response.data["results"]), 1)
         result = response.data["results"][0]
         self.assertEqual(result["id"], str(change2.id))
 
@@ -466,7 +466,6 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -514,7 +513,6 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -567,7 +565,6 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -615,7 +612,6 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -662,7 +658,6 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -710,7 +705,6 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -764,7 +758,6 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -812,7 +805,6 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -864,7 +856,6 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -912,7 +903,6 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -964,7 +954,6 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -1012,7 +1001,6 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -1064,7 +1052,6 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -1112,7 +1099,6 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -1164,7 +1150,6 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -1212,7 +1197,6 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -1264,7 +1248,6 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -1312,7 +1295,6 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -1364,7 +1346,6 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -1412,7 +1393,6 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -1464,7 +1444,6 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -1512,7 +1491,6 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -1564,7 +1542,6 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -1612,7 +1589,6 @@ class TestChangeMessaging(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -1666,7 +1642,6 @@ class TestChangeBaby(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -1719,7 +1694,6 @@ class TestChangeBaby(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -1771,7 +1745,6 @@ class TestChangeBaby(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -1824,7 +1797,6 @@ class TestChangeBaby(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -1876,7 +1848,6 @@ class TestChangeBaby(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -1929,7 +1900,6 @@ class TestChangeBaby(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -1947,7 +1917,6 @@ class TestChangeBaby(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -2016,7 +1985,6 @@ class TestChangeBaby(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -2067,7 +2035,6 @@ class TestChangeBaby(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -2125,7 +2092,6 @@ class TestChangeLanguage(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -2176,7 +2142,6 @@ class TestChangeLanguage(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -2204,7 +2169,6 @@ class TestChangeLanguage(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -2259,7 +2223,6 @@ class TestChangeUnsubscribeHousehold(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -2312,7 +2275,6 @@ class TestChangeUnsubscribeMother(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -2364,7 +2326,6 @@ class TestChangeLoss(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -2417,7 +2378,6 @@ class TestChangeLoss(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -2469,7 +2429,6 @@ class TestChangeLoss(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -2522,7 +2481,6 @@ class TestChangeLoss(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -2574,7 +2532,6 @@ class TestChangeLoss(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -2627,7 +2584,6 @@ class TestChangeLoss(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -2654,7 +2610,6 @@ class TestChangeLoss(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -2707,7 +2662,6 @@ class TestChangeLoss(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -2758,7 +2712,6 @@ class TestChangeLoss(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -2937,7 +2890,6 @@ class IdentityStoreOptoutViewTest(AuthenticatedAPITestCase):
     def optout_search_callback(self, request):
         headers = {'Content-Type': "application/json"}
         resp = {
-            "count": 2,
             "next": None,
             "previous": None,
             "results": [{
@@ -2975,7 +2927,6 @@ class IdentityStoreOptoutViewTest(AuthenticatedAPITestCase):
     def optout_search_callback_other(self, request):
         headers = {'Content-Type': "application/json"}
         resp = {
-            "count": 1,
             "next": None,
             "previous": None,
             "results": [{
@@ -3204,7 +3155,6 @@ class AdminViewsTest(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/messageset/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -3335,7 +3285,6 @@ class AdminViewsTest(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8005/api/v1/subscriptions/%s' % query_string,
             json={
-                "count": 1,
                 "next": None,
                 "previous": None,
                 "results": [{
@@ -3443,7 +3392,7 @@ class AddChangeViewsTest(AuthenticatedAPITestCase):
             responses.GET,
             'http://localhost:8001/api/v1/identities/search/?details__addresses__msisdn=%s' % msisdn,  # noqa
             json={
-                "count": 1, "next": None, "previous": None,
+                "next": None, "previous": None,
                 "results": [{
                     "id": identity_id,
                     "details": details
