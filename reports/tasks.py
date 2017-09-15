@@ -202,21 +202,6 @@ class GenerateReport(BaseTask):
         for result in registrations.iterator():
             yield result
 
-    def get_subscriptions(self, sbm_client, **kwargs):
-        subscriptions = sbm_client.get_subscriptions(kwargs)
-        for result in subscriptions['results']:
-            yield result
-
-    def get_outbounds(self, ms_client, **kwargs):
-        outbounds = ms_client.get_outbounds(kwargs)
-        for result in outbounds['results']:
-            yield result
-
-    def get_optouts(self, ids_client, **kwargs):
-        optouts = ids_client.get_optouts(kwargs)
-        for result in optouts['results']:
-            yield result
-
     def handle_registrations(self, sheet, ids_client, start_date, end_date):
 
         sheet.set_header([
@@ -327,9 +312,8 @@ class GenerateReport(BaseTask):
             'Enrolled and completed in period',
         ])
 
-        subscriptions = self.get_subscriptions(
-            sbm_client,
-            created_before=end_date.isoformat())
+        subscriptions = sbm_client.get_subscriptions({
+            'created_before': end_date.isoformat()})['results']
 
         data = collections.defaultdict(partial(collections.defaultdict, int))
         for subscription in subscriptions:
@@ -369,11 +353,10 @@ class GenerateReport(BaseTask):
     def handle_sms_delivery_msisdn(
             self, sheet, ms_client, ids_client, start_date, end_date):
 
-        outbounds = self.get_outbounds(
-            ms_client,
-            after=start_date.isoformat(),
-            before=end_date.isoformat()
-        )
+        outbounds = ms_client.get_outbounds({
+            'after': start_date.isoformat(),
+            'before': end_date.isoformat()
+        })['results']
 
         data = collections.defaultdict(dict)
         count = collections.defaultdict(int)
@@ -410,11 +393,10 @@ class GenerateReport(BaseTask):
     def handle_obd_delivery_failure(
             self, sheet, ms_client, start_date, end_date):
 
-        outbounds = self.get_outbounds(
-            ms_client,
-            after=start_date.isoformat(),
-            before=end_date.isoformat()
-        )
+        outbounds = ms_client.get_outbounds({
+            'after': start_date.isoformat(),
+            'before': end_date.isoformat()
+        })['results']
 
         data = collections.defaultdict(int)
         for outbound in outbounds:
@@ -455,9 +437,9 @@ class GenerateReport(BaseTask):
             "Reason"
         ])
 
-        optouts = self.get_optouts(
-            ids_client, created_at__gte=start_date.isoformat(),
-            created_at__lte=end_date.isoformat())
+        optouts = ids_client.get_optouts({
+            'created_at__gte': start_date.isoformat(),
+            'created_at__lte': end_date.isoformat()})['results']
 
         for optout in optouts:
             msisdns = []
