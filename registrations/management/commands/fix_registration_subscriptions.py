@@ -70,8 +70,8 @@ class Command(BaseCommand):
             sub_response = client.get_subscriptions({
                 'identity': receiver_id,
             })
-            if len(sub_response['results']):
-                subscriptions[receiver_id] = sub_response['results']
+            if len(list(sub_response['results'])):
+                subscriptions[receiver_id] = next(sub_response)
 
         # Make sure the registration has the data for the correct stage
         if registration.stage == 'prebirth':
