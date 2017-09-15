@@ -17,3 +17,5 @@ METRICS_URL = "http://metrics-url"
 METRICS_AUTH_TOKEN = "REPLACEME"
 
 PASSWORD_HASHERS = ('django.contrib.auth.hashers.MD5PasswordHasher',)
+
+REST_FRAMEWORK['PAGE_SIZE'] = 2
