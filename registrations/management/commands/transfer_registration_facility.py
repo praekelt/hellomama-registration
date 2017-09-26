@@ -27,32 +27,37 @@ class Command(BaseCommand):
         if not from_code or not to_code:
             raise CommandError('From and To code is required.')
 
-        for identity in utils.search_identities("details__personnel_code",
-                                                from_code):
-            from_identity = identity['id']
-            break
+        from_identities = []
+        identities = utils.search_identities("details__personnel_code",
+                                             from_code)
+        for identity in identities:
+            from_identities.append(identity['id'])
 
-        for identity in utils.search_identities("details__personnel_code",
-                                                to_code):
+        if not from_identities:
+            raise CommandError('From identity not found.')
+
+        try:
+            identities = utils.search_identities("details__personnel_code",
+                                                 to_code)
+            identity = next(identities)
             to_identity = identity['id']
-            break
-
-        registrations = Registration.objects.filter(
-            data__operator_id=from_identity).iterator()
+        except StopIteration:
+            raise CommandError('To identity not found.')
 
         updated = 0
-        for registration in registrations:
-            registration.data.update({"operator_id": to_identity})
-            registration.save()
-            updated += 1
+        for from_identity in from_identities:
+            registrations = Registration.objects.filter(
+                data__operator_id=from_identity).iterator()
+
+            for registration in registrations:
+                registration.data.update({"operator_id": to_identity})
+                registration.save()
+                updated += 1
 
         self.success('Updated %s registrations.' % updated)
 
     def log(self, level, msg):
         self.stdout.write(level(msg))
-
-    def warning(self, msg):
-        self.log(self.style.WARNING, msg)
 
     def success(self, msg):
         self.log(self.style.SUCCESS, msg)
