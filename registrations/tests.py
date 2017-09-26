@@ -4050,3 +4050,136 @@ class TestPersonnelCodeView(AuthenticatedAPITestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(sorted(response.data['results']), ['11111', '22222'])
+
+
+class TestTransferRegistrationsCommand(AuthenticatedAPITestCase):
+
+    def make_registration(self, operator_id):
+        reg_data = REG_DATA['hw_pre_mother'].copy()
+        reg_data.update({"operator_id": operator_id})
+        data = {
+            "stage": "postbirth",
+            "data": reg_data,
+            "source": self.make_source_normaluser()
+        }
+        return Registration.objects.create(**data)
+
+    def mock_operator_identity_lookup(self, code, identity_ids):
+
+        results = []
+        for identity_id in identity_ids:
+            results.append({
+                "id": identity_id,
+                "details": {
+                    "personnel_code": code
+                }
+            })
+
+        responses.add(
+            responses.GET,
+            'http://localhost:8001/api/v1/identities/search/?details__personnel_code=%s' % code,  # noqa
+            json={
+                "next": None, "previous": None,
+                "results": results
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+
+    @responses.activate
+    def do_call_command(self, from_code=None, to_code=None):
+        stdout = StringIO()
+        stderr = StringIO()
+
+        args = ["transfer_registration_facility"]
+
+        if from_code:
+            args.extend(["--from-code", from_code])
+
+        if to_code:
+            args.extend(["--to-code", to_code])
+
+        call_command(*args, stdout=stdout, stderr=stderr)
+        return stdout, stderr
+
+    def test_transfer_command(self):
+
+        self.make_registration("from-identity")
+        self.make_registration("from-identity")
+        self.make_registration("not-from-identity")
+
+        self.mock_operator_identity_lookup("12345", ["from-identity"])
+        self.mock_operator_identity_lookup("54321", ["to-identity"])
+
+        stdout, stderr = self.do_call_command("12345", "54321")
+
+        self.assertEqual(stdout.getvalue().strip(),
+                         "Updated 2 registrations.")
+
+        self.assertEqual(
+            Registration.objects.filter(
+                data__operator_id="from-identity").count(), 0)
+        self.assertEqual(
+            Registration.objects.filter(
+                data__operator_id="to-identity").count(), 2)
+
+    def test_transfer_command_multiple_from(self):
+
+        self.make_registration("from-identity")
+        self.make_registration("from-identity")
+        self.make_registration("from-another-identity")
+        self.make_registration("not-from-identity")
+
+        self.mock_operator_identity_lookup(
+            "12345", ["from-identity", "from-another-identity"])
+        self.mock_operator_identity_lookup("54321", ["to-identity"])
+
+        stdout, stderr = self.do_call_command("12345", "54321")
+
+        self.assertEqual(stdout.getvalue().strip(),
+                         "Updated 3 registrations.")
+
+        self.assertEqual(
+            Registration.objects.filter(
+                data__operator_id="from-identity").count(), 0)
+        self.assertEqual(
+           Registration.objects.filter(
+               data__operator_id="from-another-identity").count(), 0)
+        self.assertEqual(
+            Registration.objects.filter(
+                data__operator_id="to-identity").count(), 3)
+
+    def test_transfer_command_from_not_found(self):
+
+        self.make_registration("from-identity")
+        self.make_registration("from-identity")
+        self.make_registration("not-from-identity")
+
+        self.mock_operator_identity_lookup("12345", [])
+        self.mock_operator_identity_lookup("54321", ["to-identity"])
+
+        self.assertRaisesRegexp(
+            CommandError,
+            ('From identity not found.'),
+            self.do_call_command, "12345", "54321")
+
+    def test_transfer_command_to_not_found(self):
+
+        self.make_registration("from-identity")
+        self.make_registration("from-identity")
+        self.make_registration("not-from-identity")
+
+        self.mock_operator_identity_lookup("12345", ["from-identity"])
+        self.mock_operator_identity_lookup("54321", [])
+
+        self.assertRaisesRegexp(
+            CommandError,
+            ('To identity not found.'),
+            self.do_call_command, "12345", "54321")
+
+    def test_transfer_command_no_args(self):
+
+        self.assertRaisesRegexp(
+            CommandError,
+            ('From and To code is required.'),
+            self.do_call_command)
