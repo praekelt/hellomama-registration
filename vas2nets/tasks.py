@@ -4,7 +4,7 @@ import requests
 from django.conf import settings
 from celery.task import Task
 
-from models import VoiceCall
+from .models import VoiceCall
 
 
 class FetchVoiceData(Task):
