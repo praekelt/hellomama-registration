@@ -15,6 +15,7 @@ class FetchVoiceData(Task):
         url = "%s?report_date=%s" % (settings.V2N_VOICE_URL, date)
 
         content = requests.get(url, stream=True)
+        content.encoding = 'utf-8'
 
         return csv.DictReader(content.iter_lines())
 
