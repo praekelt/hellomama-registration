@@ -9,7 +9,6 @@ from rest_framework.test import APIClient
 from rest_framework.authtoken.models import Token
 
 from hellomama_registration import utils
-from registrations.models import Source
 from .models import VoiceCall
 
 
