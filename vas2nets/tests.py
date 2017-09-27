@@ -26,14 +26,6 @@ class APITestCase(TestCase):
 
 class AuthenticatedAPITestCase(APITestCase):
 
-    def make_source_normaluser(self):
-        data = {
-            "name": "test_voice_source_normaluser",
-            "authority": "patient",
-            "user": User.objects.get(username='testnormaluser')
-        }
-        return Source.objects.create(**data)
-
     def setUp(self):
         super(AuthenticatedAPITestCase, self).setUp()
 
@@ -55,7 +47,7 @@ class TestFetchVoiceData(AuthenticatedAPITestCase):
     @responses.activate
     def test_fetch_voice_data(self):
         lines = [
-            'BegTime,Shortcode,"Mobile Number",Duration,Reason',
+            'BegTime,Shortcode,"Mobile Number",Duration,"Reason"',
             '"2017-09-26 14:22:54",1444,08032311111,30,"No Answer"',
             '"2017-09-26 14:22:57",1444,07037622222,60,"Network failure"',
             '"2017-09-26 15:22:57",1444,08164033333,65,"Network failure"',
@@ -73,12 +65,15 @@ class TestFetchVoiceData(AuthenticatedAPITestCase):
                                           content_type='application/json')
 
         self.assertEqual(response.status_code,
-                         status.HTTP_201_CREATED)
+                         status.HTTP_202_ACCEPTED)
 
         self.assertEqual(VoiceCall.objects.all().count(), 3)
 
         call = VoiceCall.objects.all().order_by('created_at').last()
         self.assertEqual(str(call.created_at), '2017-09-26 15:22:57+00:00')
+        self.assertEqual(call.shortcode, "1444")
         self.assertEqual(call.msisdn, "08164033333")
         self.assertEqual(call.duration, 65)
         self.assertEqual(call.reason, "Network failure")
+
+        assert False

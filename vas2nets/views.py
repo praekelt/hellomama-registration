@@ -16,8 +16,9 @@ class FetchVoiceDataView(APIView):
     permission_classes = (IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
-        status = 201
+        status = 202
         date = utils.get_today() - timedelta(1)
-        fetch_voice_data.apply_async(args=[date.strftime('%Y-%m-%d')])
-        resp = {"fetch_voice_data_initiated": True}
+        task_id = fetch_voice_data.apply_async(
+            args=[date.strftime('%Y-%m-%d')])
+        resp = {"fetch_voice_data_initiated": True, "task_id": str(task_id)}
         return Response(resp, status=status)

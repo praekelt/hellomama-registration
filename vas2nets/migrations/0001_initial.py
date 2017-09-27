@@ -18,6 +18,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('created_at', models.DateTimeField()),
+                ('shortcode', models.CharField(max_length=36)),
                 ('msisdn', models.CharField(max_length=36)),
                 ('duration', models.IntegerField()),
                 ('reason', models.CharField(max_length=36)),
