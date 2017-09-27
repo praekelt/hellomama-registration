@@ -50,7 +50,7 @@ class TestFetchVoiceData(AuthenticatedAPITestCase):
             'BegTime,Shortcode,"Mobile Number",Duration,"Reason"',
             '"2017-09-26 14:22:54",1444,08032311111,30,"No Answer"',
             '"2017-09-26 14:22:57",1444,07037622222,60,"Network failure"',
-            '"2017-09-26 15:22:57",1444,08164033333,65,"Network failure"',
+            '"2017-09-26 16:22:57",1444,08164033333,65,"Network failure"',
         ]
 
         responses.add(
@@ -75,5 +75,3 @@ class TestFetchVoiceData(AuthenticatedAPITestCase):
         self.assertEqual(call.msisdn, "08164033333")
         self.assertEqual(call.duration, 65)
         self.assertEqual(call.reason, "Network failure")
-
-        assert False
