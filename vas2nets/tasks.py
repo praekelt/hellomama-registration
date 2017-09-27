@@ -10,8 +10,7 @@ from models import VoiceCall
 class FetchVoiceData(Task):
 
     def get_data(self, date):
-        url = "%s?report_date=%s" % (
-            settings.V2N_VOICE_URL, date)
+        url = "%s?report_date=%s" % (settings.V2N_VOICE_URL, date)
 
         content = requests.get(url).content.decode('utf-8')
 
