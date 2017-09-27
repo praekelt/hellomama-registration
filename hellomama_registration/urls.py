@@ -21,4 +21,5 @@ urlpatterns = patterns(
     url(r'^', include('changes.urls')),
     url(r'^', include('uniqueids.urls')),
     url(r'^', include('reports.urls')),
+    url(r'^', include('vas2nets.urls')),
 )

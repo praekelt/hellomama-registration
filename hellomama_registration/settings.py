@@ -61,8 +61,8 @@ INSTALLED_APPS = (
     'registrations',
     'changes',
     'uniqueids',
-    'reports'
-
+    'reports',
+    'vas2nets'
 )
 
 MIDDLEWARE_CLASSES = (
@@ -343,5 +343,8 @@ THIRDPARTY_REGISTRATIONS_USER = os.environ.get('THIRDPARTY_REGISTRATIONS_USER',
                                                'REPLACEME')
 THIRDPARTY_REGISTRATIONS_PASSWORD = os.environ.get(
     'THIRDPARTY_REGISTRATIONS_PASSWORD', 'REPLACEME')
+
+V2N_VOICE_URL = os.environ.get(
+    'V2N_VOICE_URL', 'http://197.253.23.121:8087/praekelt/download.php')
 
 djcelery.setup_loader()
