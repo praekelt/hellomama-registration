@@ -19,3 +19,5 @@ METRICS_AUTH_TOKEN = "REPLACEME"
 PASSWORD_HASHERS = ('django.contrib.auth.hashers.MD5PasswordHasher',)
 
 REST_FRAMEWORK['PAGE_SIZE'] = 2
+
+V2N_VOICE_URL = 'http://v2n.com/praekelt/download.php'
