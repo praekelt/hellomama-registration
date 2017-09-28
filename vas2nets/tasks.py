@@ -2,6 +2,7 @@ import csv
 import requests
 import pytz
 
+from datetime import datetime, timedelta
 from django.conf import settings
 from django.utils.dateparse import parse_datetime
 from celery.task import Task
@@ -34,3 +35,26 @@ class FetchVoiceData(Task):
 
 
 fetch_voice_data = FetchVoiceData()
+
+
+class FetchVoiceDataHistory(Task):
+
+    def run(self, start_date, end_date, **kwargs):
+
+        start_date = datetime.strptime(start_date, '%Y-%m-%d')
+        end_date = datetime.strptime(end_date, '%Y-%m-%d') + timedelta(1)
+
+        def daterange(start, end):
+            for n in range(int((end - start).days)):
+                yield start + timedelta(n)
+
+        for day in daterange(start_date, end_date):
+            if day.weekday() < 5:
+                if VoiceCall.objects.filter(
+                        created_at__year=day.year,
+                        created_at__month=day.month,
+                        created_at__day=day.day).count() == 0:
+                    fetch_voice_data.apply_async(
+                        args=[day.strftime('%Y-%m-%d')])
+
+fetch_voice_data_history = FetchVoiceDataHistory()
