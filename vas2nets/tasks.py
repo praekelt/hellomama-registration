@@ -49,12 +49,7 @@ class FetchVoiceDataHistory(Task):
                 yield start + timedelta(n)
 
         for day in daterange(start_date, end_date):
-            if day.weekday() < 5:
-                if VoiceCall.objects.filter(
-                        created_at__year=day.year,
-                        created_at__month=day.month,
-                        created_at__day=day.day).count() == 0:
-                    fetch_voice_data.apply_async(
-                        args=[day.strftime('%Y-%m-%d')])
+            fetch_voice_data.apply_async(
+                args=[day.strftime('%Y-%m-%d')])
 
 fetch_voice_data_history = FetchVoiceDataHistory()
