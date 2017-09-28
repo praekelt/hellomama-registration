@@ -16,8 +16,7 @@ class FetchVoiceData(Task):
 
         content = requests.get(url, stream=True)
 
-        return csv.DictReader(
-            [line.decode('utf-8') for line in content.iter_lines()])
+        return csv.DictReader(content.iter_lines(decode_unicode=True))
 
     def run(self, date, **kwargs):
         data = self.get_data(date)
