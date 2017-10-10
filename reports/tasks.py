@@ -122,37 +122,37 @@ class GenerateReport(BaseTask):
         self.messageset_cache = {}
         self.address_cache = {}
 
-        ids_client = IdentityStoreApiClient(settings.IDENTITY_STORE_TOKEN,
-                                            settings.IDENTITY_STORE_URL)
-        sbm_client = StageBasedMessagingApiClient(
+        self.identity_store_client = IdentityStoreApiClient(
+            settings.IDENTITY_STORE_TOKEN,
+            settings.IDENTITY_STORE_URL,
+        )
+        self.stage_based_messaging_client = StageBasedMessagingApiClient(
             settings.STAGE_BASED_MESSAGING_TOKEN,
-            settings.STAGE_BASED_MESSAGING_URL)
-        ms_client = MessageSenderApiClient(settings.MESSAGE_SENDER_TOKEN,
-                                           settings.MESSAGE_SENDER_URL)
+            settings.STAGE_BASED_MESSAGING_URL,
+        )
+        self.message_sender_client = MessageSenderApiClient(
+            settings.MESSAGE_SENDER_TOKEN,
+            settings.MESSAGE_SENDER_URL,
+        )
 
         workbook = self.workbook_class()
         sheet = workbook.add_sheet('Registrations by date', 0)
-        self.handle_registrations(sheet, ids_client, start_date, end_date)
+        self.handle_registrations(sheet, start_date, end_date)
 
         sheet = workbook.add_sheet('Health worker registrations', 1)
-        self.handle_health_worker_registrations(
-            sheet, ids_client, start_date, end_date)
+        self.handle_health_worker_registrations(sheet, start_date, end_date)
 
         sheet = workbook.add_sheet('Enrollments', 2)
-        self.handle_enrollments(sheet, sbm_client, ids_client, start_date,
-                                end_date)
+        self.handle_enrollments(sheet, start_date, end_date)
 
         sheet = workbook.add_sheet('SMS delivery per MSISDN', 3)
-        self.handle_sms_delivery_msisdn(sheet, ms_client, ids_client,
-                                        start_date, end_date)
+        self.handle_sms_delivery_msisdn(sheet, start_date, end_date)
 
         sheet = workbook.add_sheet('OBD Delivery Failure', 4)
-        self.handle_obd_delivery_failure(sheet, ms_client, start_date,
-                                         end_date)
+        self.handle_obd_delivery_failure(sheet, start_date, end_date)
 
         sheet = workbook.add_sheet('Opt Outs by Date', 5)
-        self.handle_optouts(
-            sheet, sbm_client, ids_client, start_date, end_date)
+        self.handle_optouts(sheet, start_date, end_date)
 
         output_file = generate_random_filename()
         workbook.save(output_file)
@@ -173,27 +173,28 @@ class GenerateReport(BaseTask):
                 'recipients': email_recipients,
                 'task_status_id': task_status_id})
 
-    def get_identity(self, ids_client, identity):
+    def get_identity(self, identity):
         if identity in self.identity_cache:
             return self.identity_cache[identity]
 
-        identity_object = ids_client.get_identity(identity)
+        identity_object = self.identity_store_client.get_identity(identity)
         self.identity_cache[identity] = identity_object
         return identity_object
 
-    def get_identity_address(self, ids_client, identity):
+    def get_identity_address(self, identity):
         if identity in self.address_cache:
             return self.address_cache[identity]
 
-        address = ids_client.get_identity_address(identity)
+        address = self.identity_store_client.get_identity_address(identity)
         self.address_cache[identity] = address
         return address
 
-    def get_messageset(self, sbm_client, messageset):
+    def get_messageset(self, messageset):
         if messageset in self.messageset_cache:
             return self.messageset_cache[messageset]
 
-        messageset_object = sbm_client.get_messageset(messageset)
+        messageset_object = self.stage_based_messaging_client.get_messageset(
+            messageset)
         self.messageset_cache[messageset] = messageset_object
         return messageset_object
 
@@ -202,7 +203,7 @@ class GenerateReport(BaseTask):
         for result in registrations.iterator():
             yield result
 
-    def handle_registrations(self, sheet, ids_client, start_date, end_date):
+    def handle_registrations(self, sheet, start_date, end_date):
 
         sheet.set_header([
             'MSISDN',
@@ -232,14 +233,12 @@ class GenerateReport(BaseTask):
             receiver_id = data.get('receiver_id')
 
             if operator_id:
-                operator_identity = self.get_identity(
-                    ids_client, operator_id)
+                operator_identity = self.get_identity(operator_id)
             else:
                 operator_identity = {}
 
             if receiver_id:
-                receiver_identity = self.get_identity(
-                    ids_client, receiver_id)
+                receiver_identity = self.get_identity(receiver_id)
             else:
                 receiver_identity = {}
 
@@ -270,8 +269,7 @@ class GenerateReport(BaseTask):
                 'State': operator_details.get('state'),
             })
 
-    def handle_health_worker_registrations(
-            self, sheet, ids_client, start_date, end_date):
+    def handle_health_worker_registrations(self, sheet, start_date, end_date):
         sheet.set_header([
             'Unique Personnel Code',
             'Facility',
@@ -289,7 +287,7 @@ class GenerateReport(BaseTask):
             registrations_per_operator[operator_id] += 1
 
         for operator_id, count in registrations_per_operator.items():
-            operator = self.get_identity(ids_client, operator_id) or {}
+            operator = self.get_identity(operator_id) or {}
             operator_details = operator.get('details', {})
             sheet.add_row({
                 'Unique Personnel Code': operator_details.get(
@@ -300,8 +298,7 @@ class GenerateReport(BaseTask):
                 'Number of Registrations': count,
             })
 
-    def handle_enrollments(self, sheet, sbm_client, ids_client, start_date,
-                           end_date):
+    def handle_enrollments(self, sheet, start_date, end_date):
 
         sheet.set_header([
             'Message set',
@@ -312,14 +309,13 @@ class GenerateReport(BaseTask):
             'Enrolled and completed in period',
         ])
 
-        subscriptions = sbm_client.get_subscriptions({
+        subscriptions = self.stage_based_messaging_client.get_subscriptions({
             'created_before': end_date.isoformat()})['results']
 
         data = collections.defaultdict(partial(collections.defaultdict, int))
         for subscription in subscriptions:
-            messageset = self.get_messageset(
-                sbm_client, subscription['messageset'])
-            identity = self.get_identity(ids_client, subscription['identity'])
+            messageset = self.get_messageset(subscription['messageset'])
+            identity = self.get_identity(subscription['identity'])
 
             messageset_name = messageset['short_name'].split('.')[0]
 
@@ -350,10 +346,9 @@ class GenerateReport(BaseTask):
                 6: data[key]['completed'],
             })
 
-    def handle_sms_delivery_msisdn(
-            self, sheet, ms_client, ids_client, start_date, end_date):
+    def handle_sms_delivery_msisdn(self, sheet, start_date, end_date):
 
-        outbounds = ms_client.get_outbounds({
+        outbounds = self.message_sender_client.get_outbounds({
             'after': start_date.isoformat(),
             'before': end_date.isoformat()
         })['results']
@@ -366,7 +361,7 @@ class GenerateReport(BaseTask):
                 if (not outbound.get('to_addr', '') and
                         outbound.get('to_identity', '')):
                     outbound['to_addr'] = self.get_identity_address(
-                        ids_client, outbound['to_identity'])
+                        outbound['to_identity'])
 
                 count[outbound['to_addr']] += 1
                 data[outbound['to_addr']][outbound['created_at']] = \
@@ -390,10 +385,9 @@ class GenerateReport(BaseTask):
 
                 sheet.add_row(row)
 
-    def handle_obd_delivery_failure(
-            self, sheet, ms_client, start_date, end_date):
+    def handle_obd_delivery_failure(self, sheet, start_date, end_date):
 
-        outbounds = ms_client.get_outbounds({
+        outbounds = self.message_sender_client.get_outbounds({
             'after': start_date.isoformat(),
             'before': end_date.isoformat()
         })['results']
@@ -427,8 +421,7 @@ class GenerateReport(BaseTask):
             3: '{0:.2f}%'.format(data.get('rate', 0)),
         })
 
-    def handle_optouts(
-            self, sheet, sbm_client, ids_client, start_date, end_date):
+    def handle_optouts(self, sheet, start_date, end_date):
 
         sheet.set_header([
             "MSISDN",
@@ -437,7 +430,7 @@ class GenerateReport(BaseTask):
             "Reason"
         ])
 
-        optouts = ids_client.get_optouts({
+        optouts = self.identity_store_client.get_optouts({
             'created_at__gte': start_date.isoformat(),
             'created_at__lte': end_date.isoformat()})['results']
 
@@ -446,7 +439,7 @@ class GenerateReport(BaseTask):
             if 'address' in optout and optout['address'] is not None:
                 msisdns = [optout['address']]
             elif 'identity' in optout and optout['identity'] is not None:
-                identity = self.get_identity(ids_client, optout['identity'])
+                identity = self.get_identity(optout['identity'])
                 details = identity.get('details', {})
                 default_addr_type = details.get('default_addr_type')
                 if default_addr_type:
