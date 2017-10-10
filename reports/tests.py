@@ -133,6 +133,8 @@ class GenerateReportTest(TestCase):
             )
 
     def add_identity_callback(self, identity='operator_id'):
+        linked_id = 'linked-to-identity-id'
+
         responses.add(
             responses.GET,
             'http://idstore.example.com/identities/{}/'.format(identity),
@@ -148,8 +150,25 @@ class GenerateReportTest(TestCase):
                         'msisdn': {
                             '+2340000000000': {}
                         }
-                    }
+                    },
+                    'linked_to': linked_id,
                 }
+            },
+            status=200,
+            content_type='application/json')
+
+        responses.add(
+            responses.GET,
+            'http://idstore.example.com/identities/{}/'.format(linked_id),
+            json={
+                'identity': linked_id,
+                'details': {
+                    'addresses': {
+                        'msisdn': {
+                            '+2340000000001': {},
+                        },
+                    },
+                },
             },
             status=200,
             content_type='application/json')
@@ -515,6 +534,7 @@ class GenerateReportTest(TestCase):
                 'Facility',
                 'Cadre',
                 'State',
+                'Gatekeeper',
             ])
 
         # Assert 1 row is written
@@ -536,6 +556,7 @@ class GenerateReportTest(TestCase):
                 'facility_name',
                 None,
                 'state',
+                '+2340000000001',
             ])
 
     @responses.activate

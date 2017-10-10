@@ -221,6 +221,7 @@ class GenerateReport(BaseTask):
             'Facility',
             'Cadre',
             'State',
+            'Gatekeeper',
         ])
 
         registrations = self.get_registrations(
@@ -251,6 +252,15 @@ class GenerateReport(BaseTask):
             else:
                 msisdns = []
 
+            linked_id = receiver_details.get('linked_to')
+            gatekeeper_msisdn = None
+
+            if linked_id:
+                linked_identity = self.get_identity(linked_id)
+                linked_details = linked_identity.get('details', {})
+                gatekeeper_msisdn = list(linked_details.get(
+                    'addresses', {}).get('msisdn', {}))[0]
+
             sheet.add_row({
                 'MSISDN': ','.join(msisdns),
                 'Created': registration.created_at.isoformat(),
@@ -267,6 +277,7 @@ class GenerateReport(BaseTask):
                 'Facility': operator_details.get('facility_name'),
                 'Cadre': operator_details.get('role'),
                 'State': operator_details.get('state'),
+                'Gatekeeper': gatekeeper_msisdn,
             })
 
     def handle_health_worker_registrations(self, sheet, start_date, end_date):
