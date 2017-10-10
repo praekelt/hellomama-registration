@@ -25,7 +25,7 @@ from registrations.models import (
     fire_unique_operator_metric, fire_message_type_metric, fire_source_metric,
     fire_receiver_type_metric, fire_language_metric, fire_state_metric,
     fire_role_metric)
-from .utils import parse_cursor_params, generate_random_filename
+from .utils import generate_random_filename
 from .tasks import generate_report
 from .models import ReportTaskStatus
 
@@ -112,17 +112,6 @@ class GenerateReportTest(TestCase):
         self.assertEqual(
             [cell.value for cell in rows[row_number]],
             expected)
-
-    def test_parse_cursor_params(self):
-        cursor = ("https://example"
-                  "?created_after=2010-01-01T00%3A00%3A00%2B00%3A00"
-                  "&created_before=2016-10-17T00%3A00%3A00%2B00%3A00"
-                  "&limit=1000&offset=1000")
-        params = parse_cursor_params(cursor)
-        self.assertEqual(params['created_after'], '2010-01-01T00:00:00+00:00')
-        self.assertEqual(params['created_before'], '2016-10-17T00:00:00+00:00')
-        self.assertEqual(params['limit'], '1000')
-        self.assertEqual(params['offset'], '1000')
 
     def add_registrations(self, num=1):
         for i in range(num):
