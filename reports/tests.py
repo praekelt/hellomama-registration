@@ -25,7 +25,7 @@ from registrations.models import (
     fire_unique_operator_metric, fire_message_type_metric, fire_source_metric,
     fire_receiver_type_metric, fire_language_metric, fire_state_metric,
     fire_role_metric)
-from .utils import parse_cursor_params, generate_random_filename
+from .utils import generate_random_filename
 from .tasks import generate_report
 from .models import ReportTaskStatus
 
@@ -113,17 +113,6 @@ class GenerateReportTest(TestCase):
             [cell.value for cell in rows[row_number]],
             expected)
 
-    def test_parse_cursor_params(self):
-        cursor = ("https://example"
-                  "?created_after=2010-01-01T00%3A00%3A00%2B00%3A00"
-                  "&created_before=2016-10-17T00%3A00%3A00%2B00%3A00"
-                  "&limit=1000&offset=1000")
-        params = parse_cursor_params(cursor)
-        self.assertEqual(params['created_after'], '2010-01-01T00:00:00+00:00')
-        self.assertEqual(params['created_before'], '2016-10-17T00:00:00+00:00')
-        self.assertEqual(params['limit'], '1000')
-        self.assertEqual(params['offset'], '1000')
-
     def add_registrations(self, num=1):
         for i in range(num):
             Registration.objects.create(
@@ -144,6 +133,8 @@ class GenerateReportTest(TestCase):
             )
 
     def add_identity_callback(self, identity='operator_id'):
+        linked_id = 'linked-to-identity-id'
+
         responses.add(
             responses.GET,
             'http://idstore.example.com/identities/{}/'.format(identity),
@@ -159,8 +150,25 @@ class GenerateReportTest(TestCase):
                         'msisdn': {
                             '+2340000000000': {}
                         }
-                    }
+                    },
+                    'linked_to': linked_id,
                 }
+            },
+            status=200,
+            content_type='application/json')
+
+        responses.add(
+            responses.GET,
+            'http://idstore.example.com/identities/{}/'.format(linked_id),
+            json={
+                'identity': linked_id,
+                'details': {
+                    'addresses': {
+                        'msisdn': {
+                            '+2340000000001': {},
+                        },
+                    },
+                },
             },
             status=200,
             content_type='application/json')
@@ -526,6 +534,7 @@ class GenerateReportTest(TestCase):
                 'Facility',
                 'Cadre',
                 'State',
+                'Gatekeeper',
             ])
 
         # Assert 1 row is written
@@ -547,6 +556,7 @@ class GenerateReportTest(TestCase):
                 'facility_name',
                 None,
                 'state',
+                '+2340000000001',
             ])
 
     @responses.activate
