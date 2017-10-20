@@ -846,6 +846,69 @@ class GenerateReportTest(TestCase):
                 "Test reason",
             ])
 
+    def test_get_addresses_from_identity(self):
+        """
+        Getting the addresses from the identity results in the correct
+        addresses being returned.
+        """
+        addresses = generate_report.get_addresses_from_identity({
+            'details': {
+                'default_addr_type': 'foo',
+                'addresses': {
+                    'foo': {
+                        'addr1': {},
+                        'addr2': {},
+                    },
+                    'bar': {
+                        'addr3': {},
+                        'addr4': {},
+                    },
+                },
+            },
+        })
+
+        self.assertEqual(sorted(addresses), ['addr1', 'addr2'])
+
+    def test_get_addresses_from_identity_defaults_msisdn(self):
+        """
+        If no default address type is specified, it should default to getting
+        msisdn addresses.
+        """
+        addresses = generate_report.get_addresses_from_identity({
+            'details': {
+                'addresses': {
+                    'msisdn': {
+                        'addr1': {},
+                        'addr2': {},
+                    },
+                    'bar': {
+                        'addr3': {},
+                        'addr4': {},
+                    },
+                },
+            },
+        })
+
+        self.assertEqual(sorted(addresses), ['addr1', 'addr2'])
+
+    def test_get_addresses_from_identity_no_msisdns(self):
+        """
+        If the identity has no addresses of the address type, then an empty
+        list should be returned.
+        """
+        addresses = generate_report.get_addresses_from_identity({
+            'details': {
+                'addresses': {
+                    'bar': {
+                        'addr3': {},
+                        'addr4': {},
+                    },
+                },
+            },
+        })
+
+        self.assertEqual(addresses, [])
+
 
 class ReportsViewTest(TestCase):
     def setUp(self):

@@ -203,6 +203,14 @@ class GenerateReport(BaseTask):
         for result in registrations.iterator():
             yield result
 
+    def get_addresses_from_identity(self, identity):
+        """
+        Returns the list of addresses for the given identity.
+        """
+        details = identity.get('details', {})
+        addr_type = details.get('default_addr_type', 'msisdn')
+        return details.get('addresses', {}).get(addr_type, {}).keys()
+
     def handle_registrations(self, sheet, start_date, end_date):
 
         sheet.set_header([
@@ -245,21 +253,15 @@ class GenerateReport(BaseTask):
 
             operator_details = operator_identity.get('details', {})
             receiver_details = receiver_identity.get('details', {})
-            default_addr_type = receiver_details.get('default_addr_type')
-            if default_addr_type:
-                addresses = receiver_details.get('addresses', {})
-                msisdns = addresses.get(default_addr_type, {}).keys()
-            else:
-                msisdns = []
+            msisdns = self.get_addresses_from_identity(receiver_identity)
 
             linked_id = receiver_details.get('linked_to')
-            gatekeeper_msisdn = None
+            gatekeeper_msisdns = None
 
             if linked_id:
                 linked_identity = self.get_identity(linked_id)
-                linked_details = linked_identity.get('details', {})
-                gatekeeper_msisdn = list(linked_details.get(
-                    'addresses', {}).get('msisdn', {}))[0]
+                gatekeeper_msisdns = self.get_addresses_from_identity(
+                    linked_identity)
 
             sheet.add_row({
                 'MSISDN': ','.join(msisdns),
@@ -277,7 +279,7 @@ class GenerateReport(BaseTask):
                 'Facility': operator_details.get('facility_name'),
                 'Cadre': operator_details.get('role'),
                 'State': operator_details.get('state'),
-                'Gatekeeper': gatekeeper_msisdn,
+                'Gatekeeper': ','.join(gatekeeper_msisdns),
             })
 
     def handle_health_worker_registrations(self, sheet, start_date, end_date):
