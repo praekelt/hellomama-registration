@@ -907,7 +907,7 @@ class GenerateReportTest(TestCase):
             },
         })
 
-        self.assertEqual(addresses, [])
+        self.assertEqual(sorted(addresses), [])
 
 
 class ReportsViewTest(TestCase):
