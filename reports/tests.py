@@ -19,6 +19,7 @@ from openpyxl import load_workbook
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 from rest_hooks.models import model_saved
+from seed_services_client import IdentityStoreApiClient
 
 from registrations.models import (
     Registration, registration_post_save, fire_created_metric,
@@ -26,7 +27,7 @@ from registrations.models import (
     fire_receiver_type_metric, fire_language_metric, fire_state_metric,
     fire_role_metric)
 from .utils import generate_random_filename
-from .tasks import generate_report
+from .tasks import generate_report, ExportWorkbook
 from .models import ReportTaskStatus
 
 
@@ -132,9 +133,8 @@ class GenerateReportTest(TestCase):
                 source_id=1
             )
 
-    def add_identity_callback(self, identity='operator_id'):
-        linked_id = 'linked-to-identity-id'
-
+    def add_identity_callback(
+            self, identity='operator_id', linked_id='linked-to-identity-id'):
         responses.add(
             responses.GET,
             'http://idstore.example.com/identities/{}/'.format(identity),
@@ -157,21 +157,22 @@ class GenerateReportTest(TestCase):
             status=200,
             content_type='application/json')
 
-        responses.add(
-            responses.GET,
-            'http://idstore.example.com/identities/{}/'.format(linked_id),
-            json={
-                'identity': linked_id,
-                'details': {
-                    'addresses': {
-                        'msisdn': {
-                            '+2340000000001': {},
+        if linked_id is not None:
+            responses.add(
+                responses.GET,
+                'http://idstore.example.com/identities/{}/'.format(linked_id),
+                json={
+                    'identity': linked_id,
+                    'details': {
+                        'addresses': {
+                            'msisdn': {
+                                '+2340000000001': {},
+                            },
                         },
                     },
                 },
-            },
-            status=200,
-            content_type='application/json')
+                status=200,
+                content_type='application/json')
 
     def add_identity_address_callback(
             self, identity='operator_id', msisdn="+27711445511"):
@@ -475,6 +476,70 @@ class GenerateReportTest(TestCase):
         self.assertEqual(
             task_status.error,
             "time data 'not_really_a_date' does not match format '%Y-%m-%d'")
+
+    @responses.activate
+    def test_generate_report_registrations_no_linked_identity(self):
+        """
+        If there is no linked identity, then the gatekeeper row should be
+        empty.
+        """
+        self.add_registrations(num=1)
+        Registration.objects.all().update(created_at='2016-02-01 01:00:00')
+
+        self.add_identity_callback('operator_id', linked_id=None)
+        self.add_identity_callback('receiver_id', linked_id=None)
+        generate_report.identity_cache = {}
+        generate_report.identity_store_client = IdentityStoreApiClient(
+            settings.IDENTITY_STORE_TOKEN,
+            settings.IDENTITY_STORE_URL,
+        )
+
+        workbook = ExportWorkbook()
+        sheet = workbook.add_sheet('testsheet', 0)
+        generate_report.handle_registrations(
+            sheet, datetime(2016, 2, 1), datetime(2016, 3, 1))
+
+        rows = list(sheet._sheet.rows)
+        self.assertEqual(
+            [c.value for c in rows[0]],
+            [
+                'MSISDN',
+                'Created',
+                'gravida',
+                'msg_type',
+                'last_period_date',
+                'language',
+                'msg_receiver',
+                'voice_days',
+                'Voice_times',
+                'preg_week',
+                'reg_type',
+                'Personnel_code',
+                'Facility',
+                'Cadre',
+                'State',
+                'Gatekeeper',
+            ])
+        self.assertEqual(
+            [c.value for c in rows[1]],
+            [
+                '+2340000000000',
+                '2016-02-01T01:00:00+00:00',
+                'gravida',
+                'msg_type',
+                'last_period_date',
+                'language',
+                'msg_receiver',
+                'voice_days',
+                'voice_times',
+                'preg_week',
+                'reg_type',
+                'personnel_code',
+                'facility_name',
+                None,
+                'state',
+                '',
+            ])
 
     @responses.activate
     @mock.patch("os.remove")
