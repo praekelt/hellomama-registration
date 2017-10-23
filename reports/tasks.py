@@ -256,7 +256,7 @@ class GenerateReport(BaseTask):
             msisdns = self.get_addresses_from_identity(receiver_identity)
 
             linked_id = receiver_details.get('linked_to')
-            gatekeeper_msisdns = None
+            gatekeeper_msisdns = []
 
             if linked_id:
                 linked_identity = self.get_identity(linked_id)
