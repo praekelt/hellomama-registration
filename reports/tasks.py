@@ -240,6 +240,7 @@ class GenerateReport(BaseTask):
             data = registration.data
             operator_id = data.get('operator_id')
             receiver_id = data.get('receiver_id')
+            mother_id = registration.mother_id
 
             if operator_id:
                 operator_identity = self.get_identity(operator_id)
@@ -251,11 +252,16 @@ class GenerateReport(BaseTask):
             else:
                 receiver_identity = {}
 
+            if mother_id:
+                mother_identity = self.get_identity(mother_id)
+            else:
+                mother_identity = {}
+
             operator_details = operator_identity.get('details', {})
-            receiver_details = receiver_identity.get('details', {})
+            mother_details = mother_identity.get('details', {})
             msisdns = self.get_addresses_from_identity(receiver_identity)
 
-            linked_id = receiver_details.get('linked_to')
+            linked_id = mother_details.get('linked_to')
             gatekeeper_msisdns = []
 
             if linked_id:
