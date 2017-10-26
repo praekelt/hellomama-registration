@@ -114,7 +114,7 @@ class GenerateReportTest(TestCase):
             [cell.value for cell in rows[row_number]],
             expected)
 
-    def add_registrations(self, num=1):
+    def add_registrations(self, num=1, msg_receiver='msg_receiver'):
         for i in range(num):
             Registration.objects.create(
                 mother_id='mother_id',
@@ -125,7 +125,7 @@ class GenerateReportTest(TestCase):
                     'msg_type': 'msg_type',
                     'last_period_date': 'last_period_date',
                     'language': 'language',
-                    'msg_receiver': 'msg_receiver',
+                    'msg_receiver': msg_receiver,
                     'voice_days': 'voice_days',
                     'voice_times': 'voice_times',
                     'preg_week': 'preg_week',
@@ -135,7 +135,8 @@ class GenerateReportTest(TestCase):
             )
 
     def add_identity_callback(
-            self, identity='operator_id', linked_id='linked-to-identity-id'):
+            self, identity='operator_id', linked_id='linked-to-identity-id',
+            address='+2340000000000'):
         responses.add(
             responses.GET,
             'http://idstore.example.com/identities/{}/'.format(identity),
@@ -149,7 +150,7 @@ class GenerateReportTest(TestCase):
                     'state': 'state',
                     'addresses': {
                         'msisdn': {
-                            '+2340000000000': {}
+                            address: {}
                         }
                     },
                     'linked_to': linked_id,
@@ -479,17 +480,18 @@ class GenerateReportTest(TestCase):
             "time data 'not_really_a_date' does not match format '%Y-%m-%d'")
 
     @responses.activate
-    def test_generate_report_registrations_no_linked_identity(self):
+    def test_generate_report_registrations_mother_only(self):
         """
-        If there is no linked identity, then the gatekeeper row should be
+        If it is a mother_only registration, then the gatekeeper row should be
         empty.
         """
-        self.add_registrations(num=1)
+        self.add_registrations(num=1, msg_receiver='mother_only')
         Registration.objects.all().update(created_at='2016-02-01 01:00:00')
 
-        self.add_identity_callback('operator_id')
-        self.add_identity_callback('receiver_id')
-        self.add_identity_callback('mother_id', linked_id=None)
+        self.add_identity_callback('operator_id', address='op-addr')
+        self.add_identity_callback('receiver_id', address='rec-addr')
+        self.add_identity_callback(
+            'mother_id', linked_id=None, address='mother-addr')
 
         generate_report.identity_cache = {}
         generate_report.identity_store_client = IdentityStoreApiClient(
@@ -506,7 +508,8 @@ class GenerateReportTest(TestCase):
         self.assertEqual(
             [c.value for c in rows[0]],
             [
-                'MSISDN',
+                'Mother',
+                'Gatekeeper',
                 'Created',
                 'gravida',
                 'msg_type',
@@ -521,18 +524,18 @@ class GenerateReportTest(TestCase):
                 'Facility',
                 'Cadre',
                 'State',
-                'Gatekeeper',
             ])
         self.assertEqual(
             [c.value for c in rows[1]],
             [
-                '+2340000000000',
+                'mother-addr',
+                '',
                 '2016-02-01T01:00:00+00:00',
                 'gravida',
                 'msg_type',
                 'last_period_date',
                 'language',
-                'msg_receiver',
+                'mother_only',
                 'voice_days',
                 'voice_times',
                 'preg_week',
@@ -541,7 +544,6 @@ class GenerateReportTest(TestCase):
                 'facility_name',
                 None,
                 'state',
-                '',
             ])
 
     @responses.activate
@@ -557,13 +559,13 @@ class GenerateReportTest(TestCase):
         Registration.objects.all().update(created_at='2016-02-01 01:00:00')
 
         # HCW Identity
-        self.add_identity_callback()
+        self.add_identity_callback(address='hcw-addr')
 
         # Receiver Identity
-        self.add_identity_callback('receiver_id')
+        self.add_identity_callback('receiver_id', address='receiver-addr')
 
         # Mother Identity
-        self.add_identity_callback('mother_id')
+        self.add_identity_callback('mother_id', address='mother-addr')
 
         # Subscriptions, first page, just returns empty results to make sure
         # we're actually paging through the results sets using the `next`
@@ -591,7 +593,8 @@ class GenerateReportTest(TestCase):
         self.assertSheetRow(
             tmp_file, 'Registrations by date', 0,
             [
-                'MSISDN',
+                'Mother',
+                'Gatekeeper',
                 'Created',
                 'gravida',
                 'msg_type',
@@ -606,14 +609,14 @@ class GenerateReportTest(TestCase):
                 'Facility',
                 'Cadre',
                 'State',
-                'Gatekeeper',
             ])
 
         # Assert 1 row is written
         self.assertSheetRow(
             tmp_file, 'Registrations by date', 1,
             [
-                '+2340000000000',
+                'mother-addr',
+                'receiver-addr',
                 '2016-02-01T01:00:00+00:00',
                 'gravida',
                 'msg_type',
@@ -628,7 +631,6 @@ class GenerateReportTest(TestCase):
                 'facility_name',
                 None,
                 'state',
-                '+2340000000001',
             ])
 
     @responses.activate

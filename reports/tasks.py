@@ -214,7 +214,8 @@ class GenerateReport(BaseTask):
     def handle_registrations(self, sheet, start_date, end_date):
 
         sheet.set_header([
-            'MSISDN',
+            'Mother',
+            'Gatekeeper',
             'Created',
             'gravida',
             'msg_type',
@@ -229,7 +230,6 @@ class GenerateReport(BaseTask):
             'Facility',
             'Cadre',
             'State',
-            'Gatekeeper',
         ])
 
         registrations = self.get_registrations(
@@ -242,35 +242,22 @@ class GenerateReport(BaseTask):
             receiver_id = data.get('receiver_id')
             mother_id = registration.mother_id
 
-            if operator_id:
-                operator_identity = self.get_identity(operator_id)
-            else:
-                operator_identity = {}
-
-            if receiver_id:
-                receiver_identity = self.get_identity(receiver_id)
-            else:
-                receiver_identity = {}
-
-            if mother_id:
-                mother_identity = self.get_identity(mother_id)
-            else:
-                mother_identity = {}
+            operator_identity = self.get_identity(operator_id) or {}
+            receiver_identity = self.get_identity(receiver_id) or {}
+            mother_identity = self.get_identity(mother_id) or {}
 
             operator_details = operator_identity.get('details', {})
-            mother_details = mother_identity.get('details', {})
-            msisdns = self.get_addresses_from_identity(receiver_identity)
+            mother_msisdns = self.get_addresses_from_identity(mother_identity)
 
-            linked_id = mother_details.get('linked_to')
             gatekeeper_msisdns = []
 
-            if linked_id:
-                linked_identity = self.get_identity(linked_id)
+            if data.get('msg_receiver') != 'mother_only':
                 gatekeeper_msisdns = self.get_addresses_from_identity(
-                    linked_identity)
+                    receiver_identity)
 
             sheet.add_row({
-                'MSISDN': ','.join(msisdns),
+                'Mother': ','.join(mother_msisdns),
+                'Gatekeeper': ','.join(gatekeeper_msisdns),
                 'Created': registration.created_at.isoformat(),
                 'gravida': data.get('gravida'),
                 'msg_type': data.get('msg_type'),
@@ -285,7 +272,6 @@ class GenerateReport(BaseTask):
                 'Facility': operator_details.get('facility_name'),
                 'Cadre': operator_details.get('role'),
                 'State': operator_details.get('state'),
-                'Gatekeeper': ','.join(gatekeeper_msisdns),
             })
 
     def handle_health_worker_registrations(self, sheet, start_date, end_date):
