@@ -117,6 +117,7 @@ class GenerateReportTest(TestCase):
     def add_registrations(self, num=1):
         for i in range(num):
             Registration.objects.create(
+                mother_id='mother_id',
                 created_at='2016-01-02 00:00:00+00:00', data={
                     'operator_id': 'operator_id',
                     'receiver_id': 'receiver_id',
@@ -486,8 +487,10 @@ class GenerateReportTest(TestCase):
         self.add_registrations(num=1)
         Registration.objects.all().update(created_at='2016-02-01 01:00:00')
 
-        self.add_identity_callback('operator_id', linked_id=None)
-        self.add_identity_callback('receiver_id', linked_id=None)
+        self.add_identity_callback('operator_id')
+        self.add_identity_callback('receiver_id')
+        self.add_identity_callback('mother_id', linked_id=None)
+
         generate_report.identity_cache = {}
         generate_report.identity_store_client = IdentityStoreApiClient(
             settings.IDENTITY_STORE_TOKEN,
@@ -548,6 +551,7 @@ class GenerateReportTest(TestCase):
         When generating a report, the first tab should be a list of
         registrations with the relevant registration details.
         """
+        self.maxDiff = None
         # Add Registrations
         self.add_registrations()
         Registration.objects.all().update(created_at='2016-02-01 01:00:00')
@@ -557,6 +561,9 @@ class GenerateReportTest(TestCase):
 
         # Receiver Identity
         self.add_identity_callback('receiver_id')
+
+        # Mother Identity
+        self.add_identity_callback('mother_id')
 
         # Subscriptions, first page, just returns empty results to make sure
         # we're actually paging through the results sets using the `next`
@@ -640,6 +647,9 @@ class GenerateReportTest(TestCase):
 
         # identity for receiver, for first report
         self.add_identity_callback('receiver_id')
+
+        # Mother Identity
+        self.add_identity_callback('mother_id')
 
         # Subscriptions, first page, just returns empty results to make sure
         # we're actually paging through the results sets using the `next`
