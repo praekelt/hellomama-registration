@@ -131,6 +131,7 @@ class GenerateReportTest(TestCase):
                     'preg_week': 'preg_week',
                     'reg_type': 'reg_type',
                 },
+                validated=True,
                 source_id=1
             )
 
@@ -478,6 +479,43 @@ class GenerateReportTest(TestCase):
         self.assertEqual(
             task_status.error,
             "time data 'not_really_a_date' does not match format '%Y-%m-%d'")
+
+    @responses.activate
+    def test_generate_report_registrations_validated_only(self):
+        """
+        The registrations report should only return validated registrations.
+        """
+        self.add_registrations()
+        Registration.objects.all().update(validated=False)
+        Registration.objects.all().update(created_at='2016-02-01 01:00:00')
+
+        workbook = ExportWorkbook()
+        sheet = workbook.add_sheet('testsheet', 0)
+        generate_report.handle_registrations(
+            sheet, datetime(2016, 2, 1), datetime(2016, 3, 1))
+
+        rows = list(sheet._sheet.rows)
+        # Only the header
+        self.assertEqual(len(rows), 1)
+
+    @responses.activate
+    def test_generate_report_healthworker_registrations_validated_only(self):
+        """
+        The healthworker registrations report should only return validated
+        registrations.
+        """
+        self.add_registrations()
+        Registration.objects.all().update(validated=False)
+        Registration.objects.all().update(created_at='2016-02-01 01:00:00')
+
+        workbook = ExportWorkbook()
+        sheet = workbook.add_sheet('testsheet', 0)
+        generate_report.handle_registrations(
+            sheet, datetime(2016, 2, 1), datetime(2016, 3, 1))
+
+        rows = list(sheet._sheet.rows)
+        # Only the header
+        self.assertEqual(len(rows), 1)
 
     @responses.activate
     def test_generate_report_registrations_mother_only(self):
