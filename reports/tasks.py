@@ -234,7 +234,9 @@ class GenerateReport(BaseTask):
 
         registrations = self.get_registrations(
             created_at__gte=start_date.isoformat(),
-            created_at__lte=end_date.isoformat())
+            created_at__lte=end_date.isoformat(),
+            validated=True,
+        )
 
         for idx, registration in enumerate(registrations):
             data = registration.data
@@ -284,7 +286,9 @@ class GenerateReport(BaseTask):
 
         registrations = self.get_registrations(
             created_at__gte=start_date.isoformat(),
-            created_at__lte=end_date.isoformat())
+            created_at__lte=end_date.isoformat(),
+            validated=True,
+        )
         registrations_per_operator = collections.defaultdict(int)
 
         for registration in registrations:
