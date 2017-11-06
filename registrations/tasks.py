@@ -439,6 +439,15 @@ class PullThirdPartyRegistrations(Task):
         identity = utils.create_identity(identity)
         return identity
 
+    def get_operator_identity(self, personnel_code):
+        identities = utils.search_identities(
+            "details__personnel_code", personnel_code)
+
+        for identity in identities:
+            return identity
+
+        raise ValueError('Operator not found.')
+
     def get_data(self):
         url = settings.THIRDPARTY_REGISTRATIONS_URL
         username = settings.THIRDPARTY_REGISTRATIONS_USER
@@ -468,7 +477,7 @@ class PullThirdPartyRegistrations(Task):
     def create_registration(self, line, source):
         mother_identity = self.get_or_create_identity(
             line['mothers_phone_number'], details={})
-        operator_identity = self.get_or_create_identity(
+        operator_identity = self.get_operator_identity(
             line['health_worker_phone_number'])
 
         language = utils.get_language(line['preferred_msg_language'])

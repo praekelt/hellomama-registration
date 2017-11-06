@@ -3561,6 +3561,29 @@ class TestThirdPartyRegistrations(AuthenticatedAPITestCase):
             match_querystring=True
         )
 
+    def mock_operator_lookup(self, code, identity_id=None):
+
+        results = []
+
+        if identity_id:
+            results.append({
+                "id": identity_id,
+                "details": {
+                    "personnel_code": code
+                }
+            })
+
+        responses.add(
+            responses.GET,
+            'http://localhost:8001/api/v1/identities/search/?details__personnel_code=%s' % code,  # noqa
+            json={
+                "next": None, "previous": None,
+                "results": results
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+
     def mock_identity_patch(self, identity_id):
         responses.add(
             responses.PATCH,
@@ -3633,7 +3656,7 @@ class TestThirdPartyRegistrations(AuthenticatedAPITestCase):
 
         self.mock_identity_lookup("%2B2347031221927", mother_id)
         self.mock_identity_lookup("%2B2347031221928", father_id)
-        self.mock_identity_lookup("11111", operator_id)
+        self.mock_operator_lookup("11111", operator_id)
 
         self.mock_identity_patch(mother_id)
         self.mock_identity_patch(father_id)
@@ -3711,7 +3734,7 @@ class TestThirdPartyRegistrations(AuthenticatedAPITestCase):
         operator_id = "4038a518-1111-1111-1111-hfud7383gfyt"
 
         self.mock_identity_lookup("%2B2347031221927", mother_id)
-        self.mock_identity_lookup("11111", operator_id)
+        self.mock_operator_lookup("11111", operator_id)
 
         self.mock_identity_patch(mother_id)
 
@@ -3762,8 +3785,7 @@ class TestThirdPartyRegistrations(AuthenticatedAPITestCase):
 
         operator_identity = "4038a518-1111-1111-1111-hfud7383gfyt"
 
-        self.mock_identity_lookup("11111", operator_identity)
-        self.mock_identity_patch(operator_identity)
+        self.mock_operator_lookup("11111", operator_identity)
 
         try:
             self.adminclient.post('/api/v1/extregistration/',
@@ -3786,8 +3808,7 @@ class TestThirdPartyRegistrations(AuthenticatedAPITestCase):
 
         operator_identity = "4038a518-1111-1111-1111-hfud7383gfyt"
 
-        self.mock_identity_lookup("11111", operator_identity)
-        self.mock_identity_patch(operator_identity)
+        self.mock_operator_lookup("11111", operator_identity)
 
         try:
             self.adminclient.post('/api/v1/extregistration/',
@@ -3817,7 +3838,7 @@ class TestAddRegistrationsAPI(TestThirdPartyRegistrations):
         operator_id = "4038a518-1111-1111-1111-hfud7383gfyt"
 
         self.mock_identity_lookup("%2B2347031221927", mother_id)
-        self.mock_identity_lookup("11111", operator_id)
+        self.mock_operator_lookup("11111", operator_id)
 
         self.mock_identity_patch(mother_id)
 
@@ -3878,7 +3899,7 @@ class TestAddRegistrationsAPI(TestThirdPartyRegistrations):
         operator_id = "4038a518-1111-1111-1111-hfud7383gfyt"
 
         self.mock_identity_lookup("%2B2347031221927", father_id)
-        self.mock_identity_lookup("11111", operator_id)
+        self.mock_operator_lookup("11111", operator_id)
         self.mock_identity_post(mother_id, father_id)
 
         self.mock_identity_patch(mother_id)
@@ -3937,7 +3958,7 @@ class TestAddRegistrationsAPI(TestThirdPartyRegistrations):
         operator_id = "4038a518-1111-1111-1111-hfud7383gfyt"
 
         self.mock_identity_lookup("%2B2347031221927", mother_id)
-        self.mock_identity_lookup("11111", operator_id)
+        self.mock_operator_lookup("11111", operator_id)
 
         self.mock_identity_patch(mother_id)
 
@@ -3967,7 +3988,7 @@ class TestAddRegistrationsAPI(TestThirdPartyRegistrations):
         operator_id = "4038a518-1111-1111-1111-hfud7383gfyt"
 
         self.mock_identity_lookup("%2B2347031221927", mother_id)
-        self.mock_identity_lookup("11111", operator_id)
+        self.mock_operator_lookup("11111", operator_id)
 
         self.mock_identity_patch(mother_id)
 
@@ -3997,7 +4018,7 @@ class TestAddRegistrationsAPI(TestThirdPartyRegistrations):
         operator_id = "4038a518-1111-1111-1111-hfud7383gfyt"
 
         self.mock_identity_lookup("%2B2347031221927", mother_id)
-        self.mock_identity_lookup("11111", operator_id)
+        self.mock_operator_lookup("11111", operator_id)
 
         self.mock_identity_patch(mother_id)
 
@@ -4011,6 +4032,33 @@ class TestAddRegistrationsAPI(TestThirdPartyRegistrations):
         self.assertEqual(response.data['registration_added'], False)
         self.assertTrue(
             response.data['error'].find("This field may not be null") != -1)
+
+        self.assertEqual(Registration.objects.count(), 0)
+
+    @responses.activate
+    def test_add_registration_operator_not_found(self):
+        """
+        It should not create a registration if the operator is not found, it
+        should respond with correct code and message
+        """
+
+        self.make_source_adminuser()
+
+        mother_id = "4038a518-2940-4b15-9c5c-2b7b123b8735"
+
+        self.mock_identity_lookup("%2B2347031221927", mother_id)
+        self.mock_operator_lookup("11111")
+
+        data = override_get_data_mother_only(None)[0]
+
+        response = self.adminclient.post('/api/v1/addregistration/',
+                                         json.dumps(data),
+                                         content_type='application/json')
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data['registration_added'], False)
+        self.assertTrue(
+            response.data['error'].find("Operator not found") != -1)
 
         self.assertEqual(Registration.objects.count(), 0)
 
