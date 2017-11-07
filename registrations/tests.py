@@ -4293,3 +4293,79 @@ class TestTransferRegistrationsCommand(AuthenticatedAPITestCase):
             CommandError,
             ('From and To code is required.'),
             self.do_call_command)
+
+
+class TestFixV2NRegistrationsCommand(AuthenticatedAPITestCase):
+
+    def setUp(self):
+        super(TestFixV2NRegistrationsCommand, self).setUp()
+
+        self.source = self.make_source_normaluser()
+        self.source2 = self.make_source_normaluser()
+
+    def make_registration(self, operator_id, source):
+        reg_data = REG_DATA['hw_pre_mother'].copy()
+        reg_data.update({"operator_id": operator_id})
+        data = {
+            "stage": "postbirth",
+            "data": reg_data,
+            "source": source
+        }
+        return Registration.objects.create(**data)
+
+    @responses.activate
+    def do_call_command(self, source=None):
+        stdout = StringIO()
+        stderr = StringIO()
+
+        args = ["fix_v2n_registrations_operator"]
+
+        if source:
+            args.extend(["--source", str(source)])
+
+        call_command(*args, stdout=stdout, stderr=stderr)
+        return stdout, stderr
+
+    def test_fix_v2n_registrations_command(self):
+
+        self.make_registration("operator-id-old", self.source)
+        self.make_registration("operator-id-old", self.source2)
+
+        url = 'http://localhost:8001/api/v1/identities/operator-id-old/'
+        responses.add(
+            responses.GET,
+            url,
+            json={
+                "id": "operator-id-old",
+                "details": {"default_address": "12345"},
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+
+        url = 'http://localhost:8001/api/v1/identities/search/?details__personnel_code=12345'  # noqa
+        responses.add(
+            responses.GET,
+            url,
+            json={
+                "next": None, "previous": None,
+                "results": [{
+                    "id": "operator-id-12345",
+                    "details": {"personnel_code": "12345"},
+                }]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+
+        stdout, stderr = self.do_call_command(self.source.id)
+
+        self.assertEqual(stdout.getvalue().strip(),
+                         "Updated 1 registrations.")
+
+        self.assertEqual(
+            Registration.objects.filter(
+                data__operator_id="operator-id-old").count(), 1)
+        self.assertEqual(
+            Registration.objects.filter(
+                data__operator_id="operator-id-12345").count(), 1)
