@@ -3469,7 +3469,7 @@ class TestRepopulateMetricsTask(TestCase):
 def override_get_data(self):
     return [{
         "mothers_phone_number": "07031221927",
-        "health_worker_phone_number": "11111",
+        "health_worker_personnel_code": "11111",
         "pregnancy_week": "13",
         "gravida": "2",
         "preferred_msg_language": "english",
@@ -3485,7 +3485,7 @@ def override_get_data(self):
 def override_get_data_mother_only(self):
     return [{
         "mothers_phone_number": "07031221927",
-        "health_worker_phone_number": "11111",
+        "health_worker_personnel_code": "11111",
         "pregnancy_week": "13",
         "gravida": "2",
         "preferred_msg_language": "english",
@@ -3501,7 +3501,7 @@ def override_get_data_mother_only(self):
 def override_get_data_father_only(self):
     return [{
         "mothers_phone_number": "",
-        "health_worker_phone_number": "11111",
+        "health_worker_personnel_code": "11111",
         "pregnancy_week": "13",
         "gravida": "2",
         "preferred_msg_language": "english",
@@ -3517,7 +3517,7 @@ def override_get_data_father_only(self):
 def override_get_data_bad(self):
     return [{
         "mothers_phone_number": "",
-        "health_worker_phone_number": "11111",
+        "health_worker_personnel_code": "11111",
         "pregnancy_week": "13",
         "gravida": "2",
         "preferred_msg_language": "english",
@@ -3556,6 +3556,29 @@ class TestThirdPartyRegistrations(AuthenticatedAPITestCase):
                         }
                     }
                 }]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+
+    def mock_operator_lookup(self, code, identity_id=None):
+
+        results = []
+
+        if identity_id:
+            results.append({
+                "id": identity_id,
+                "details": {
+                    "personnel_code": code
+                }
+            })
+
+        responses.add(
+            responses.GET,
+            'http://localhost:8001/api/v1/identities/search/?details__personnel_code=%s' % code,  # noqa
+            json={
+                "next": None, "previous": None,
+                "results": results
             },
             status=200, content_type='application/json',
             match_querystring=True
@@ -3633,7 +3656,7 @@ class TestThirdPartyRegistrations(AuthenticatedAPITestCase):
 
         self.mock_identity_lookup("%2B2347031221927", mother_id)
         self.mock_identity_lookup("%2B2347031221928", father_id)
-        self.mock_identity_lookup("11111", operator_id)
+        self.mock_operator_lookup("11111", operator_id)
 
         self.mock_identity_patch(mother_id)
         self.mock_identity_patch(father_id)
@@ -3711,7 +3734,7 @@ class TestThirdPartyRegistrations(AuthenticatedAPITestCase):
         operator_id = "4038a518-1111-1111-1111-hfud7383gfyt"
 
         self.mock_identity_lookup("%2B2347031221927", mother_id)
-        self.mock_identity_lookup("11111", operator_id)
+        self.mock_operator_lookup("11111", operator_id)
 
         self.mock_identity_patch(mother_id)
 
@@ -3762,8 +3785,7 @@ class TestThirdPartyRegistrations(AuthenticatedAPITestCase):
 
         operator_identity = "4038a518-1111-1111-1111-hfud7383gfyt"
 
-        self.mock_identity_lookup("11111", operator_identity)
-        self.mock_identity_patch(operator_identity)
+        self.mock_operator_lookup("11111", operator_identity)
 
         try:
             self.adminclient.post('/api/v1/extregistration/',
@@ -3786,8 +3808,7 @@ class TestThirdPartyRegistrations(AuthenticatedAPITestCase):
 
         operator_identity = "4038a518-1111-1111-1111-hfud7383gfyt"
 
-        self.mock_identity_lookup("11111", operator_identity)
-        self.mock_identity_patch(operator_identity)
+        self.mock_operator_lookup("11111", operator_identity)
 
         try:
             self.adminclient.post('/api/v1/extregistration/',
@@ -3817,11 +3838,73 @@ class TestAddRegistrationsAPI(TestThirdPartyRegistrations):
         operator_id = "4038a518-1111-1111-1111-hfud7383gfyt"
 
         self.mock_identity_lookup("%2B2347031221927", mother_id)
-        self.mock_identity_lookup("11111", operator_id)
+        self.mock_operator_lookup("11111", operator_id)
 
         self.mock_identity_patch(mother_id)
 
         data = override_get_data_mother_only(None)[0]
+
+        response = self.adminclient.post('/api/v1/addregistration/',
+                                         json.dumps(data),
+                                         content_type='application/json')
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data['registration_added'], True)
+
+        self.assertEqual(Registration.objects.count(), 1)
+
+        reg = Registration.objects.last()
+        self.assertEqual(
+            reg.created_by, User.objects.get(username='testadminuser'))
+        self.assertEqual(
+            reg.updated_by, User.objects.get(username='testadminuser'))
+
+        patch_identity = responses.calls[2]
+
+        self.assertEqual(
+            patch_identity.request.url,
+            'http://localhost:8001/api/v1/identities/%s/' % mother_id)
+        self._check_request(
+            patch_identity.request, 'PATCH',
+            data={
+                'details': {
+                    'default_addr_type': 'msisdn',
+                    'gravida': '2',
+                    'operator_id': '4038a518-1111-1111-1111-hfud7383gfyt',
+                    'preferred_language': 'eng_NG',
+                    'preferred_msg_days': 'tue_thu',
+                    'preferred_msg_times': '2_5',
+                    'preferred_msg_type': 'audio',
+                    'receiver_role': 'mother',
+                    'addresses': {
+                        'msisdn': {
+                            '+2347031221927': {'default': True}
+                        }
+                    }
+                }
+            }
+        )
+
+    @responses.activate
+    def test_add_registration_old_keys(self):
+        """
+        It should successfully create a registration if the data is valid, even
+        if the api is being called with old keys
+        """
+
+        self.make_source_adminuser()
+
+        mother_id = "4038a518-2940-4b15-9c5c-2b7b123b8735"
+        operator_id = "4038a518-1111-1111-1111-hfud7383gfyt"
+
+        self.mock_identity_lookup("%2B2347031221927", mother_id)
+        self.mock_operator_lookup("11111", operator_id)
+
+        self.mock_identity_patch(mother_id)
+
+        data = override_get_data_mother_only(None)[0]
+        data['health_worker_phone_number'] = data['health_worker_personnel_code']  # noqa
+        del data['health_worker_personnel_code']
 
         response = self.adminclient.post('/api/v1/addregistration/',
                                          json.dumps(data),
@@ -3878,7 +3961,7 @@ class TestAddRegistrationsAPI(TestThirdPartyRegistrations):
         operator_id = "4038a518-1111-1111-1111-hfud7383gfyt"
 
         self.mock_identity_lookup("%2B2347031221927", father_id)
-        self.mock_identity_lookup("11111", operator_id)
+        self.mock_operator_lookup("11111", operator_id)
         self.mock_identity_post(mother_id, father_id)
 
         self.mock_identity_patch(mother_id)
@@ -3937,7 +4020,7 @@ class TestAddRegistrationsAPI(TestThirdPartyRegistrations):
         operator_id = "4038a518-1111-1111-1111-hfud7383gfyt"
 
         self.mock_identity_lookup("%2B2347031221927", mother_id)
-        self.mock_identity_lookup("11111", operator_id)
+        self.mock_operator_lookup("11111", operator_id)
 
         self.mock_identity_patch(mother_id)
 
@@ -3967,7 +4050,7 @@ class TestAddRegistrationsAPI(TestThirdPartyRegistrations):
         operator_id = "4038a518-1111-1111-1111-hfud7383gfyt"
 
         self.mock_identity_lookup("%2B2347031221927", mother_id)
-        self.mock_identity_lookup("11111", operator_id)
+        self.mock_operator_lookup("11111", operator_id)
 
         self.mock_identity_patch(mother_id)
 
@@ -3997,7 +4080,7 @@ class TestAddRegistrationsAPI(TestThirdPartyRegistrations):
         operator_id = "4038a518-1111-1111-1111-hfud7383gfyt"
 
         self.mock_identity_lookup("%2B2347031221927", mother_id)
-        self.mock_identity_lookup("11111", operator_id)
+        self.mock_operator_lookup("11111", operator_id)
 
         self.mock_identity_patch(mother_id)
 
@@ -4011,6 +4094,33 @@ class TestAddRegistrationsAPI(TestThirdPartyRegistrations):
         self.assertEqual(response.data['registration_added'], False)
         self.assertTrue(
             response.data['error'].find("This field may not be null") != -1)
+
+        self.assertEqual(Registration.objects.count(), 0)
+
+    @responses.activate
+    def test_add_registration_operator_not_found(self):
+        """
+        It should not create a registration if the operator is not found, it
+        should respond with correct code and message
+        """
+
+        self.make_source_adminuser()
+
+        mother_id = "4038a518-2940-4b15-9c5c-2b7b123b8735"
+
+        self.mock_identity_lookup("%2B2347031221927", mother_id)
+        self.mock_operator_lookup("11111")
+
+        data = override_get_data_mother_only(None)[0]
+
+        response = self.adminclient.post('/api/v1/addregistration/',
+                                         json.dumps(data),
+                                         content_type='application/json')
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data['registration_added'], False)
+        self.assertTrue(
+            response.data['error'].find("Operator not found") != -1)
 
         self.assertEqual(Registration.objects.count(), 0)
 

@@ -211,6 +211,17 @@ class AddRegistrationView(APIView):
 
         try:
             source = Source.objects.get(user=self.request.user.id)
+
+            # EH - We have changed this field name to more accurately reflect
+            # what is being sent. This is a failsafe to accept both old and
+            # new. We have to make sure all 3rd parties pushing registrations
+            # have updated before we remove it.
+            # Also remove tests.py/test_add_registration_old_keys
+            if('health_worker_phone_number' in request.data and
+                    'health_worker_personnel_code' not in request.data):
+                request.data['health_worker_personnel_code'] = \
+                    request.data['health_worker_phone_number']
+
             pull_third_party_registrations.create_registration(
                 request.data, source)
         except Source.DoesNotExist as error:
