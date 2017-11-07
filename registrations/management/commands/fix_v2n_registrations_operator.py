@@ -28,7 +28,6 @@ class Command(BaseCommand):
             operator = utils.get_identity(
                 registration.data['operator_id'])
 
-            print operator
             if 'personnel_code' not in operator['details']:
 
                 try:
@@ -36,7 +35,7 @@ class Command(BaseCommand):
                         "details__personnel_code",
                         operator['details']['default_address'])
                     identity = next(identities)
-                    print identity
+
                     new_operator_id = identity['id']
 
                     registration.data.update({"operator_id": new_operator_id})
