@@ -3469,7 +3469,7 @@ class TestRepopulateMetricsTask(TestCase):
 def override_get_data(self):
     return [{
         "mothers_phone_number": "07031221927",
-        "health_worker_phone_number": "11111",
+        "health_worker_personnel_code": "11111",
         "pregnancy_week": "13",
         "gravida": "2",
         "preferred_msg_language": "english",
@@ -3485,7 +3485,7 @@ def override_get_data(self):
 def override_get_data_mother_only(self):
     return [{
         "mothers_phone_number": "07031221927",
-        "health_worker_phone_number": "11111",
+        "health_worker_personnel_code": "11111",
         "pregnancy_week": "13",
         "gravida": "2",
         "preferred_msg_language": "english",
@@ -3501,7 +3501,7 @@ def override_get_data_mother_only(self):
 def override_get_data_father_only(self):
     return [{
         "mothers_phone_number": "",
-        "health_worker_phone_number": "11111",
+        "health_worker_personnel_code": "11111",
         "pregnancy_week": "13",
         "gravida": "2",
         "preferred_msg_language": "english",
@@ -3517,7 +3517,7 @@ def override_get_data_father_only(self):
 def override_get_data_bad(self):
     return [{
         "mothers_phone_number": "",
-        "health_worker_phone_number": "11111",
+        "health_worker_personnel_code": "11111",
         "pregnancy_week": "13",
         "gravida": "2",
         "preferred_msg_language": "english",
@@ -3843,6 +3843,68 @@ class TestAddRegistrationsAPI(TestThirdPartyRegistrations):
         self.mock_identity_patch(mother_id)
 
         data = override_get_data_mother_only(None)[0]
+
+        response = self.adminclient.post('/api/v1/addregistration/',
+                                         json.dumps(data),
+                                         content_type='application/json')
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data['registration_added'], True)
+
+        self.assertEqual(Registration.objects.count(), 1)
+
+        reg = Registration.objects.last()
+        self.assertEqual(
+            reg.created_by, User.objects.get(username='testadminuser'))
+        self.assertEqual(
+            reg.updated_by, User.objects.get(username='testadminuser'))
+
+        patch_identity = responses.calls[2]
+
+        self.assertEqual(
+            patch_identity.request.url,
+            'http://localhost:8001/api/v1/identities/%s/' % mother_id)
+        self._check_request(
+            patch_identity.request, 'PATCH',
+            data={
+                'details': {
+                    'default_addr_type': 'msisdn',
+                    'gravida': '2',
+                    'operator_id': '4038a518-1111-1111-1111-hfud7383gfyt',
+                    'preferred_language': 'eng_NG',
+                    'preferred_msg_days': 'tue_thu',
+                    'preferred_msg_times': '2_5',
+                    'preferred_msg_type': 'audio',
+                    'receiver_role': 'mother',
+                    'addresses': {
+                        'msisdn': {
+                            '+2347031221927': {'default': True}
+                        }
+                    }
+                }
+            }
+        )
+
+    @responses.activate
+    def test_add_registration_old_keys(self):
+        """
+        It should successfully create a registration if the data is valid, even
+        if the api is being called with old keys
+        """
+
+        self.make_source_adminuser()
+
+        mother_id = "4038a518-2940-4b15-9c5c-2b7b123b8735"
+        operator_id = "4038a518-1111-1111-1111-hfud7383gfyt"
+
+        self.mock_identity_lookup("%2B2347031221927", mother_id)
+        self.mock_operator_lookup("11111", operator_id)
+
+        self.mock_identity_patch(mother_id)
+
+        data = override_get_data_mother_only(None)[0]
+        data['health_worker_phone_number'] = data['health_worker_personnel_code']  # noqa
+        del data['health_worker_personnel_code']
 
         response = self.adminclient.post('/api/v1/addregistration/',
                                          json.dumps(data),

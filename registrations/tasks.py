@@ -478,7 +478,7 @@ class PullThirdPartyRegistrations(Task):
         mother_identity = self.get_or_create_identity(
             line['mothers_phone_number'], details={})
         operator_identity = self.get_operator_identity(
-            line['health_worker_phone_number'])
+            line['health_worker_personnel_code'])
 
         language = utils.get_language(line['preferred_msg_language'])
         receiver = utils.get_receiver(line['message_receiver'])
