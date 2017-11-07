@@ -217,8 +217,8 @@ class AddRegistrationView(APIView):
             # new. We have to make sure all 3rd parties pushing registrations
             # have updated before we remove it.
             # Also remove tests.py/test_add_registration_old_keys
-            if('health_worker_phone_number' in request.data
-                    and 'health_worker_personnel_code' not in request.data):
+            if('health_worker_phone_number' in request.data and
+                    'health_worker_personnel_code' not in request.data):
                 request.data['health_worker_personnel_code'] = \
                     request.data['health_worker_phone_number']
 
