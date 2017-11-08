@@ -31,7 +31,8 @@ class Command(BaseCommand):
             if 'personnel_code' not in operator['details']:
 
                 try:
-                    code = operator['details']['addresses']['msisdn'].keys()[0]
+                    code = list(
+                        operator['details']['addresses']['msisdn'].keys())[0]
 
                     identities = utils.search_identities(
                         "details__personnel_code", code)
