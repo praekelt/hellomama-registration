@@ -27,7 +27,7 @@ from registrations.models import (
     fire_receiver_type_metric, fire_language_metric, fire_state_metric,
     fire_role_metric)
 from .utils import generate_random_filename
-from .tasks import generate_report, ExportWorkbook
+from .tasks.detailed_report import generate_report, ExportWorkbook
 from .models import ReportTaskStatus
 
 
@@ -405,7 +405,7 @@ class GenerateReportTest(TestCase):
         self.assertEqual(task_status.status, ReportTaskStatus.DONE)
         self.assertEqual(task_status.file_size > 7000, True)
 
-    @mock.patch("reports.tasks.SendEmail.apply_async")
+    @mock.patch("reports.tasks.send_email.SendEmail.apply_async")
     @responses.activate
     def test_generate_report_status_email(self, mock_send):
         """
@@ -422,7 +422,7 @@ class GenerateReportTest(TestCase):
         self.assertEqual(task_status.file_size > 7000, True)
 
     @responses.activate
-    @mock.patch("reports.tasks.SendEmail.apply_async")
+    @mock.patch("reports.tasks.send_email.SendEmail.apply_async")
     def test_generate_report_status_running(self, mock_send):
         """
         Generating a report should mark the ReportTaskStatus objects as Sending
@@ -1059,7 +1059,7 @@ class ReportsViewTest(TestCase):
         return timestamp.replace(hour=0, minute=0, second=0, microsecond=0,
                                  tzinfo=pytz.timezone(settings.TIME_ZONE))
 
-    @mock.patch("reports.tasks.generate_report.apply_async")
+    @mock.patch("reports.tasks.detailed_report.generate_report.apply_async")
     def test_auth_required(self, mock_generation):
         data = {}
 
@@ -1074,7 +1074,7 @@ class ReportsViewTest(TestCase):
                                          content_type='application/json')
         self.assertEqual(request.status_code, 202)
 
-    @mock.patch("reports.tasks.generate_report.apply_async")
+    @mock.patch("reports.tasks.detailed_report.generate_report.apply_async")
     def test_post_successful(self, mock_generation):
         data = {
             'start_date': '2016-01-01',

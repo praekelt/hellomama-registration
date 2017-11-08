@@ -5,7 +5,7 @@ from rest_framework.views import APIView
 from rest_framework import viewsets
 from rest_framework.pagination import CursorPagination
 
-from reports.tasks import generate_report
+from reports.tasks.detailed_report import generate_report
 from reports.serializers import (ReportGenerationSerializer,
                                  ReportTaskStatusSerializer)
 from reports.models import ReportTaskStatus
