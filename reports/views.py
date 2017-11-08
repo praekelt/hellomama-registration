@@ -51,7 +51,7 @@ class SmallResultsSetPagination(CursorPagination):
 
 class ReportTaskStatusViewSet(viewsets.ReadOnlyModelViewSet):
     """
-    API endpoint that allows Registrations to be viewed.
+    API endpoint that allows ReportTaskStatus to be viewed.
     """
     permission_classes = (IsAuthenticated,)
     queryset = ReportTaskStatus.objects.all()
