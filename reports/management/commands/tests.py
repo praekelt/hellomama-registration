@@ -31,7 +31,7 @@ class ManagementCommandsTests(TestCase):
         self.assertEqual(
             str(ce.exception), "Please specify --output-file.")
 
-    @mock.patch("reports.tasks.generate_report.run")
+    @mock.patch("reports.tasks.detailed_report.generate_report.run")
     def test_command_successful(self, mock_generation):
         tmp_file = self.mk_tempfile()
         management.call_command(

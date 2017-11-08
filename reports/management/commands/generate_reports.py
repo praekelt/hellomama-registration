@@ -3,7 +3,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.core.validators import EmailValidator
 from django.utils import timezone
 
-from reports.tasks import generate_report
+from reports.tasks.detailed_report import generate_report
 from reports.utils import midnight, midnight_validator, one_month_after
 
 

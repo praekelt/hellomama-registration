@@ -1,9 +1,7 @@
 import collections
 import os
 
-from celery.task import Task
 from django.conf import settings
-from django.core.mail import EmailMessage
 from django.utils.dateparse import parse_datetime
 from functools import partial
 from openpyxl import Workbook
@@ -14,47 +12,11 @@ from seed_services_client import (IdentityStoreApiClient,
                                   StageBasedMessagingApiClient,
                                   MessageSenderApiClient)
 
+from .base import BaseTask
+from .send_email import SendEmail
 from registrations.models import Registration
 from reports.utils import midnight_validator, generate_random_filename
 from reports.models import ReportTaskStatus
-
-
-class BaseTask(Task):
-
-    def on_failure(self, exc, task_id, args, kwargs, einfo):
-        if kwargs.get('task_status_id'):
-            task_status = ReportTaskStatus.objects.get(
-                id=kwargs['task_status_id'])
-
-            task_status.status = ReportTaskStatus.FAILED
-            task_status.error = exc
-            task_status.save()
-            super(BaseTask, self).on_failure(exc, task_id, args, kwargs, einfo)
-
-
-class SendEmail(BaseTask):
-
-    def run(self, **kwargs):
-        subject = kwargs['subject']
-        sender = kwargs['sender']
-        recipients = kwargs['recipients']
-        file_location = kwargs['file_location']
-        file_name = kwargs['file_name']
-        task_status_id = kwargs['task_status_id']
-
-        email = EmailMessage(subject, '', sender, recipients)
-        with open(file_location, 'rb') as fp:
-            email.attach(file_name, fp.read(), 'application/vnd.ms-excel')
-        email.send()
-
-        task_status = ReportTaskStatus.objects.get(id=task_status_id)
-        task_status.status = ReportTaskStatus.DONE
-        task_status.save()
-
-        try:
-            os.remove(file_location)
-        except OSError:
-            pass
 
 
 class ExportSheet(object):
