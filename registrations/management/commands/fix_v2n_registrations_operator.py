@@ -31,9 +31,10 @@ class Command(BaseCommand):
             if 'personnel_code' not in operator['details']:
 
                 try:
+                    code = operator['details']['addresses']['msisdn'].keys()[0]
+
                     identities = utils.search_identities(
-                        "details__personnel_code",
-                        operator['details']['default_address'])
+                        "details__personnel_code", code)
                     identity = next(identities)
 
                     new_operator_id = identity['id']
