@@ -4337,7 +4337,13 @@ class TestFixV2NRegistrationsCommand(AuthenticatedAPITestCase):
             url,
             json={
                 "id": "operator-id-old",
-                "details": {"default_address": "12345"},
+                "details": {
+                    "addresses": {
+                        "msisdn": {
+                            "12345": {}
+                        }
+                    }
+                },
             },
             status=200, content_type='application/json',
             match_querystring=True
