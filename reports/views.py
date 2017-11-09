@@ -1,4 +1,5 @@
 from datetime import datetime
+from django.core.urlresolvers import reverse
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -12,10 +13,23 @@ from reports.models import ReportTaskStatus
 
 
 class ReportsView(APIView):
-    """ Reports Generation
-        POST - starts up the task that generates the reports
+    """ Reports generation
+        GET: lists available reports
+        POST: creates a task to generate a detailed report
     """
     permission_classes = (IsAuthenticated,)
+
+    def get(self, request):
+        response = {
+            'reports': {
+                'detailed': {
+                    'name': 'Detailed report',
+                    'endpoint': reverse('generate-reports'),
+                },
+            },
+        }
+
+        return Response(response, status=200)
 
     def post(self, request, *args, **kwargs):
         serializer = ReportGenerationSerializer(data=request.data)

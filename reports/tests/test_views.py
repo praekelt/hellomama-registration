@@ -50,6 +50,12 @@ class ReportsViewTest(TestCase):
         return timestamp.replace(hour=0, minute=0, second=0, microsecond=0,
                                  tzinfo=pytz.timezone(settings.TIME_ZONE))
 
+    def test_get_returns_list_of_reports(self):
+        response = self.normalclient.get('/api/v1/reports/')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(isinstance(response.data, dict))
+        self.assertTrue(isinstance(response.data['reports'], dict))
+
     @mock.patch("reports.tasks.detailed_report.generate_report.apply_async")
     def test_auth_required(self, mock_generation):
         data = {}
