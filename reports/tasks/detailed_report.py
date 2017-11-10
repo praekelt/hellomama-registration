@@ -4,7 +4,6 @@ import os
 from django.conf import settings
 from django.utils.dateparse import parse_datetime
 from functools import partial
-from openpyxl import Workbook
 from six import string_types
 from datetime import timedelta
 
@@ -15,48 +14,12 @@ from seed_services_client import (IdentityStoreApiClient,
 from .base import BaseTask
 from .send_email import SendEmail
 from registrations.models import Registration
-from reports.utils import midnight_validator, generate_random_filename
+from reports.utils import (
+    ExportWorkbook,
+    generate_random_filename,
+    midnight_validator,
+)
 from reports.models import ReportTaskStatus
-
-
-class ExportSheet(object):
-
-    def __init__(self, sheet, headers=None):
-        self._sheet = sheet
-        self.set_header(headers or [])
-
-    def set_header(self, headers, row=1):
-        self._headers = headers
-        for index, header in enumerate(headers):
-            self._sheet.cell(row=row, column=index + 1, value=header)
-
-    def get_header(self):
-        return self._headers
-
-    def add_row(self, row):
-        row_number = self._sheet.max_row + 1
-        for key, value in row.items():
-            if isinstance(key, int):
-                col_idx = key
-            else:
-                col_idx = self._headers.index(key) + 1
-
-            cell = self._sheet.cell(
-                row=row_number,
-                column=col_idx)
-            cell.value = value
-
-
-class ExportWorkbook(object):
-
-    def __init__(self):
-        self._workbook = Workbook()
-
-    def add_sheet(self, sheetname, position):
-        return ExportSheet(self._workbook.create_sheet(sheetname, position))
-
-    def save(self, file_name):
-        return self._workbook.save(file_name)
 
 
 class GenerateReport(BaseTask):
