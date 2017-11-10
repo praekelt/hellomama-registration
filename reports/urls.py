@@ -10,5 +10,8 @@ router.register(r'reporttasks', views.ReportTaskStatusViewSet)
 urlpatterns = [
     url(r'^api/v1/reports/$', views.ReportsView.as_view(),
         name='generate-reports'),
+    url(r'^api/v1/reports/msisdn-messages/$',
+        views.MSISDNMessagesReportView.as_view(),
+        name='generate-report-msisdn-messages'),
     url(r'^api/v1/', include(router.urls)),
 ]

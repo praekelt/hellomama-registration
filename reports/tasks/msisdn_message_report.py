@@ -1,4 +1,6 @@
 from django.conf import settings
+from os.path import getsize
+from reports.models import ReportTaskStatus
 from reports.tasks.base import BaseTask
 from reports.utils import ExportWorkbook, generate_random_filename
 from seed_services_client import IdentityStoreApiClient
@@ -11,10 +13,20 @@ class GenerateMSISDNMessageReport(BaseTask):
     MSISDNs.
     """
 
-    def run(self, msisdns=[]):
+    def run(self, task_status_id, msisdns=[]):
+        task_status = ReportTaskStatus.objects.get(id=task_status_id)
+        task_status.status = ReportTaskStatus.RUNNING
+        task_status.save()
+
         spreadsheet = self.create_spreadsheet(msisdns)
         output_file = generate_random_filename()
         spreadsheet.save(output_file)
+
+        task_status.status = ReportTaskStatus.SENDING
+        task_status.file_size = getsize(output_file)
+        task_status.save()
+
+        # TODO: Use SendEmail task to send the email
 
     def create_spreadsheet(self, msisdns):
         logger = self.get_logger()
