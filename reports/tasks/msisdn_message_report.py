@@ -81,6 +81,7 @@ class GenerateMSISDNMessageReport(BaseTask):
                 # Skip if we didn't find an identity
                 continue
 
+            # Currently we'll only be working with mother msisdns
             registration = Registration.objects.filter(
                     mother_id=data[msisdn]['id']
                 ).order_by('-created_at').first()
