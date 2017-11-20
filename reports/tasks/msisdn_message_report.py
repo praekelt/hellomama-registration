@@ -194,7 +194,7 @@ class GenerateMSISDNMessageReport(BaseTask):
                 'Message type': data[msisdn].get('msg_type', '')
             }
             j = 1
-            for message in data[msisdn]['messages']:
+            for message in data[msisdn].get('messages', []):
                 row['Message %d: content' % j] = message['content']
                 row['Message %d: date sent' % j] = message['date_sent']
                 row['Message %d: status' % j] = message['status']
