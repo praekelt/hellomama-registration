@@ -4,6 +4,7 @@ from os.path import getsize
 from registrations.models import Registration
 from reports.models import ReportTaskStatus
 from reports.tasks.base import BaseTask
+from reports.tasks.send_email import SendEmail
 from reports.utils import ExportWorkbook, generate_random_filename
 from seed_services_client import IdentityStoreApiClient, MessageSenderApiClient
 
@@ -15,7 +16,9 @@ class GenerateMSISDNMessageReport(BaseTask):
     MSISDNs.
     """
 
-    def run(self, start_date, end_date, task_status_id, msisdns=[]):
+    def run(self, start_date, end_date, task_status_id, msisdns=[],
+            email_recipients=[], email_sender=settings.DEFAULT_FROM_EMAIL,
+            email_subject='Seed Control Interface Generated Report', **kwargs):
         task_status = ReportTaskStatus.objects.get(id=task_status_id)
         task_status.status = ReportTaskStatus.RUNNING
         task_status.save()
@@ -45,7 +48,17 @@ class GenerateMSISDNMessageReport(BaseTask):
         task_status.file_size = getsize(output_file)
         task_status.save()
 
-        # TODO: Use SendEmail task to send the email
+        if email_recipients:
+            file_name = 'msisdn-report-%s-to-%s.xlsx' % (
+                start_date.strftime('%Y-%m-%d'),
+                end_date.strftime('%Y-%m-%d'))
+            SendEmail.apply_async(kwargs={
+                'subject': email_subject,
+                'file_name': file_name,
+                'file_location': output_file,
+                'sender': email_sender,
+                'recipients': email_recipients,
+                'task_status_id': task_status_id})
 
     def retrieve_identity_info(self, msisdns):
         logger = self.get_logger()
