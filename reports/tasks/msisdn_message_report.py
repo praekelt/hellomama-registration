@@ -148,7 +148,7 @@ class GenerateMSISDNMessageReport(BaseTask):
                     "content": message['content'],
                     "date_sent": datetime.strptime(message['created_at'],
                                                    "%Y-%m-%dT%H:%M:%S.%fZ"),
-                    "status": 'Delivered' if message['delivered'] else 'Undelivered'
+                    "status": 'Delivered' if message['delivered'] else 'Undelivered'  # noqa
                 })
 
             data[msisdn]["messages"] = message_list
@@ -189,7 +189,7 @@ class GenerateMSISDNMessageReport(BaseTask):
             row = {
                 'Phone number': msisdn,
                 'Date registered': data[msisdn].get('reg_date', ''),
-                'Facility': data[msisdn].get('facility', ""),
+                'Facility': data[msisdn].get('facility', ''),
                 'Pregnancy week': data[msisdn].get('preg_week', ''),
                 'Message type': data[msisdn].get('msg_type', '')
             }
