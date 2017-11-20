@@ -85,6 +85,12 @@ class GenerateMSISDNMessageReport(BaseTask):
                     mother_id=data[msisdn]['id']
                 ).order_by('-created_at').first()
 
+            if registration is None:
+                logger.info(
+                    'No registration found with mother_id {0} ({1})'
+                    .format(data[msisdn]['id'], msisdn))
+                continue
+
             data[msisdn]['reg_date'] = registration.created_at
             data[msisdn]['msg_type'] = registration.data.get('msg_type', "")
             data[msisdn]['preg_week'] = registration.data.get('preg_week', "")
@@ -161,12 +167,17 @@ class GenerateMSISDNMessageReport(BaseTask):
         sheet.set_header(header)
 
         for msisdn in data:
+            if data[msisdn].get('id', None) is None:
+                sheet.add_row({'Phone number': msisdn})
+                # Skip if there isn't an identity
+                continue
+
             row = {
                 'Phone number': msisdn,
-                'Date registered': data[msisdn]['reg_date'],
-                'Facility': data[msisdn]['facility'],
-                'Pregnancy week': data[msisdn]['preg_week'],
-                'Message type': data[msisdn]['msg_type']
+                'Date registered': data[msisdn].get('reg_date', ''),
+                'Facility': data[msisdn].get('facility', ""),
+                'Pregnancy week': data[msisdn].get('preg_week', ''),
+                'Message type': data[msisdn].get('msg_type', '')
             }
             j = 1
             for message in data[msisdn]['messages']:
