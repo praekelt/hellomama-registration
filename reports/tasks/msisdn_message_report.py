@@ -1,5 +1,6 @@
 from django.conf import settings
 from os.path import getsize
+from registrations.models import Registration
 from reports.models import ReportTaskStatus
 from reports.tasks.base import BaseTask
 from reports.utils import ExportWorkbook, generate_random_filename
@@ -24,6 +25,8 @@ class GenerateMSISDNMessageReport(BaseTask):
         )
 
         data = self.retrieve_identity_info(msisdns)
+
+        data = self.retrieve_registration_info(data)
 
         spreadsheet = self.populate_spreadsheet(data)
 
@@ -62,7 +65,36 @@ class GenerateMSISDNMessageReport(BaseTask):
 
         return data
 
-    def populate_spreadsheet(self, data):
+    def retrieve_registration_info(self, data):
+        logger = self.get_logger()
+
+        for msisdn in data:
+            if data[msisdn].get('id', None) is None:
+                # Skip if we didn't find an identity
+                continue
+
+            registration = Registration.objects.filter(
+                    mother_id=data[msisdn]['id']
+                ).order_by('-created_at').first()
+
+            data[msisdn]['reg_date'] = registration.created_at
+            data[msisdn]['msg_type'] = registration.data.get('msg_type', "")
+            data[msisdn]['preg_week'] = registration.data.get('preg_week', "")
+
+            # Get facility info from the operator's identity
+            operator_id = registration.data.get('operator_id', None)
+            if operator_id is not None:
+                operator_identity = self.is_client.get_identity(operator_id)
+                data[msisdn]['facility'] = operator_identity.get(
+                        'details', {}).get('facility_name', "")
+            else:
+                logger.info(
+                    'No operator_id on registration for {0}'.format(msisdn))
+                data[msisdn]['facility'] = ""
+
+        return data
+
+    def populate_spreadsheet(self, data, list_length):
         workbook = ExportWorkbook()
         sheet = workbook.add_sheet('Data for study cohort', 0)
 
@@ -80,7 +112,10 @@ class GenerateMSISDNMessageReport(BaseTask):
         for msisdn in data:
             sheet.add_row({
                 'Phone number': msisdn,
-                'Date registered': data[msisdn]['created_at']
+                'Date registered': data[msisdn]['reg_date'],
+                'Facility': data[msisdn]['facility'],
+                'Pregnancy week': data[msisdn]['preg_week'],
+                'Message type': data[msisdn]['msg_type']
             })
 
         return workbook
