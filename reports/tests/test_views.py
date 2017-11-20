@@ -16,7 +16,7 @@ from rest_framework.test import APIClient
 from ..models import ReportTaskStatus
 
 
-class ReportsViewTest(TestCase):
+class ViewTest(TestCase):
     def setUp(self):
         self.adminclient = APIClient()
         self.normalclient = APIClient()
@@ -46,9 +46,17 @@ class ReportsViewTest(TestCase):
         self.normalclient.credentials(
             HTTP_AUTHORIZATION='Token ' + self.normaltoken)
 
+
+class ReportsViewTest(ViewTest):
     def midnight(self, timestamp):
         return timestamp.replace(hour=0, minute=0, second=0, microsecond=0,
                                  tzinfo=pytz.timezone(settings.TIME_ZONE))
+
+    def test_get_returns_list_of_reports(self):
+        response = self.normalclient.get('/api/v1/reports/')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(isinstance(response.data, dict))
+        self.assertTrue(isinstance(response.data['reports'], dict))
 
     @mock.patch("reports.tasks.detailed_report.generate_report.apply_async")
     def test_auth_required(self, mock_generation):
@@ -135,3 +143,31 @@ class ReportsViewTest(TestCase):
         self.assertEqual(results[0]['start_date'], '2016-01-01 00:00:00+00:00')
         self.assertEqual(results[0]['end_date'], '2016-02-01 00:00:00+00:00')
         self.assertEqual(request.status_code, 200)
+
+
+class MSISDNMessagesReportViewTest(ViewTest):
+    celery_method = ('reports.tasks.msisdn_message_report.'
+                     'generate_msisdn_message_report.apply_async')
+
+    @mock.patch(celery_method)
+    def test_creates_task_status(self, celery_method_patch):
+        response = self.normalclient.post('/api/v1/reports/msisdn-messages/')
+        report_task_statuses = ReportTaskStatus.objects.all()
+
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(len(report_task_statuses), 1)
+        self.assertEqual(report_task_statuses.first().start_date, '2017-09-01')
+        self.assertEqual(report_task_statuses.first().end_date, '2018-09-01')
+        self.assertEqual(report_task_statuses.first().status, 'P')
+
+    @mock.patch(celery_method)
+    def test_creates_background_task(self, celery_method_patch):
+        self.normalclient.post('/api/v1/reports/msisdn-messages/',
+                               json.dumps({'msisdns': ['+123456']}),
+                               content_type='application/json')
+        report_task_status = ReportTaskStatus.objects.first()
+
+        celery_method_patch.assert_called_once_with(kwargs={
+            'msisdns': ['+123456'],
+            'task_status_id': report_task_status.id,
+        })

@@ -12,6 +12,7 @@ class ReportGenerationSerializer(serializers.Serializer):
                                      default=[])
     email_from = serializers.EmailField(default=settings.DEFAULT_FROM_EMAIL)
     email_subject = serializers.CharField(default='HelloMama Generated Report')
+    msisdns = serializers.ListField(default=[])
 
     def validate(self, data):
         if 'start_date' not in data:

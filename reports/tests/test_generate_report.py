@@ -23,8 +23,8 @@ from registrations.models import (
     fire_unique_operator_metric, fire_message_type_metric, fire_source_metric,
     fire_receiver_type_metric, fire_language_metric, fire_state_metric,
     fire_role_metric)
-from ..utils import generate_random_filename
-from ..tasks.detailed_report import generate_report, ExportWorkbook
+from ..utils import ExportWorkbook, generate_random_filename
+from ..tasks.detailed_report import generate_report
 from ..models import ReportTaskStatus
 
 
