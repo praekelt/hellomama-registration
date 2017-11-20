@@ -72,9 +72,6 @@ class MSISDNMessagesReportView(APIView):
     def post(self, request, *args, **kwargs):
         request_data = request.data.copy()
 
-        request_data['start_date'] = '2017-09-01'
-        request_data['end_date'] = '2018-09-01'
-
         serializer = ReportGenerationSerializer(data=request_data)
         serializer.is_valid(raise_exception=True)
 
@@ -88,6 +85,8 @@ class MSISDNMessagesReportView(APIView):
         })
 
         generate_msisdn_message_report.apply_async(kwargs={
+            "start_date": datetime.strftime(data['start_date'], '%Y-%m-%d'),
+            "end_date": datetime.strftime(data['end_date'], '%Y-%m-%d'),
             "task_status_id": task_status.id,
             "msisdns": data['msisdns'],
         })

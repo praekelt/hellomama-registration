@@ -13,7 +13,7 @@ class GenerateMSISDNMessageReport(BaseTask):
     MSISDNs.
     """
 
-    def run(self, task_status_id, msisdns=[]):
+    def run(self, start_date, end_date, task_status_id, msisdns=[]):
         task_status = ReportTaskStatus.objects.get(id=task_status_id)
         task_status.status = ReportTaskStatus.RUNNING
         task_status.save()
