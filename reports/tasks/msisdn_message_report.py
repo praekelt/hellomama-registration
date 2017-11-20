@@ -1,10 +1,11 @@
+from datetime import datetime
 from django.conf import settings
 from os.path import getsize
 from registrations.models import Registration
 from reports.models import ReportTaskStatus
 from reports.tasks.base import BaseTask
 from reports.utils import ExportWorkbook, generate_random_filename
-from seed_services_client import IdentityStoreApiClient
+from seed_services_client import IdentityStoreApiClient, MessageSenderApiClient
 
 
 class GenerateMSISDNMessageReport(BaseTask):
@@ -23,12 +24,19 @@ class GenerateMSISDNMessageReport(BaseTask):
             settings.IDENTITY_STORE_TOKEN,
             settings.IDENTITY_STORE_URL,
         )
+        self.ms_client = MessageSenderApiClient(
+            settings.MESSAGE_SENDER_TOKEN,
+            settings.MESSAGE_SENDER_URL,
+        )
 
         data = self.retrieve_identity_info(msisdns)
 
         data = self.retrieve_registration_info(data)
 
-        spreadsheet = self.populate_spreadsheet(data)
+        (data, list_length) = self.retrieve_messages(data, start_date,
+                                                     end_date)
+
+        spreadsheet = self.populate_spreadsheet(data, list_length)
 
         output_file = generate_random_filename()
         spreadsheet.save(output_file)
@@ -94,29 +102,80 @@ class GenerateMSISDNMessageReport(BaseTask):
 
         return data
 
+    def retrieve_messages(self, data, start_date, end_date):
+        logger = self.get_logger()
+
+        longest_list = 0
+        for msisdn in data:
+            message_list = []
+
+            response = self.ms_client.get_outbounds({
+                "to_identity": data[msisdn]['id'],
+                "after": start_date.strftime("%Y-%m-%dT00:00:00"),
+                "before": end_date.strftime("%Y-%m-%dT00:00:00")
+            })
+            results = list(response['results'])
+
+            if len(results) < 1:
+                logger.info(
+                    'No results from message sender for {0}'.format(msisdn))
+
+                data[msisdn]["messages"] = message_list
+                continue
+
+            for message in results:
+                message_list.append({
+                    "content": message['content'],
+                    "date_sent": datetime.strptime(message['created_at'],
+                                                   "%Y-%m-%dT%H:%M:%S.%fZ"),
+                    "status": 'Delivered' if message['delivered'] else 'Undelivered'
+                })
+
+            data[msisdn]["messages"] = message_list
+            if len(message_list) > longest_list:
+                longest_list = len(message_list)
+
+        return (data, longest_list)
+
     def populate_spreadsheet(self, data, list_length):
         workbook = ExportWorkbook()
         sheet = workbook.add_sheet('Data for study cohort', 0)
 
-        sheet.set_header([
+        header = [
             'Phone number',
             'Date registered',
             'Facility',
             'Pregnancy week',
-            'Message type',
-            'Message 1: content',
-            'Message 1: date sent',
-            'Message 1: status'
-        ])
+            'Message type'
+        ]
+
+        i = 1
+        while i <= list_length:
+            header.extend([
+                'Message %d: content' % i,
+                'Message %d: date sent' % i,
+                'Message %d: status' % i
+            ])
+            i += 1
+
+        sheet.set_header(header)
 
         for msisdn in data:
-            sheet.add_row({
+            row = {
                 'Phone number': msisdn,
                 'Date registered': data[msisdn]['reg_date'],
                 'Facility': data[msisdn]['facility'],
                 'Pregnancy week': data[msisdn]['preg_week'],
                 'Message type': data[msisdn]['msg_type']
-            })
+            }
+            j = 1
+            for message in data[msisdn]['messages']:
+                row['Message %d: content' % j] = message['content']
+                row['Message %d: date sent' % j] = message['date_sent']
+                row['Message %d: status' % j] = message['status']
+                j += 1
+
+            sheet.add_row(row)
 
         return workbook
 
