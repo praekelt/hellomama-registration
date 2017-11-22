@@ -354,6 +354,15 @@ class RetrieveMessagesTest(GenerateMSISDNMessageReportTest):
             match_querystring=True,
         )
 
+    def test_get_messages_skipped_if_no_identity(self):
+        (data, _) = generate_msisdn_message_report.retrieve_messages(
+            self.ms_client, {'+2340000000': {}},
+            datetime(2017, 1, 1), datetime(2018, 1, 1)
+        )
+
+        self.assertEqual(data.keys(), ['+2340000000'])
+        self.assertEqual(data['+2340000000'], {})
+
     @responses.activate
     def test_get_messages_skipped_if_no_messages(self):
         self.add_response_get_messages(

@@ -129,6 +129,10 @@ class GenerateMSISDNMessageReport(BaseTask):
         for msisdn in data:
             message_list = []
 
+            if data[msisdn].get('id', None) is None:
+                # Skip if we didn't find an identity
+                continue
+
             response = ms_client.get_outbounds({
                 "to_identity": data[msisdn]['id'],
                 "after": start_date.strftime("%Y-%m-%dT00:00:00"),
