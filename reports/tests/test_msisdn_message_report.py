@@ -122,12 +122,12 @@ class PopulateSpreadsheetTest(GenerateReportTest):
 
     def test_populate_spreadsheet_returns_spreadsheet(self):
         spreadsheet = generate_msisdn_message_report.populate_spreadsheet(
-            {}, 0)
+            [], {}, 0)
         self.assertTrue(isinstance(spreadsheet, ExportWorkbook))
 
     def test_populate_spreadsheet_has_headers_for_messages(self):
         spreadsheet = generate_msisdn_message_report.populate_spreadsheet(
-            {}, 2)
+            [], {}, 2)
 
         self.assertEqual(
             spreadsheet._workbook.active['F1'].value, 'Message 1: content')
@@ -144,6 +144,7 @@ class PopulateSpreadsheetTest(GenerateReportTest):
 
     def test_populate_spreadsheet_skips_if_identity_is_missing(self):
         spreadsheet = generate_msisdn_message_report.populate_spreadsheet(
+            ['+2340000000'],
             {"+2340000000": {
                 "reg_date": datetime(2017, 01, 01, 00, 00, 00),
                 "facility": "Somewhere",
@@ -160,6 +161,7 @@ class PopulateSpreadsheetTest(GenerateReportTest):
 
     def test_populate_spreadsheet_includes_registration_details(self):
         spreadsheet = generate_msisdn_message_report.populate_spreadsheet(
+            ['+2340000000'],
             {"+2340000000": {
                 "id": "54cc71b7-533f-4a83-93c1-e02340000000",
                 "reg_date": datetime(2017, 01, 01, 00, 00, 00),
@@ -184,6 +186,7 @@ class PopulateSpreadsheetTest(GenerateReportTest):
 
     def test_populate_spreadsheet_includes_messages(self):
         spreadsheet = generate_msisdn_message_report.populate_spreadsheet(
+            ['+2340000000'],
             {"+2340000000": {
                 "id": "54cc71b7-533f-4a83-93c1-e02340000000",
                 "messages": [{
@@ -215,6 +218,18 @@ class PopulateSpreadsheetTest(GenerateReportTest):
             datetime(2017, 01, 02, 00, 00, 00))
         self.assertEqual(
             spreadsheet._workbook.active['K2'].value, 'Undelivered')
+
+    def test_populate_spreadsheet_maintains_order(self):
+        spreadsheet = generate_msisdn_message_report.populate_spreadsheet(
+            ['+2340000000', '+2341111111', '+2342222222'],
+            {"+2340000000": {}, "+2342222222": {}, "+2341111111": {}}, 0)
+
+        self.assertEqual(
+            spreadsheet._workbook.active['A2'].value, '+2340000000')
+        self.assertEqual(
+            spreadsheet._workbook.active['A3'].value, '+2341111111')
+        self.assertEqual(
+            spreadsheet._workbook.active['A4'].value, '+2342222222')
 
 
 class RetrieveIdentityInfoTest(GenerateReportTest):

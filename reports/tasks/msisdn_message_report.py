@@ -39,7 +39,7 @@ class GenerateMSISDNMessageReport(BaseTask):
         (data, list_length) = self.retrieve_messages(ms_client, data,
                                                      start_date, end_date)
 
-        spreadsheet = self.populate_spreadsheet(data, list_length)
+        spreadsheet = self.populate_spreadsheet(msisdns, data, list_length)
 
         output_file = generate_random_filename()
         spreadsheet.save(output_file)
@@ -161,7 +161,7 @@ class GenerateMSISDNMessageReport(BaseTask):
 
         return (data, longest_list)
 
-    def populate_spreadsheet(self, data, list_length):
+    def populate_spreadsheet(self, msisdns, data, list_length):
         workbook = ExportWorkbook()
         sheet = workbook.add_sheet('Data for study cohort', 0)
 
@@ -184,7 +184,7 @@ class GenerateMSISDNMessageReport(BaseTask):
 
         sheet.set_header(header)
 
-        for msisdn in data:
+        for msisdn in msisdns:
             if data[msisdn].get('id', None) is None:
                 sheet.add_row({'Phone number': msisdn})
                 # Skip if there isn't an identity
