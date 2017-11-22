@@ -28,6 +28,7 @@ class GenerateMSISDNMessageReportTest(TestCase):
 
 
 class PopulateSpreadsheetTest(GenerateMSISDNMessageReportTest):
+
     def test_populate_spreadsheet_returns_spreadsheet(self):
         spreadsheet = generate_msisdn_message_report.populate_spreadsheet(
             {}, 0)
@@ -126,11 +127,12 @@ class PopulateSpreadsheetTest(GenerateMSISDNMessageReportTest):
 
 
 class RetrieveIdentityInfoTest(GenerateMSISDNMessageReportTest):
+
     @responses.activate
     def test_retrieve_identity_adds_id(self):
         self.add_response_identity_store_search('%2B2340000000', [
             {'id': '54cc71b7-533f-4a83-93c1-e02340000000',
-                'created_at': '2017-01-01'}])
+                'created_at': '2017-01-01T00:00:00.000000Z'}])
 
         data = generate_msisdn_message_report.retrieve_identity_info(
             self.is_client, ['+2340000000'])
@@ -139,25 +141,32 @@ class RetrieveIdentityInfoTest(GenerateMSISDNMessageReportTest):
         self.assertItemsEqual(data['+2340000000'].keys(), ['id', 'created_at'])
         self.assertEqual(data['+2340000000']['id'],
                          '54cc71b7-533f-4a83-93c1-e02340000000')
-        self.assertEqual(data['+2340000000']['created_at'], '2017-01-01')
+        self.assertEqual(data['+2340000000']['created_at'],
+                         '2017-01-01T00:00:00.000000Z')
 
     @responses.activate
     def test_retrieve_identity_works_with_multiple_msisdns(self):
         self.add_response_identity_store_search('%2B2340000000', [
             {'id': '54cc71b7-533f-4a83-93c1-e02340000000',
-                'created_at': '2017-01-01'}])
+                'created_at': '2017-01-01T00:00:00.000000Z'}])
         self.add_response_identity_store_search('%2B2341111111', [
             {'id': '54cc71b7-533f-4a83-93c1-e02341111111',
-                'created_at': '2017-01-02'}])
+                'created_at': '2017-01-02T00:00:00.000000Z'}])
 
         data = generate_msisdn_message_report.retrieve_identity_info(
-            self.is_client, ['+2340000000'])
+            self.is_client, ['+2340000000', '+2341111111'])
 
-        self.assertEqual(data.keys(), ['+2340000000'])
+        self.assertItemsEqual(data.keys(), ['+2340000000', '+2341111111'])
         self.assertItemsEqual(data['+2340000000'].keys(), ['id', 'created_at'])
         self.assertEqual(data['+2340000000']['id'],
                          '54cc71b7-533f-4a83-93c1-e02340000000')
-        self.assertEqual(data['+2340000000']['created_at'], '2017-01-01')
+        self.assertEqual(data['+2340000000']['created_at'],
+                         '2017-01-01T00:00:00.000000Z')
+        self.assertItemsEqual(data['+2341111111'].keys(), ['id', 'created_at'])
+        self.assertEqual(data['+2341111111']['id'],
+                         '54cc71b7-533f-4a83-93c1-e02341111111')
+        self.assertEqual(data['+2341111111']['created_at'],
+                         '2017-01-02T00:00:00.000000Z')
 
     @responses.activate
     def test_identity_data_empty_if_none_found(self):
@@ -173,9 +182,9 @@ class RetrieveIdentityInfoTest(GenerateMSISDNMessageReportTest):
     def test_identity_data_empy_if_multiple_found(self):
         self.add_response_identity_store_search('%2B2340000000', [
             {'id': '54cc71b7-533f-4a83-93c1-e02340000000',
-                'created_at': '2017-01-01'},
+                'created_at': '2017-01-01T00:00:00.000000Z'},
             {'id': '54cc71b7-533f-4a83-93c1-e02341111111',
-                'created_at': '2017-01-02'}])
+                'created_at': '2017-01-02T00:00:00.000000Z'}])
 
         data = generate_msisdn_message_report.retrieve_identity_info(
             self.is_client, ['+2340000000'])
