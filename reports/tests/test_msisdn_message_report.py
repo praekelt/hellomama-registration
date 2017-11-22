@@ -22,13 +22,70 @@ from reports.utils import ExportWorkbook
     MESSAGE_SENDER_URL='http://message-sender/',
     MESSAGE_SENDER_TOKEN='mstoken',
 )
-class GenerateMSISDNMessageReportTest(TestCase):
+class GenerateReportTest(TestCase):
     def setUp(self):
         self.is_client = IdentityStoreApiClient('idstoretoken',
                                                 'http://identity-store/')
 
         self.ms_client = MessageSenderApiClient('mstoken',
                                                 'http://message-sender/')
+
+        self.adminuser = User.objects.create()
+        self.source = Source.objects.create(
+            name='test_source', user=self.adminuser, authority='hw_full')
+
+        def has_listeners(class_name):
+            return post_save.has_listeners(class_name)
+        assert has_listeners(Registration), (
+            "Registration model has no post_save listeners. Make sure"
+            " helpers cleaned up properly in earlier tests.")
+        post_save.disconnect(receiver=registration_post_save,
+                             sender=Registration)
+        post_save.disconnect(receiver=fire_created_metric,
+                             sender=Registration)
+        post_save.disconnect(receiver=fire_source_metric,
+                             sender=Registration)
+        post_save.disconnect(receiver=fire_unique_operator_metric,
+                             sender=Registration)
+        post_save.disconnect(receiver=fire_message_type_metric,
+                             sender=Registration)
+        post_save.disconnect(receiver=fire_receiver_type_metric,
+                             sender=Registration)
+        post_save.disconnect(receiver=fire_language_metric,
+                             sender=Registration)
+        post_save.disconnect(receiver=fire_state_metric,
+                             sender=Registration)
+        post_save.disconnect(receiver=fire_role_metric,
+                             sender=Registration)
+        post_save.disconnect(receiver=model_saved,
+                             dispatch_uid='instance-saved-hook')
+        assert not has_listeners(Registration), (
+            "Registration model still has post_save listeners. Make sure"
+            " helpers cleaned up properly in earlier tests.")
+
+    def tearDown(self):
+        def has_listeners(class_name):
+            return post_save.has_listeners(class_name)
+        assert not has_listeners(Registration), (
+            "Registration model still has post_save listeners. Make sure"
+            " helpers removed them properly in earlier tests.")
+        post_save.connect(receiver=registration_post_save,
+                          sender=Registration)
+        post_save.connect(receiver=fire_created_metric,
+                          sender=Registration)
+        post_save.connect(receiver=fire_source_metric,
+                          sender=Registration)
+        post_save.connect(receiver=fire_unique_operator_metric,
+                          sender=Registration)
+        post_save.connect(receiver=fire_language_metric,
+                          sender=Registration)
+        post_save.connect(receiver=fire_state_metric,
+                          sender=Registration)
+        post_save.connect(receiver=fire_role_metric,
+                          sender=Registration)
+
+        post_save.connect(receiver=model_saved,
+                          dispatch_uid='instance-saved-hook')
 
     def add_response_identity_store_search(self, msisdn, results):
         responses.add(
@@ -40,8 +97,28 @@ class GenerateMSISDNMessageReportTest(TestCase):
             match_querystring=True,
         )
 
+    def add_response_get_identity(self, identity, result):
+        responses.add(
+            responses.GET,
+            ('http://identity-store/identities/%s/' % identity),
+            json=result,
+            content_type='application/json',
+            match_querystring=True,
+        )
 
-class PopulateSpreadsheetTest(GenerateMSISDNMessageReportTest):
+    def add_response_get_messages(self, identity, results):
+        responses.add(
+            responses.GET,
+            ('http://message-sender/outbound/?to_identity=%s'
+                '&after=2017-01-01T00:00:00'
+                '&before=2018-01-01T00:00:00' % identity),
+            json={'results': results},
+            content_type='application/json',
+            match_querystring=True,
+        )
+
+
+class PopulateSpreadsheetTest(GenerateReportTest):
 
     def test_populate_spreadsheet_returns_spreadsheet(self):
         spreadsheet = generate_msisdn_message_report.populate_spreadsheet(
@@ -140,7 +217,7 @@ class PopulateSpreadsheetTest(GenerateMSISDNMessageReportTest):
             spreadsheet._workbook.active['K2'].value, 'Undelivered')
 
 
-class RetrieveIdentityInfoTest(GenerateMSISDNMessageReportTest):
+class RetrieveIdentityInfoTest(GenerateReportTest):
 
     @responses.activate
     def test_retrieve_identity_adds_id(self):
@@ -207,75 +284,7 @@ class RetrieveIdentityInfoTest(GenerateMSISDNMessageReportTest):
         self.assertEqual(data['+2340000000'], {})
 
 
-class RetrieveRegistrationInfoTest(GenerateMSISDNMessageReportTest):
-    def setUp(self):
-        super(RetrieveRegistrationInfoTest, self).setUp()
-
-        self.adminuser = User.objects.create()
-        self.source = Source.objects.create(
-            name='test_source', user=self.adminuser, authority='hw_full')
-
-        def has_listeners(class_name):
-            return post_save.has_listeners(class_name)
-        assert has_listeners(Registration), (
-            "Registration model has no post_save listeners. Make sure"
-            " helpers cleaned up properly in earlier tests.")
-        post_save.disconnect(receiver=registration_post_save,
-                             sender=Registration)
-        post_save.disconnect(receiver=fire_created_metric,
-                             sender=Registration)
-        post_save.disconnect(receiver=fire_source_metric,
-                             sender=Registration)
-        post_save.disconnect(receiver=fire_unique_operator_metric,
-                             sender=Registration)
-        post_save.disconnect(receiver=fire_message_type_metric,
-                             sender=Registration)
-        post_save.disconnect(receiver=fire_receiver_type_metric,
-                             sender=Registration)
-        post_save.disconnect(receiver=fire_language_metric,
-                             sender=Registration)
-        post_save.disconnect(receiver=fire_state_metric,
-                             sender=Registration)
-        post_save.disconnect(receiver=fire_role_metric,
-                             sender=Registration)
-        post_save.disconnect(receiver=model_saved,
-                             dispatch_uid='instance-saved-hook')
-        assert not has_listeners(Registration), (
-            "Registration model still has post_save listeners. Make sure"
-            " helpers cleaned up properly in earlier tests.")
-
-    def tearDown(self):
-        def has_listeners(class_name):
-            return post_save.has_listeners(class_name)
-        assert not has_listeners(Registration), (
-            "Registration model still has post_save listeners. Make sure"
-            " helpers removed them properly in earlier tests.")
-        post_save.connect(receiver=registration_post_save,
-                          sender=Registration)
-        post_save.connect(receiver=fire_created_metric,
-                          sender=Registration)
-        post_save.connect(receiver=fire_source_metric,
-                          sender=Registration)
-        post_save.connect(receiver=fire_unique_operator_metric,
-                          sender=Registration)
-        post_save.connect(receiver=fire_language_metric,
-                          sender=Registration)
-        post_save.connect(receiver=fire_state_metric,
-                          sender=Registration)
-        post_save.connect(receiver=fire_role_metric,
-                          sender=Registration)
-
-        post_save.connect(receiver=model_saved,
-                          dispatch_uid='instance-saved-hook')
-
-    def add_response_get_identity(self, identity, result):
-        responses.add(
-            responses.GET,
-            ('http://identity-store/identities/%s/' % identity),
-            json=result,
-            content_type='application/json',
-            match_querystring=True,
-        )
+class RetrieveRegistrationInfoTest(GenerateReportTest):
 
     def test_get_registration_data_skipped_if_no_identity(self):
         data = generate_msisdn_message_report.retrieve_registration_info(
@@ -341,18 +350,7 @@ class RetrieveRegistrationInfoTest(GenerateMSISDNMessageReportTest):
             'facility': 'Somewhere'})
 
 
-class RetrieveMessagesTest(GenerateMSISDNMessageReportTest):
-
-    def add_response_get_messages(self, identity, results):
-        responses.add(
-            responses.GET,
-            ('http://message-sender/outbound/?to_identity=%s'
-                '&after=2017-01-01T00:00:00'
-                '&before=2018-01-01T00:00:00' % identity),
-            json={'results': results},
-            content_type='application/json',
-            match_querystring=True,
-        )
+class RetrieveMessagesTest(GenerateReportTest):
 
     def test_get_messages_skipped_if_no_identity(self):
         (data, _) = generate_msisdn_message_report.retrieve_messages(
