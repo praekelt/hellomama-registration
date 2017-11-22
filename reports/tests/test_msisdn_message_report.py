@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.test import TestCase, override_settings
 from rest_hooks.models import model_saved
-from seed_services_client import IdentityStoreApiClient
+from seed_services_client import IdentityStoreApiClient, MessageSenderApiClient
 
 from registrations.models import (
     Registration, Source, registration_post_save, fire_created_metric,
@@ -19,11 +19,16 @@ from reports.utils import ExportWorkbook
 @override_settings(
     IDENTITY_STORE_URL='http://identity-store/',
     IDENTITY_STORE_TOKEN='idstoretoken',
+    MESSAGE_SENDER_URL='http://message-sender/',
+    MESSAGE_SENDER_TOKEN='mstoken',
 )
 class GenerateMSISDNMessageReportTest(TestCase):
     def setUp(self):
         self.is_client = IdentityStoreApiClient('idstoretoken',
                                                 'http://identity-store/')
+
+        self.ms_client = MessageSenderApiClient('mstoken',
+                                                'http://message-sender/')
 
     def add_response_identity_store_search(self, msisdn, results):
         responses.add(
@@ -334,3 +339,93 @@ class RetrieveRegistrationInfoTest(GenerateMSISDNMessageReportTest):
             'created_at': '2017-01-02T00:00:00.000000Z',
             'reg_date': reg.created_at, 'msg_type': 'text', 'preg_week': 16,
             'facility': 'Somewhere'})
+
+
+class RetrieveMessagesTest(GenerateMSISDNMessageReportTest):
+
+    def add_response_get_messages(self, identity, results):
+        responses.add(
+            responses.GET,
+            ('http://message-sender/outbound/?to_identity=%s'
+                '&after=2017-01-01T00:00:00'
+                '&before=2018-01-01T00:00:00' % identity),
+            json={'results': results},
+            content_type='application/json',
+            match_querystring=True,
+        )
+
+    @responses.activate
+    def test_get_messages_skipped_if_no_messages(self):
+        self.add_response_get_messages(
+            '54cc71b7-533f-4a83-93c1-e02340000000', [])
+
+        (data, _) = generate_msisdn_message_report.retrieve_messages(
+            self.ms_client, {'+2340000000': {
+                'id': '54cc71b7-533f-4a83-93c1-e02340000000'}},
+            datetime(2017, 1, 1), datetime(2018, 1, 1)
+        )
+
+        self.assertEqual(data.keys(), ['+2340000000'])
+        self.assertEqual(data['+2340000000']['messages'], [])
+
+    @responses.activate
+    def test_get_messages_multiple_messages(self):
+        self.add_response_get_messages(
+            '54cc71b7-533f-4a83-93c1-e02340000000', [
+                {'content': 'message 1', 'delivered': True,
+                 'created_at': '2017-01-02T00:00:00.000000Z'},
+                {'content': 'message 2', 'delivered': False,
+                 'created_at': '2017-01-03T00:00:00.000000Z'}
+            ])
+
+        (data, length) = generate_msisdn_message_report.retrieve_messages(
+            self.ms_client, {'+2340000000': {
+                'id': '54cc71b7-533f-4a83-93c1-e02340000000'}},
+            datetime(2017, 1, 1), datetime(2018, 1, 1)
+        )
+
+        self.assertEqual(length, 2)
+        self.assertEqual(data.keys(), ['+2340000000'])
+        self.assertEqual(data['+2340000000']['messages'], [
+            {'content': 'message 1', 'status': 'Delivered',
+             'date_sent': datetime(2017, 1, 2)},
+            {'content': 'message 2', 'status': 'Undelivered',
+             'date_sent': datetime(2017, 1, 3)}
+        ])
+
+    @responses.activate
+    def test_get_messages_returns_longest_list_length(self):
+        self.add_response_get_messages(
+            '54cc71b7-533f-4a83-93c1-e02340000000', [
+                {'content': 'message 1', 'delivered': True,
+                 'created_at': '2017-01-02T00:00:00.000000Z'},
+                {'content': 'message 2', 'delivered': False,
+                 'created_at': '2017-01-03T00:00:00.000000Z'}
+            ])
+        self.add_response_get_messages(
+            '54cc71b7-533f-4a83-93c1-e02341111111', [
+                {'content': 'message 3', 'delivered': True,
+                 'created_at': '2017-01-04T00:00:00.000000Z'}
+            ])
+
+        (data, length) = generate_msisdn_message_report.retrieve_messages(
+            self.ms_client, {
+                '+2340000000': {
+                    'id': '54cc71b7-533f-4a83-93c1-e02340000000'},
+                '+2341111111': {
+                    'id': '54cc71b7-533f-4a83-93c1-e02341111111'}},
+            datetime(2017, 1, 1), datetime(2018, 1, 1)
+        )
+
+        self.assertEqual(length, 2)
+        self.assertItemsEqual(data.keys(), ['+2340000000', '+2341111111'])
+        self.assertEqual(data['+2340000000']['messages'], [
+            {'content': 'message 1', 'status': 'Delivered',
+             'date_sent': datetime(2017, 1, 2)},
+            {'content': 'message 2', 'status': 'Undelivered',
+             'date_sent': datetime(2017, 1, 3)}
+        ])
+        self.assertEqual(data['+2341111111']['messages'], [
+            {'content': 'message 3', 'status': 'Delivered',
+             'date_sent': datetime(2017, 1, 4)}
+        ])
