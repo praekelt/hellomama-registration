@@ -12,6 +12,10 @@ from seed_services_client import IdentityStoreApiClient
     IDENTITY_STORE_TOKEN='idstoretoken',
 )
 class GenerateMSISDNMessageReportTest(TestCase):
+    def setUp(self):
+        self.is_client = IdentityStoreApiClient('idstoretoken',
+                                                'http://identity-store/')
+
     def add_response_identity_store_search(self, msisdn, results):
         responses.add(
             responses.GET,
@@ -122,10 +126,6 @@ class PopulateSpreadsheetTest(GenerateMSISDNMessageReportTest):
 
 
 class RetrieveIdentityInfoTest(GenerateMSISDNMessageReportTest):
-    def setUp(self):
-        self.is_client = IdentityStoreApiClient('idstoretoken',
-                                                'http://identity-store/')
-
     @responses.activate
     def test_retrieve_identity_adds_id(self):
         self.add_response_identity_store_search('%2B2340000000', [
