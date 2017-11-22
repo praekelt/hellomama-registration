@@ -1,7 +1,11 @@
+import mock
 import responses
+import openpyxl
+import os
 from datetime import datetime
 
 from django.contrib.auth.models import User
+from django.core import mail
 from django.db.models.signals import post_save
 from django.test import TestCase, override_settings
 from rest_hooks.models import model_saved
@@ -12,8 +16,15 @@ from registrations.models import (
     fire_unique_operator_metric, fire_message_type_metric, fire_source_metric,
     fire_receiver_type_metric, fire_language_metric, fire_state_metric,
     fire_role_metric)
+from reports.models import ReportTaskStatus
 from reports.tasks.msisdn_message_report import generate_msisdn_message_report
-from reports.utils import ExportWorkbook
+from reports.utils import ExportWorkbook, generate_random_filename
+
+
+class mockobj(object):
+    @classmethod
+    def choice(cls, li):
+        return li[0]
 
 
 @override_settings(
@@ -86,6 +97,13 @@ class GenerateReportTest(TestCase):
 
         post_save.connect(receiver=model_saved,
                           dispatch_uid='instance-saved-hook')
+
+        try:
+            with mock.patch('random.choice', mockobj.choice):
+                filename = generate_random_filename()
+                os.remove(filename)
+        except OSError:
+            pass
 
     def add_response_identity_store_search(self, msisdn, results):
         responses.add(
@@ -448,3 +466,231 @@ class RetrieveMessagesTest(GenerateReportTest):
             {'content': 'message 3', 'status': 'Delivered',
              'date_sent': "2017-01-04 00:00:00"}
         ])
+
+
+class GenerateMSISDNMessageReportTest(GenerateReportTest):
+
+    def trigger_report_generation(self, msisdns=[]):
+        with mock.patch('random.choice', mockobj.choice):
+            filename = generate_random_filename()
+
+            task_status = ReportTaskStatus.objects.create(**{
+                "start_date": datetime.strptime('2017-01-01', '%Y-%m-%d'),
+                "end_date": datetime.strptime('2018-01-01', '%Y-%m-%d'),
+                "email_subject": 'The Email Subject',
+                "status": ReportTaskStatus.PENDING
+            })
+
+            generate_msisdn_message_report.apply_async(kwargs={
+                'start_date': datetime.strptime('2017-01-01', '%Y-%m-%d'),
+                'end_date': datetime.strptime('2018-01-01', '%Y-%m-%d'),
+                'email_recipients': ['foo@example.com'],
+                'email_subject': 'The Email Subject',
+                'task_status_id': task_status.id,
+                'msisdns': msisdns
+            })
+
+            return filename
+
+    @responses.activate
+    @mock.patch("os.remove")
+    def test_generate_report_email(self, mock_remove):
+        """
+        Generating a report should create an email with the correct address,
+        subject, and attachment.
+        """
+
+        self.add_response_identity_store_search('%2B2340000000', [])
+        self.trigger_report_generation(['+2340000000'])
+        [report_email] = mail.outbox
+        self.assertEqual(report_email.subject, 'The Email Subject')
+        (file_name, data, mimetype) = report_email.attachments[0]
+        self.assertEqual('msisdn-report-2017-01-01-to-2018-01-01.xlsx',
+                         file_name)
+
+    @responses.activate
+    def test_generate_report_status_done(self):
+        """
+        Generating a report should mark the ReportTaskStatus objects as Done if
+        it is successful.
+        """
+
+        self.add_response_identity_store_search('%2B2340000000', [])
+        self.trigger_report_generation(['+2340000000'])
+
+        task_status = ReportTaskStatus.objects.last()
+        self.assertEqual(task_status.status, ReportTaskStatus.DONE)
+        self.assertEqual(task_status.file_size > 5000, True)
+
+    @mock.patch("reports.tasks.send_email.SendEmail.apply_async")
+    @responses.activate
+    def test_generate_report_status_email(self, mock_send):
+        """
+        Generating a report should mark the ReportTaskStatus objects as Sending
+        before it sends the email.
+        """
+
+        self.add_response_identity_store_search('%2B2340000000', [])
+        self.trigger_report_generation(['+2340000000'])
+
+        task_status = ReportTaskStatus.objects.last()
+        self.assertEqual(task_status.status, ReportTaskStatus.SENDING)
+        self.assertEqual(task_status.file_size > 5000, True)
+
+    @responses.activate
+    @mock.patch("reports.tasks.send_email.SendEmail.apply_async")
+    def test_generate_report_status_running(self, mock_send):
+        """
+        Generating a report should mark the ReportTaskStatus objects as Running
+        while the generation is in progress.
+        """
+
+        orig = openpyxl.Workbook.save
+
+        def new_save(wb, file):
+            task_status = ReportTaskStatus.objects.last()
+            self.assertEqual(task_status.status, ReportTaskStatus.RUNNING)
+            orig(wb, file)
+
+        self.add_response_identity_store_search('%2B2340000000', [])
+
+        with mock.patch('openpyxl.Workbook.save', new_save):
+            self.trigger_report_generation(['+2340000000'])
+
+    @responses.activate
+    @override_settings(
+        CELERY_EAGER_PROPAGATES_EXCEPTIONS=False)
+    def test_generate_report_status_failed(self):
+        """
+        Generating a report should mark the ReportTaskStatus objects as Failed
+        if there is a problem.
+        """
+
+        self.add_response_identity_store_search('%2B2340000000', [])
+
+        task_status = ReportTaskStatus.objects.create(**{
+            "start_date": "not_really_a_date",
+            "end_date": datetime.strptime('2018-01-01', '%Y-%m-%d'),
+            "email_subject": 'The Email Subject',
+            "status": ReportTaskStatus.PENDING
+        })
+
+        try:
+            with mock.patch('random.choice', mockobj.choice):
+                generate_msisdn_message_report.apply_async(kwargs={
+                    'start_date': "not_really_a_date",
+                    'end_date': datetime.strptime('2018-01-01', '%Y-%m-%d'),
+                    'email_recipients': ['foo@example.com'],
+                    'email_subject': 'The Email Subject',
+                    'task_status_id': task_status.id})
+        except:
+            pass
+
+        task_status.refresh_from_db()
+        self.assertEqual(task_status.status, ReportTaskStatus.FAILED)
+        self.assertEqual(task_status.error,
+                         "'str' object has no attribute 'strftime'")
+
+    @responses.activate
+    def test_generate_full_report(self):
+        # msisdn without identity
+        self.add_response_identity_store_search('%2B2340000000', [])
+        # msisdn without registration
+        self.add_response_identity_store_search('%2B2341111111', [
+            {'id': '54cc71b7-533f-4a83-93c1-e02341111111',
+                'created_at': '2017-01-01T00:00:00.000000Z'}])
+        # msisdn without messages
+        self.add_response_identity_store_search('%2B2342222222', [
+            {'id': '54cc71b7-533f-4a83-93c1-e02342222222',
+                'created_at': '2017-01-02T00:00:00.000000Z'}])
+        # msisdn with varying multiple messages
+        self.add_response_identity_store_search('%2B2343333333', [
+            {'id': '54cc71b7-533f-4a83-93c1-e02343333333',
+                'created_at': '2017-01-02T00:00:00.000000Z'}])
+
+        self.add_response_get_identity('54cc71b7-533f-4a83-93c1-e0235555555', {
+            'details': {
+                'facility_name': 'Somewhere'}
+            })
+
+        reg1 = Registration.objects.create(
+            source=self.source, data={
+                'msg_type': 'text', 'preg_week': 1,
+                'operator_id': '54cc71b7-533f-4a83-93c1-e0235555555'},
+            mother_id='54cc71b7-533f-4a83-93c1-e02342222222')
+        reg2 = Registration.objects.create(
+            source=self.source, data={'msg_type': 'text', 'preg_week': 2},
+            mother_id='54cc71b7-533f-4a83-93c1-e02343333333')
+
+        self.add_response_get_messages(
+            '54cc71b7-533f-4a83-93c1-e02341111111', [
+                {'content': 'message 0', 'delivered': True,
+                 'created_at': '2017-01-02T00:00:00.000000Z'}
+            ])
+        self.add_response_get_messages(
+            '54cc71b7-533f-4a83-93c1-e02342222222', [])
+        self.add_response_get_messages(
+            '54cc71b7-533f-4a83-93c1-e02343333333', [
+                {'content': 'message 1', 'delivered': True,
+                 'created_at': '2017-01-02T00:00:00.000000Z'},
+                {'content': 'message 2', 'delivered': False,
+                 'created_at': '2017-01-03T00:00:00.000000Z'}
+            ])
+
+        orig = openpyxl.Workbook.save
+
+        def new_save(wb, file):
+            sheet = wb['Data for study cohort']
+            self.assertEqual(sheet['A1'].value, 'Phone number')
+            self.assertEqual(sheet['B1'].value, 'Date registered')
+            self.assertEqual(sheet['C1'].value, 'Facility')
+            self.assertEqual(sheet['D1'].value, 'Pregnancy week')
+            self.assertEqual(sheet['E1'].value, 'Message type')
+            self.assertEqual(sheet['F1'].value, 'Message 1: content')
+            self.assertEqual(sheet['G1'].value, 'Message 1: date sent')
+            self.assertEqual(sheet['H1'].value, 'Message 1: status')
+            self.assertEqual(sheet['I1'].value, 'Message 2: content')
+            self.assertEqual(sheet['J1'].value, 'Message 2: date sent')
+            self.assertEqual(sheet['K1'].value, 'Message 2: status')
+
+            self.assertEqual(sheet['A2'].value, '+2340000000')
+            self.assertEqual(sheet['B2'].value, None)
+            self.assertEqual(sheet['C2'].value, None)
+            self.assertEqual(sheet['D2'].value, None)
+            self.assertEqual(sheet['E2'].value, None)
+
+            self.assertEqual(sheet['A3'].value, '+2341111111')
+            self.assertEqual(sheet['B3'].value, '')
+            self.assertEqual(sheet['C3'].value, '')
+            self.assertEqual(sheet['D3'].value, '')
+            self.assertEqual(sheet['E3'].value, '')
+            self.assertEqual(sheet['F3'].value, 'message 0')
+            self.assertEqual(sheet['G3'].value, "2017-01-02 00:00:00")
+            self.assertEqual(sheet['H3'].value, 'Delivered')
+
+            self.assertEqual(sheet['A4'].value, '+2342222222')
+            self.assertEqual(sheet['B4'].value,
+                             reg1.created_at.strftime("%Y-%m-%d %H:%M:%S"))
+            self.assertEqual(sheet['C4'].value, 'Somewhere')
+            self.assertEqual(sheet['D4'].value, 1)
+            self.assertEqual(sheet['E4'].value, 'text')
+            self.assertEqual(sheet['F4'].value, None)
+
+            self.assertEqual(sheet['A5'].value, '+2343333333')
+            self.assertEqual(sheet['B5'].value,
+                             reg2.created_at.strftime("%Y-%m-%d %H:%M:%S"))
+            self.assertEqual(sheet['C5'].value, '')
+            self.assertEqual(sheet['D5'].value, 2)
+            self.assertEqual(sheet['E5'].value, 'text')
+            self.assertEqual(sheet['F5'].value, 'message 1')
+            self.assertEqual(sheet['G5'].value, "2017-01-02 00:00:00")
+            self.assertEqual(sheet['H5'].value, 'Delivered')
+            self.assertEqual(sheet['I5'].value, 'message 2')
+            self.assertEqual(sheet['J5'].value, "2017-01-03 00:00:00")
+            self.assertEqual(sheet['K5'].value, 'Undelivered')
+
+            orig(wb, file)
+
+        with mock.patch('openpyxl.Workbook.save', new_save):
+            self.trigger_report_generation([
+                '+2340000000', '+2341111111', '+2342222222', '+2343333333'])
