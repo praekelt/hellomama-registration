@@ -1,10 +1,19 @@
 import responses
 from datetime import datetime
 
+from django.contrib.auth.models import User
+from django.db.models.signals import post_save
 from django.test import TestCase, override_settings
+from rest_hooks.models import model_saved
+from seed_services_client import IdentityStoreApiClient
+
+from registrations.models import (
+    Registration, Source, registration_post_save, fire_created_metric,
+    fire_unique_operator_metric, fire_message_type_metric, fire_source_metric,
+    fire_receiver_type_metric, fire_language_metric, fire_state_metric,
+    fire_role_metric)
 from reports.tasks.msisdn_message_report import generate_msisdn_message_report
 from reports.utils import ExportWorkbook
-from seed_services_client import IdentityStoreApiClient
 
 
 @override_settings(
@@ -191,3 +200,137 @@ class RetrieveIdentityInfoTest(GenerateMSISDNMessageReportTest):
 
         self.assertEqual(data.keys(), ['+2340000000'])
         self.assertEqual(data['+2340000000'], {})
+
+
+class RetrieveRegistrationInfoTest(GenerateMSISDNMessageReportTest):
+    def setUp(self):
+        super(RetrieveRegistrationInfoTest, self).setUp()
+
+        self.adminuser = User.objects.create()
+        self.source = Source.objects.create(
+            name='test_source', user=self.adminuser, authority='hw_full')
+
+        def has_listeners(class_name):
+            return post_save.has_listeners(class_name)
+        assert has_listeners(Registration), (
+            "Registration model has no post_save listeners. Make sure"
+            " helpers cleaned up properly in earlier tests.")
+        post_save.disconnect(receiver=registration_post_save,
+                             sender=Registration)
+        post_save.disconnect(receiver=fire_created_metric,
+                             sender=Registration)
+        post_save.disconnect(receiver=fire_source_metric,
+                             sender=Registration)
+        post_save.disconnect(receiver=fire_unique_operator_metric,
+                             sender=Registration)
+        post_save.disconnect(receiver=fire_message_type_metric,
+                             sender=Registration)
+        post_save.disconnect(receiver=fire_receiver_type_metric,
+                             sender=Registration)
+        post_save.disconnect(receiver=fire_language_metric,
+                             sender=Registration)
+        post_save.disconnect(receiver=fire_state_metric,
+                             sender=Registration)
+        post_save.disconnect(receiver=fire_role_metric,
+                             sender=Registration)
+        post_save.disconnect(receiver=model_saved,
+                             dispatch_uid='instance-saved-hook')
+        assert not has_listeners(Registration), (
+            "Registration model still has post_save listeners. Make sure"
+            " helpers cleaned up properly in earlier tests.")
+
+    def tearDown(self):
+        def has_listeners(class_name):
+            return post_save.has_listeners(class_name)
+        assert not has_listeners(Registration), (
+            "Registration model still has post_save listeners. Make sure"
+            " helpers removed them properly in earlier tests.")
+        post_save.connect(receiver=registration_post_save,
+                          sender=Registration)
+        post_save.connect(receiver=fire_created_metric,
+                          sender=Registration)
+        post_save.connect(receiver=fire_source_metric,
+                          sender=Registration)
+        post_save.connect(receiver=fire_unique_operator_metric,
+                          sender=Registration)
+        post_save.connect(receiver=fire_language_metric,
+                          sender=Registration)
+        post_save.connect(receiver=fire_state_metric,
+                          sender=Registration)
+        post_save.connect(receiver=fire_role_metric,
+                          sender=Registration)
+
+        post_save.connect(receiver=model_saved,
+                          dispatch_uid='instance-saved-hook')
+
+    def add_response_get_identity(self, identity, result):
+        responses.add(
+            responses.GET,
+            ('http://identity-store/identities/%s/' % identity),
+            json=result,
+            content_type='application/json',
+            match_querystring=True,
+        )
+
+    def test_get_registration_data_skipped_if_no_identity(self):
+        data = generate_msisdn_message_report.retrieve_registration_info(
+            self.is_client, {'+2340000000': {}}
+        )
+
+        self.assertEqual(data.keys(), ['+2340000000'])
+        self.assertEqual(data['+2340000000'], {})
+
+    def test_get_registration_data_skipped_if_no_registration(self):
+        data = generate_msisdn_message_report.retrieve_registration_info(
+            self.is_client, {'+2340000000': {
+                'id': '54cc71b7-533f-4a83-93c1-e02340000000',
+                'created_at': '2017-01-02T00:00:00.000000Z'}})
+
+        self.assertEqual(data.keys(), ['+2340000000'])
+        self.assertEqual(data['+2340000000'], {
+            'id': '54cc71b7-533f-4a83-93c1-e02340000000',
+            'created_at': '2017-01-02T00:00:00.000000Z'})
+
+    def test_get_registration_data_without_operator(self):
+        reg = Registration.objects.create(
+            source=self.source, data={'msg_type': 'text', 'preg_week': 16},
+            mother_id='54cc71b7-533f-4a83-93c1-e02340000000')
+
+        data = generate_msisdn_message_report.retrieve_registration_info(
+            self.is_client, {'+2340000000': {
+                'id': '54cc71b7-533f-4a83-93c1-e02340000000',
+                'created_at': '2017-01-02T00:00:00.000000Z'}})
+
+        self.assertEqual(data.keys(), ['+2340000000'])
+        self.assertItemsEqual(data['+2340000000'], {
+            'id': '54cc71b7-533f-4a83-93c1-e02340000000',
+            'created_at': '2017-01-02T00:00:00.000000Z',
+            'reg_date': reg.created_at, 'msg_type': 'text', 'preg_week': 16,
+            'facility': ''})
+
+    @responses.activate
+    def test_get_registration_data_with_operator(self):
+        self.add_response_get_identity(
+            '54cc71b7-533f-4a83-93c1-e02341111111', {
+                'id': '54cc71b7-533f-4a83-93c1-e02341111111', 'details': {
+                    'facility_name': 'Somewhere'
+                }
+            })
+
+        reg = Registration.objects.create(
+            source=self.source, data={
+                'msg_type': 'text', 'preg_week': 16,
+                'operator_id': '54cc71b7-533f-4a83-93c1-e02341111111'},
+            mother_id='54cc71b7-533f-4a83-93c1-e02340000000')
+
+        data = generate_msisdn_message_report.retrieve_registration_info(
+            self.is_client, {'+2340000000': {
+                'id': '54cc71b7-533f-4a83-93c1-e02340000000',
+                'created_at': '2017-01-02T00:00:00.000000Z'}})
+
+        self.assertEqual(data.keys(), ['+2340000000'])
+        self.assertItemsEqual(data['+2340000000'], {
+            'id': '54cc71b7-533f-4a83-93c1-e02340000000',
+            'created_at': '2017-01-02T00:00:00.000000Z',
+            'reg_date': reg.created_at, 'msg_type': 'text', 'preg_week': 16,
+            'facility': 'Somewhere'})
