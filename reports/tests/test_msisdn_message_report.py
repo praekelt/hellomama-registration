@@ -300,7 +300,7 @@ class RetrieveIdentityInfoTest(GenerateReportTest):
         self.assertEqual(data['+2340000000'], {})
 
     @responses.activate
-    def test_identity_data_empy_if_multiple_found(self):
+    def test_identity_data_empty_if_multiple_found(self):
         self.add_response_identity_store_search('%2B2340000000', [
             {'id': '54cc71b7-533f-4a83-93c1-e02340000000',
                 'created_at': '2017-01-01T00:00:00.000000Z'},
@@ -475,15 +475,15 @@ class GenerateMSISDNMessageReportTest(GenerateReportTest):
             filename = generate_random_filename()
 
             task_status = ReportTaskStatus.objects.create(**{
-                "start_date": datetime.strptime('2017-01-01', '%Y-%m-%d'),
-                "end_date": datetime.strptime('2018-01-01', '%Y-%m-%d'),
+                "start_date": '2017-01-01',
+                "end_date": '2018-01-01',
                 "email_subject": 'The Email Subject',
                 "status": ReportTaskStatus.PENDING
             })
 
             generate_msisdn_message_report.apply_async(kwargs={
-                'start_date': datetime.strptime('2017-01-01', '%Y-%m-%d'),
-                'end_date': datetime.strptime('2018-01-01', '%Y-%m-%d'),
+                'start_date': '2017-01-01',
+                'end_date': '2018-01-01',
                 'email_recipients': ['foo@example.com'],
                 'email_subject': 'The Email Subject',
                 'task_status_id': task_status.id,
@@ -570,7 +570,7 @@ class GenerateMSISDNMessageReportTest(GenerateReportTest):
 
         task_status = ReportTaskStatus.objects.create(**{
             "start_date": "not_really_a_date",
-            "end_date": datetime.strptime('2018-01-01', '%Y-%m-%d'),
+            "end_date": '2018-01-01',
             "email_subject": 'The Email Subject',
             "status": ReportTaskStatus.PENDING
         })
@@ -589,7 +589,8 @@ class GenerateMSISDNMessageReportTest(GenerateReportTest):
         task_status.refresh_from_db()
         self.assertEqual(task_status.status, ReportTaskStatus.FAILED)
         self.assertEqual(task_status.error,
-                         "'str' object has no attribute 'strftime'")
+                         "time data 'not_really_a_date' does not match format "
+                         "'%Y-%m-%d'")
 
     @responses.activate
     def test_generate_full_report(self):

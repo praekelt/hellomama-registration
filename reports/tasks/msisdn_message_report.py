@@ -19,6 +19,10 @@ class GenerateMSISDNMessageReport(BaseTask):
     def run(self, start_date, end_date, task_status_id, msisdns=[],
             email_recipients=[], email_sender=settings.DEFAULT_FROM_EMAIL,
             email_subject='Seed Control Interface Generated Report', **kwargs):
+
+        start_date = datetime.strptime(start_date, "%Y-%m-%d")
+        end_date = datetime.strptime(end_date, "%Y-%m-%d")
+
         task_status = ReportTaskStatus.objects.get(id=task_status_id)
         task_status.status = ReportTaskStatus.RUNNING
         task_status.save()
