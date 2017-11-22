@@ -105,7 +105,8 @@ class GenerateMSISDNMessageReport(BaseTask):
                     .format(data[msisdn]['id'], msisdn))
                 continue
 
-            data[msisdn]['reg_date'] = registration.created_at
+            data[msisdn]['reg_date'] = registration.created_at.strftime(
+                "%Y-%m-%d %H:%M:%S")
             data[msisdn]['msg_type'] = registration.data.get('msg_type', "")
             data[msisdn]['preg_week'] = registration.data.get('preg_week', "")
 
@@ -150,8 +151,8 @@ class GenerateMSISDNMessageReport(BaseTask):
             for message in results:
                 message_list.append({
                     "content": message['content'],
-                    "date_sent": datetime.strptime(message['created_at'],
-                                                   "%Y-%m-%dT%H:%M:%S.%fZ"),
+                    # Reformat the date
+                    "date_sent": message['created_at'].replace('T', ' ')[:-8],
                     "status": 'Delivered' if message['delivered'] else 'Undelivered'  # noqa
                 })
 

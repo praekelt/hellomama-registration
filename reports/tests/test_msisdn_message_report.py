@@ -146,7 +146,7 @@ class PopulateSpreadsheetTest(GenerateReportTest):
         spreadsheet = generate_msisdn_message_report.populate_spreadsheet(
             ['+2340000000'],
             {"+2340000000": {
-                "reg_date": datetime(2017, 01, 01, 00, 00, 00),
+                "reg_date": "2017-01-01 00:00:00",
                 "facility": "Somewhere",
                 "preg_week": 16,
                 "msg_type": "text"
@@ -164,7 +164,7 @@ class PopulateSpreadsheetTest(GenerateReportTest):
             ['+2340000000'],
             {"+2340000000": {
                 "id": "54cc71b7-533f-4a83-93c1-e02340000000",
-                "reg_date": datetime(2017, 01, 01, 00, 00, 00),
+                "reg_date": "2017-01-01 00:00:00",
                 "facility": "Somewhere",
                 "preg_week": 16,
                 "msg_type": "text"
@@ -173,8 +173,7 @@ class PopulateSpreadsheetTest(GenerateReportTest):
         self.assertEqual(
             spreadsheet._workbook.active['A2'].value, '+2340000000')
         self.assertEqual(
-            spreadsheet._workbook.active['B2'].value,
-            datetime(2017, 01, 01, 00, 00, 00))
+            spreadsheet._workbook.active['B2'].value, "2017-01-01 00:00:00")
         self.assertEqual(
             spreadsheet._workbook.active['C2'].value, 'Somewhere')
         self.assertEqual(
@@ -191,11 +190,11 @@ class PopulateSpreadsheetTest(GenerateReportTest):
                 "id": "54cc71b7-533f-4a83-93c1-e02340000000",
                 "messages": [{
                     "content": "Test message",
-                    "date_sent": datetime(2017, 01, 01, 00, 00, 00),
+                    "date_sent": "2017-01-01 00:00:00",
                     "status": "Delivered"
                 }, {
                     "content": "Another test message",
-                    "date_sent": datetime(2017, 01, 02, 00, 00, 00),
+                    "date_sent": "2017-01-02 00:00:00",
                     "status": "Undelivered"
                 }]
             }}, 2)
@@ -207,15 +206,13 @@ class PopulateSpreadsheetTest(GenerateReportTest):
         self.assertEqual(
             spreadsheet._workbook.active['F2'].value, 'Test message')
         self.assertEqual(
-            spreadsheet._workbook.active['G2'].value,
-            datetime(2017, 01, 01, 00, 00, 00))
+            spreadsheet._workbook.active['G2'].value, "2017-01-01 00:00:00")
         self.assertEqual(
             spreadsheet._workbook.active['H2'].value, 'Delivered')
         self.assertEqual(
             spreadsheet._workbook.active['I2'].value, 'Another test message')
         self.assertEqual(
-            spreadsheet._workbook.active['J2'].value,
-            datetime(2017, 01, 02, 00, 00, 00))
+            spreadsheet._workbook.active['J2'].value, "2017-01-02 00:00:00")
         self.assertEqual(
             spreadsheet._workbook.active['K2'].value, 'Undelivered')
 
@@ -410,9 +407,9 @@ class RetrieveMessagesTest(GenerateReportTest):
         self.assertEqual(data.keys(), ['+2340000000'])
         self.assertEqual(data['+2340000000']['messages'], [
             {'content': 'message 1', 'status': 'Delivered',
-             'date_sent': datetime(2017, 1, 2)},
+             'date_sent': "2017-01-02 00:00:00"},
             {'content': 'message 2', 'status': 'Undelivered',
-             'date_sent': datetime(2017, 1, 3)}
+             'date_sent': "2017-01-03 00:00:00"}
         ])
 
     @responses.activate
@@ -443,11 +440,11 @@ class RetrieveMessagesTest(GenerateReportTest):
         self.assertItemsEqual(data.keys(), ['+2340000000', '+2341111111'])
         self.assertEqual(data['+2340000000']['messages'], [
             {'content': 'message 1', 'status': 'Delivered',
-             'date_sent': datetime(2017, 1, 2)},
+             'date_sent': "2017-01-02 00:00:00"},
             {'content': 'message 2', 'status': 'Undelivered',
-             'date_sent': datetime(2017, 1, 3)}
+             'date_sent': "2017-01-03 00:00:00"}
         ])
         self.assertEqual(data['+2341111111']['messages'], [
             {'content': 'message 3', 'status': 'Delivered',
-             'date_sent': datetime(2017, 1, 4)}
+             'date_sent': "2017-01-04 00:00:00"}
         ])
