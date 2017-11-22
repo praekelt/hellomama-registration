@@ -258,12 +258,9 @@ class RetrieveIdentityInfoTest(GenerateReportTest):
         data = generate_msisdn_message_report.retrieve_identity_info(
             self.is_client, ['+2340000000'])
 
-        self.assertEqual(data.keys(), ['+2340000000'])
-        self.assertItemsEqual(data['+2340000000'].keys(), ['id', 'created_at'])
-        self.assertEqual(data['+2340000000']['id'],
-                         '54cc71b7-533f-4a83-93c1-e02340000000')
-        self.assertEqual(data['+2340000000']['created_at'],
-                         '2017-01-01T00:00:00.000000Z')
+        self.assertDictEqual(data['+2340000000'], {
+            'id': '54cc71b7-533f-4a83-93c1-e02340000000',
+            'created_at': '2017-01-01T00:00:00.000000Z'})
 
     @responses.activate
     def test_retrieve_identity_works_with_multiple_msisdns(self):
@@ -277,17 +274,12 @@ class RetrieveIdentityInfoTest(GenerateReportTest):
         data = generate_msisdn_message_report.retrieve_identity_info(
             self.is_client, ['+2340000000', '+2341111111'])
 
-        self.assertItemsEqual(data.keys(), ['+2340000000', '+2341111111'])
-        self.assertItemsEqual(data['+2340000000'].keys(), ['id', 'created_at'])
-        self.assertEqual(data['+2340000000']['id'],
-                         '54cc71b7-533f-4a83-93c1-e02340000000')
-        self.assertEqual(data['+2340000000']['created_at'],
-                         '2017-01-01T00:00:00.000000Z')
-        self.assertItemsEqual(data['+2341111111'].keys(), ['id', 'created_at'])
-        self.assertEqual(data['+2341111111']['id'],
-                         '54cc71b7-533f-4a83-93c1-e02341111111')
-        self.assertEqual(data['+2341111111']['created_at'],
-                         '2017-01-02T00:00:00.000000Z')
+        self.assertDictEqual(data['+2340000000'], {
+            'id': '54cc71b7-533f-4a83-93c1-e02340000000',
+            'created_at': '2017-01-01T00:00:00.000000Z'})
+        self.assertDictEqual(data['+2341111111'], {
+            'id': '54cc71b7-533f-4a83-93c1-e02341111111',
+            'created_at': '2017-01-02T00:00:00.000000Z'})
 
     @responses.activate
     def test_identity_data_empty_if_none_found(self):
@@ -296,7 +288,6 @@ class RetrieveIdentityInfoTest(GenerateReportTest):
         data = generate_msisdn_message_report.retrieve_identity_info(
             self.is_client, ['+2340000000'])
 
-        self.assertEqual(data.keys(), ['+2340000000'])
         self.assertEqual(data['+2340000000'], {})
 
     @responses.activate
@@ -310,7 +301,6 @@ class RetrieveIdentityInfoTest(GenerateReportTest):
         data = generate_msisdn_message_report.retrieve_identity_info(
             self.is_client, ['+2340000000'])
 
-        self.assertEqual(data.keys(), ['+2340000000'])
         self.assertEqual(data['+2340000000'], {})
 
 
@@ -321,7 +311,6 @@ class RetrieveRegistrationInfoTest(GenerateReportTest):
             self.is_client, {'+2340000000': {}}
         )
 
-        self.assertEqual(data.keys(), ['+2340000000'])
         self.assertEqual(data['+2340000000'], {})
 
     def test_get_registration_data_skipped_if_no_registration(self):
@@ -330,8 +319,7 @@ class RetrieveRegistrationInfoTest(GenerateReportTest):
                 'id': '54cc71b7-533f-4a83-93c1-e02340000000',
                 'created_at': '2017-01-02T00:00:00.000000Z'}})
 
-        self.assertEqual(data.keys(), ['+2340000000'])
-        self.assertEqual(data['+2340000000'], {
+        self.assertDictEqual(data['+2340000000'], {
             'id': '54cc71b7-533f-4a83-93c1-e02340000000',
             'created_at': '2017-01-02T00:00:00.000000Z'})
 
@@ -345,12 +333,11 @@ class RetrieveRegistrationInfoTest(GenerateReportTest):
                 'id': '54cc71b7-533f-4a83-93c1-e02340000000',
                 'created_at': '2017-01-02T00:00:00.000000Z'}})
 
-        self.assertEqual(data.keys(), ['+2340000000'])
-        self.assertItemsEqual(data['+2340000000'], {
+        self.assertDictEqual(data['+2340000000'], {
             'id': '54cc71b7-533f-4a83-93c1-e02340000000',
             'created_at': '2017-01-02T00:00:00.000000Z',
-            'reg_date': reg.created_at, 'msg_type': 'text', 'preg_week': 16,
-            'facility': ''})
+            'reg_date': reg.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+            'msg_type': 'text', 'preg_week': 16, 'facility': ''})
 
     @responses.activate
     def test_get_registration_data_with_operator(self):
@@ -372,12 +359,11 @@ class RetrieveRegistrationInfoTest(GenerateReportTest):
                 'id': '54cc71b7-533f-4a83-93c1-e02340000000',
                 'created_at': '2017-01-02T00:00:00.000000Z'}})
 
-        self.assertEqual(data.keys(), ['+2340000000'])
-        self.assertItemsEqual(data['+2340000000'], {
+        self.assertDictEqual(data['+2340000000'], {
             'id': '54cc71b7-533f-4a83-93c1-e02340000000',
             'created_at': '2017-01-02T00:00:00.000000Z',
-            'reg_date': reg.created_at, 'msg_type': 'text', 'preg_week': 16,
-            'facility': 'Somewhere'})
+            'reg_date': reg.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+            'msg_type': 'text', 'preg_week': 16, 'facility': 'Somewhere'})
 
 
 class RetrieveMessagesTest(GenerateReportTest):
@@ -388,7 +374,6 @@ class RetrieveMessagesTest(GenerateReportTest):
             datetime(2017, 1, 1), datetime(2018, 1, 1)
         )
 
-        self.assertEqual(data.keys(), ['+2340000000'])
         self.assertEqual(data['+2340000000'], {})
 
     @responses.activate
@@ -402,7 +387,6 @@ class RetrieveMessagesTest(GenerateReportTest):
             datetime(2017, 1, 1), datetime(2018, 1, 1)
         )
 
-        self.assertEqual(data.keys(), ['+2340000000'])
         self.assertEqual(data['+2340000000']['messages'], [])
 
     @responses.activate
@@ -422,7 +406,6 @@ class RetrieveMessagesTest(GenerateReportTest):
         )
 
         self.assertEqual(length, 2)
-        self.assertEqual(data.keys(), ['+2340000000'])
         self.assertEqual(data['+2340000000']['messages'], [
             {'content': 'message 1', 'status': 'Delivered',
              'date_sent': "2017-01-02 00:00:00"},
@@ -455,7 +438,6 @@ class RetrieveMessagesTest(GenerateReportTest):
         )
 
         self.assertEqual(length, 2)
-        self.assertItemsEqual(data.keys(), ['+2340000000', '+2341111111'])
         self.assertEqual(data['+2340000000']['messages'], [
             {'content': 'message 1', 'status': 'Delivered',
              'date_sent': "2017-01-02 00:00:00"},
