@@ -151,7 +151,11 @@ class MSISDNMessagesReportViewTest(ViewTest):
 
     @mock.patch(celery_method)
     def test_creates_task_status(self, celery_method_patch):
-        response = self.normalclient.post('/api/v1/reports/msisdn-messages/')
+        response = self.normalclient.post('/api/v1/reports/msisdn-messages/',
+                                          json.dumps({
+                                            'start_date': '2017-09-01',
+                                            'end_date': '2018-09-01'}),
+                                          content_type='application/json')
         report_task_statuses = ReportTaskStatus.objects.all()
 
         self.assertEqual(response.status_code, 202)
@@ -163,11 +167,40 @@ class MSISDNMessagesReportViewTest(ViewTest):
     @mock.patch(celery_method)
     def test_creates_background_task(self, celery_method_patch):
         self.normalclient.post('/api/v1/reports/msisdn-messages/',
-                               json.dumps({'msisdns': ['+123456']}),
+                               json.dumps({'start_date': '2017-09-01',
+                                           'end_date': '2018-09-01',
+                                           'msisdns': ['+123456']}),
                                content_type='application/json')
         report_task_status = ReportTaskStatus.objects.first()
 
         celery_method_patch.assert_called_once_with(kwargs={
+            "start_date": '2017-09-01',
+            "end_date": '2018-09-01',
             'msisdns': ['+123456'],
             'task_status_id': report_task_status.id,
+            'email_recipients': [],
+            'email_sender': settings.DEFAULT_FROM_EMAIL,
+            'email_subject': 'HelloMama Generated Report'
+        })
+
+    @mock.patch(celery_method)
+    def test_forwards_email_details_to_task(self, celery_method_patch):
+        self.normalclient.post('/api/v1/reports/msisdn-messages/',
+                               json.dumps({'start_date': '2017-09-01',
+                                           'end_date': '2018-09-01',
+                                           'msisdns': ['+123456'],
+                                           'email_to': ['foo@example.com'],
+                                           'email_from': 'bar@example.com',
+                                           'email_subject': 'Cohort report'}),
+                               content_type='application/json')
+        report_task_status = ReportTaskStatus.objects.first()
+
+        celery_method_patch.assert_called_once_with(kwargs={
+            "start_date": '2017-09-01',
+            "end_date": '2018-09-01',
+            'msisdns': ['+123456'],
+            'task_status_id': report_task_status.id,
+            'email_recipients': ['foo@example.com'],
+            'email_sender': 'bar@example.com',
+            'email_subject': 'Cohort report'
         })

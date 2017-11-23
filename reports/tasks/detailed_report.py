@@ -82,11 +82,13 @@ class GenerateReport(BaseTask):
         output_file = generate_random_filename()
         workbook.save(output_file)
 
-        task_status.status = ReportTaskStatus.SENDING
+        task_status.status = ReportTaskStatus.DONE
         task_status.file_size = os.path.getsize(output_file)
         task_status.save()
 
         if email_recipients:
+            task_status.status = ReportTaskStatus.SENDING
+            task_status.save()
             file_name = 'report-%s-to-%s.xlsx' % (
                 start_date.strftime('%Y-%m-%d'),
                 end_date.strftime('%Y-%m-%d'))
