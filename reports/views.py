@@ -37,6 +37,11 @@ class ReportsView(APIView):
         return Response(response, status=200)
 
     def post(self, request, *args, **kwargs):
+        report_type = request.data.get('report_type')
+
+        if report_type == 'cohort':
+            return MSISDNMessagesReportView().post(request, args, kwargs)
+
         serializer = ReportGenerationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
