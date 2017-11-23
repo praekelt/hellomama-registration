@@ -155,10 +155,12 @@ class GenerateMSISDNMessageReport(BaseTask):
                 continue
 
             for message in results:
+                date_sent = datetime.strptime(
+                        message['created_at'], "%Y-%m-%dT%H:%M:%S.%fZ")
                 message_list.append({
                     "content": message['content'],
                     # Reformat the date
-                    "date_sent": message['created_at'].replace('T', ' ')[:-8],
+                    "date_sent": date_sent.strftime("%Y-%m-%d %H:%M:%S"),
                     "status": 'Delivered' if message['delivered'] else 'Undelivered'  # noqa
                 })
 
