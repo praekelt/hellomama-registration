@@ -182,14 +182,12 @@ class GenerateMSISDNMessageReport(BaseTask):
             'Message type'
         ]
 
-        i = 1
-        while i <= list_length:
+        for i in range(1, list_length + 1):
             header.extend([
                 'Message %d: content' % i,
                 'Message %d: date sent' % i,
                 'Message %d: status' % i
             ])
-            i += 1
 
         sheet.set_header(header)
 
@@ -207,12 +205,11 @@ class GenerateMSISDNMessageReport(BaseTask):
                 'Pregnancy week': data[msisdn].get('preg_week', ''),
                 'Message type': data[msisdn].get('msg_type', '')
             }
-            j = 1
-            for message in data[msisdn].get('messages', []):
-                row['Message %d: content' % j] = message['content']
-                row['Message %d: date sent' % j] = message['date_sent']
-                row['Message %d: status' % j] = message['status']
-                j += 1
+
+            for i, message in enumerate(data[msisdn].get('messages', []), 1):
+                row['Message %d: content' % i] = message['content']
+                row['Message %d: date sent' % i] = message['date_sent']
+                row['Message %d: status' % i] = message['status']
 
             sheet.add_row(row)
 
