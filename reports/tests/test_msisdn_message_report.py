@@ -452,7 +452,7 @@ class RetrieveMessagesTest(GenerateReportTest):
 
 class GenerateMSISDNMessageReportTest(GenerateReportTest):
 
-    def trigger_report_generation(self, msisdns=[]):
+    def trigger_report_generation(self, msisdns=[], emails=[]):
         with mock.patch('random.choice', mockobj.choice):
             filename = generate_random_filename()
 
@@ -466,7 +466,7 @@ class GenerateMSISDNMessageReportTest(GenerateReportTest):
             generate_msisdn_message_report.apply_async(kwargs={
                 'start_date': '2017-01-01',
                 'end_date': '2018-01-01',
-                'email_recipients': ['foo@example.com'],
+                'email_recipients': emails,
                 'email_subject': 'The Email Subject',
                 'task_status_id': task_status.id,
                 'msisdns': msisdns
@@ -483,7 +483,7 @@ class GenerateMSISDNMessageReportTest(GenerateReportTest):
         """
 
         self.add_response_identity_store_search('%2B2340000000', [])
-        self.trigger_report_generation(['+2340000000'])
+        self.trigger_report_generation(['+2340000000'], ['foo@example.com'])
         [report_email] = mail.outbox
         self.assertEqual(report_email.subject, 'The Email Subject')
         (file_name, data, mimetype) = report_email.attachments[0]
@@ -491,14 +491,14 @@ class GenerateMSISDNMessageReportTest(GenerateReportTest):
                          file_name)
 
     @responses.activate
-    def test_generate_report_status_done(self):
+    def test_generate_report_status_done_with_email(self):
         """
         Generating a report should mark the ReportTaskStatus objects as Done if
         it is successful.
         """
 
         self.add_response_identity_store_search('%2B2340000000', [])
-        self.trigger_report_generation(['+2340000000'])
+        self.trigger_report_generation(['+2340000000'], ['foo@example.com'])
 
         task_status = ReportTaskStatus.objects.last()
         self.assertEqual(task_status.status, ReportTaskStatus.DONE)
@@ -513,10 +513,24 @@ class GenerateMSISDNMessageReportTest(GenerateReportTest):
         """
 
         self.add_response_identity_store_search('%2B2340000000', [])
-        self.trigger_report_generation(['+2340000000'])
+        self.trigger_report_generation(['+2340000000'], ['foo@example.com'])
 
         task_status = ReportTaskStatus.objects.last()
         self.assertEqual(task_status.status, ReportTaskStatus.SENDING)
+        self.assertEqual(task_status.file_size > 5000, True)
+
+    @responses.activate
+    def test_generate_report_status_done_without_email(self):
+        """
+        Generating a report should mark the ReportTaskStatus objects as Done
+        if no email_recipients are specified.
+        """
+
+        self.add_response_identity_store_search('%2B2340000000', [])
+        self.trigger_report_generation(['+2340000000'])
+
+        task_status = ReportTaskStatus.objects.last()
+        self.assertEqual(task_status.status, ReportTaskStatus.DONE)
         self.assertEqual(task_status.file_size > 5000, True)
 
     @responses.activate

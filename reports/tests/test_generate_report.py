@@ -347,7 +347,7 @@ class GenerateReportTest(TestCase):
         return timestamp.replace(hour=0, minute=0, second=0, microsecond=0,
                                  tzinfo=pytz.timezone(settings.TIME_ZONE))
 
-    def trigger_report_generation(self):
+    def trigger_report_generation(self, emails=[]):
         with mock.patch('random.choice', mockobj.choice):
             filename = generate_random_filename()
 
@@ -365,7 +365,7 @@ class GenerateReportTest(TestCase):
                                                               '%Y-%m-%d')),
                 'end_date': self.midnight(datetime.strptime('2016-02-01',
                                                             '%Y-%m-%d')),
-                'email_recipients': ['foo@example.com'],
+                'email_recipients': emails,
                 'email_subject': 'The Email Subject',
                 'task_status_id': task_status.id})
 
@@ -381,7 +381,7 @@ class GenerateReportTest(TestCase):
         self.add_blank_subscription_callback(next_=None)
         self.add_blank_outbound_callback(next_=None)
         self.add_blank_optouts_callback(next_=None)
-        self.trigger_report_generation()
+        self.trigger_report_generation(['foo@example.com'])
         [report_email] = mail.outbox
         self.assertEqual(report_email.subject, 'The Email Subject')
         (file_name, data, mimetype) = report_email.attachments[0]
@@ -396,7 +396,7 @@ class GenerateReportTest(TestCase):
         self.add_blank_subscription_callback(next_=None)
         self.add_blank_outbound_callback(next_=None)
         self.add_blank_optouts_callback(next_=None)
-        self.trigger_report_generation()
+        self.trigger_report_generation(['foo@example.com'])
 
         task_status = ReportTaskStatus.objects.last()
         self.assertEqual(task_status.status, ReportTaskStatus.DONE)
@@ -412,10 +412,26 @@ class GenerateReportTest(TestCase):
         self.add_blank_subscription_callback(next_=None)
         self.add_blank_outbound_callback(next_=None)
         self.add_blank_optouts_callback(next_=None)
-        self.trigger_report_generation()
+        self.trigger_report_generation(['foo@example.com'])
 
         task_status = ReportTaskStatus.objects.last()
         self.assertEqual(task_status.status, ReportTaskStatus.SENDING)
+        self.assertEqual(task_status.file_size > 7000, True)
+
+    @responses.activate
+    def test_generate_report_status_done_without_email(self):
+        """
+        Generating a report should mark the ReportTaskStatus objects as Done
+        if no email_recipients are specified.
+        """
+
+        self.add_blank_subscription_callback(next_=None)
+        self.add_blank_outbound_callback(next_=None)
+        self.add_blank_optouts_callback(next_=None)
+        self.trigger_report_generation()
+
+        task_status = ReportTaskStatus.objects.last()
+        self.assertEqual(task_status.status, ReportTaskStatus.DONE)
         self.assertEqual(task_status.file_size > 7000, True)
 
     @responses.activate
@@ -438,7 +454,7 @@ class GenerateReportTest(TestCase):
         self.add_blank_optouts_callback(next_=None)
 
         with mock.patch('openpyxl.Workbook.save', new_save):
-            self.trigger_report_generation()
+            self.trigger_report_generation(['foo@example.com'])
 
     @responses.activate
     @override_settings(
@@ -620,7 +636,7 @@ class GenerateReportTest(TestCase):
         # No opt outs, we're not testing optout by subscription
         self.add_blank_optouts_callback(next_=None)
 
-        tmp_file = self.trigger_report_generation()
+        tmp_file = self.trigger_report_generation(['foo@example.com'])
 
         mock_remove.assert_called_once_with(tmp_file)
 
@@ -706,7 +722,7 @@ class GenerateReportTest(TestCase):
         # No opt outs, we're not testing optout by subscription
         self.add_blank_optouts_callback(next_=None)
 
-        tmp_file = self.trigger_report_generation()
+        tmp_file = self.trigger_report_generation(['foo@example.com'])
 
         mock_remove.assert_called_once_with(tmp_file)
 
@@ -766,7 +782,7 @@ class GenerateReportTest(TestCase):
         # No opt outs, we're not testing optout by subscription
         self.add_blank_optouts_callback(next_=None)
 
-        tmp_file = self.trigger_report_generation()
+        tmp_file = self.trigger_report_generation(['foo@example.com'])
 
         mock_remove.assert_called_once_with(tmp_file)
 
@@ -825,7 +841,7 @@ class GenerateReportTest(TestCase):
         # No opt outs, we're not testing optout by subscription
         self.add_blank_optouts_callback(next_=None)
 
-        tmp_file = self.trigger_report_generation()
+        tmp_file = self.trigger_report_generation(['foo@example.com'])
 
         mock_remove.assert_called_once_with(tmp_file)
 
@@ -880,7 +896,7 @@ class GenerateReportTest(TestCase):
         # No opt outs, we're not testing optout by subscription
         self.add_blank_optouts_callback(next_=None)
 
-        tmp_file = self.trigger_report_generation()
+        tmp_file = self.trigger_report_generation(['foo@example.com'])
 
         mock_remove.assert_called_once_with(tmp_file)
 
@@ -934,7 +950,7 @@ class GenerateReportTest(TestCase):
 
         self.add_blank_outbound_callback(next_=None)
 
-        tmp_file = self.trigger_report_generation()
+        tmp_file = self.trigger_report_generation(['foo@example.com'])
 
         mock_remove.assert_called_once_with(tmp_file)
 

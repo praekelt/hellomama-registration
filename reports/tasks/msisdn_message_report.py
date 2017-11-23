@@ -48,11 +48,13 @@ class GenerateMSISDNMessageReport(BaseTask):
         output_file = generate_random_filename()
         spreadsheet.save(output_file)
 
-        task_status.status = ReportTaskStatus.SENDING
+        task_status.status = ReportTaskStatus.DONE
         task_status.file_size = getsize(output_file)
         task_status.save()
 
         if email_recipients:
+            task_status.status = ReportTaskStatus.SENDING
+            task_status.save()
             file_name = 'msisdn-report-%s-to-%s.xlsx' % (
                 start_date.strftime('%Y-%m-%d'),
                 end_date.strftime('%Y-%m-%d'))
