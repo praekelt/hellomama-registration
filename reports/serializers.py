@@ -12,7 +12,6 @@ class ReportGenerationSerializer(serializers.Serializer):
                                      default=[])
     email_from = serializers.EmailField(default=settings.DEFAULT_FROM_EMAIL)
     email_subject = serializers.CharField(default='HelloMama Generated Report')
-    msisdns = serializers.ListField(default=[])
 
     def validate(self, data):
         if 'start_date' not in data:
@@ -34,6 +33,30 @@ class ReportGenerationSerializer(serializers.Serializer):
 
     def validate_end_date(self, value):
         return self.validate_date(value)
+
+
+class MSISDNMessagesReportSerializer(ReportGenerationSerializer):
+    msisdn_list = serializers.ListField(default=[])
+
+    def validate_msisdn_list(self, value):
+        msisdn_list = []
+
+        for msisdn in value:
+            # Check element is a number
+            msisdn = msisdn.replace(" ", "").replace("+", "")
+            if not msisdn.isdigit():
+                raise serializers.ValidationError(
+                    "Invalid value for: msisdn_list. Msisdns must only "
+                    "contain digits or '+'")
+
+            # Check number is Nigerian
+            if msisdn[:3] != '234' or len(msisdn) != 11:
+                raise serializers.ValidationError(
+                    "Invalid value for: msisdn_list. Msisdns must be 12 "
+                    "characters and prefixed with '+234'")
+            msisdn = ''.join(('+', msisdn))
+            msisdn_list.append(msisdn)
+        return msisdn_list
 
 
 class ReportTaskStatusSerializer(serializers.ModelSerializer):

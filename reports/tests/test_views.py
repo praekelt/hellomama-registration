@@ -169,14 +169,14 @@ class MSISDNMessagesReportViewTest(ViewTest):
         self.normalclient.post('/api/v1/reports/msisdn-messages/',
                                json.dumps({'start_date': '2017-09-01',
                                            'end_date': '2018-09-01',
-                                           'msisdns': ['+123456']}),
+                                           'msisdn_list': ['+23455659423']}),
                                content_type='application/json')
         report_task_status = ReportTaskStatus.objects.first()
 
         celery_method_patch.assert_called_once_with(kwargs={
             "start_date": '2017-09-01',
             "end_date": '2018-09-01',
-            'msisdns': ['+123456'],
+            'msisdns': ['+23455659423'],
             'task_status_id': report_task_status.id,
             'email_recipients': [],
             'email_sender': settings.DEFAULT_FROM_EMAIL,
@@ -188,7 +188,7 @@ class MSISDNMessagesReportViewTest(ViewTest):
         self.normalclient.post('/api/v1/reports/msisdn-messages/',
                                json.dumps({'start_date': '2017-09-01',
                                            'end_date': '2018-09-01',
-                                           'msisdns': ['+123456'],
+                                           'msisdn_list': ['+23455659423'],
                                            'email_to': ['foo@example.com'],
                                            'email_from': 'bar@example.com',
                                            'email_subject': 'Cohort report'}),
@@ -198,9 +198,40 @@ class MSISDNMessagesReportViewTest(ViewTest):
         celery_method_patch.assert_called_once_with(kwargs={
             "start_date": '2017-09-01',
             "end_date": '2018-09-01',
-            'msisdns': ['+123456'],
+            'msisdns': ['+23455659423'],
             'task_status_id': report_task_status.id,
             'email_recipients': ['foo@example.com'],
             'email_sender': 'bar@example.com',
             'email_subject': 'Cohort report'
         })
+
+    def test_raises_400_for_invalid_msisdns(self):
+        response = self.normalclient.post(
+            '/api/v1/reports/msisdn-messages/',
+            json.dumps({'start_date': '2017-09-01', 'end_date': '2018-09-01',
+                        'msisdn_list': ['+2345565']}),
+            content_type='application/json')
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data, {
+            'msisdn_list': ["Invalid value for: msisdn_list. Msisdns must be "
+                            "12 characters and prefixed with '+234'"]})
+
+        response = self.normalclient.post(
+            '/api/v1/reports/msisdn-messages/',
+            json.dumps({'start_date': '2017-09-01', 'end_date': '2018-09-01',
+                        'msisdn_list': ['+12342655565']}),
+            content_type='application/json')
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data, {
+            'msisdn_list': ["Invalid value for: msisdn_list. Msisdns must be "
+                            "12 characters and prefixed with '+234'"]})
+
+        response = self.normalclient.post(
+            '/api/v1/reports/msisdn-messages/',
+            json.dumps({'start_date': '2017-09-01', 'end_date': '2018-09-01',
+                        'msisdn_list': ['+234sdk83dfs']}),
+            content_type='application/json')
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data, {
+            'msisdn_list': ["Invalid value for: msisdn_list. Msisdns must "
+                            "only contain digits or '+'"]})

@@ -9,7 +9,8 @@ from rest_framework.pagination import CursorPagination
 from reports.tasks.detailed_report import generate_report
 from reports.tasks.msisdn_message_report import generate_msisdn_message_report
 from reports.serializers import (ReportGenerationSerializer,
-                                 ReportTaskStatusSerializer)
+                                 ReportTaskStatusSerializer,
+                                 MSISDNMessagesReportSerializer)
 from reports.models import ReportTaskStatus
 
 
@@ -77,7 +78,7 @@ class MSISDNMessagesReportView(APIView):
     def post(self, request, *args, **kwargs):
         request_data = request.data.copy()
 
-        serializer = ReportGenerationSerializer(data=request_data)
+        serializer = MSISDNMessagesReportSerializer(data=request_data)
         serializer.is_valid(raise_exception=True)
 
         data = serializer.validated_data
@@ -93,7 +94,7 @@ class MSISDNMessagesReportView(APIView):
             "start_date": datetime.strftime(data['start_date'], '%Y-%m-%d'),
             "end_date": datetime.strftime(data['end_date'], '%Y-%m-%d'),
             "task_status_id": task_status.id,
-            "msisdns": data['msisdns'],
+            "msisdns": data['msisdn_list'],
             "email_recipients": data['email_to'],
             "email_sender": data['email_from'],
             "email_subject": data['email_subject']
