@@ -89,6 +89,9 @@ class MSISDNMessagesReportView(APIView):
             "end_date": datetime.strftime(data['end_date'], '%Y-%m-%d'),
             "task_status_id": task_status.id,
             "msisdns": data['msisdns'],
+            "email_recipients": data['email_to'],
+            "email_sender": data['email_from'],
+            "email_subject": data['email_subject']
         })
 
         return Response({"report_generation_requested": True}, status=202)
