@@ -543,15 +543,19 @@ class GenerateMSISDNMessageReportTest(GenerateReportTest):
 
         orig = openpyxl.Workbook.save
 
+        mock_called = {'ran': False}
+
         def new_save(wb, file):
             task_status = ReportTaskStatus.objects.last()
             self.assertEqual(task_status.status, ReportTaskStatus.RUNNING)
             orig(wb, file)
+            mock_called['ran'] = True
 
         self.add_response_identity_store_search('%2B2340000000', [])
 
         with mock.patch('openpyxl.Workbook.save', new_save):
             self.trigger_report_generation(['+2340000000'])
+        self.assertTrue(mock_called['ran'])
 
     @responses.activate
     @override_settings(
@@ -636,6 +640,8 @@ class GenerateMSISDNMessageReportTest(GenerateReportTest):
 
         orig = openpyxl.Workbook.save
 
+        mock_called = {'ran': False}
+
         def new_save(wb, file):
             sheet = wb['Data for study cohort']
             self.assertEqual(sheet['A1'].value, 'Phone number')
@@ -687,7 +693,10 @@ class GenerateMSISDNMessageReportTest(GenerateReportTest):
             self.assertEqual(sheet['K5'].value, 'Undelivered')
 
             orig(wb, file)
+            mock_called['ran'] = True
 
         with mock.patch('openpyxl.Workbook.save', new_save):
             self.trigger_report_generation([
                 '+2340000000', '+2341111111', '+2342222222', '+2343333333'])
+
+        self.assertTrue(mock_called['ran'])
