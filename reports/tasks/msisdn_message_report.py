@@ -95,37 +95,37 @@ class GenerateMSISDNMessageReport(BaseTask):
     def retrieve_registration_info(self, is_client, data):
         logger = self.get_logger()
 
-        for msisdn in data:
-            if data[msisdn].get('id', None) is None:
+        for msisdn, datum in data.items():
+            if datum.get('id', None) is None:
                 # Skip if we didn't find an identity
                 continue
 
             # Currently we'll only be working with mother msisdns
             registration = Registration.objects.filter(
-                    mother_id=data[msisdn]['id']
+                    mother_id=datum['id']
                 ).order_by('-created_at').first()
 
             if registration is None:
                 logger.info(
                     'No registration found with mother_id {0} ({1})'
-                    .format(data[msisdn]['id'], msisdn))
+                    .format(datum['id'], msisdn))
                 continue
 
-            data[msisdn]['reg_date'] = registration.created_at.strftime(
+            datum['reg_date'] = registration.created_at.strftime(
                 "%Y-%m-%d %H:%M:%S")
-            data[msisdn]['msg_type'] = registration.data.get('msg_type', "")
-            data[msisdn]['preg_week'] = registration.data.get('preg_week', "")
+            datum['msg_type'] = registration.data.get('msg_type', "")
+            datum['preg_week'] = registration.data.get('preg_week', "")
 
             # Get facility info from the operator's identity
             operator_id = registration.data.get('operator_id', None)
             if operator_id is not None:
                 operator_identity = is_client.get_identity(operator_id)
-                data[msisdn]['facility'] = operator_identity.get(
+                datum['facility'] = operator_identity.get(
                         'details', {}).get('facility_name', "")
             else:
                 logger.info(
                     'No operator_id on registration for {0}'.format(msisdn))
-                data[msisdn]['facility'] = ""
+                datum['facility'] = ""
 
         return data
 
@@ -133,15 +133,15 @@ class GenerateMSISDNMessageReport(BaseTask):
         logger = self.get_logger()
 
         longest_list = 0
-        for msisdn in data:
+        for msisdn, datum in data.items():
             message_list = []
 
-            if data[msisdn].get('id', None) is None:
+            if datum.get('id', None) is None:
                 # Skip if we didn't find an identity
                 continue
 
             response = ms_client.get_outbounds({
-                "to_identity": data[msisdn]['id'],
+                "to_identity": datum['id'],
                 "after": start_date.strftime("%Y-%m-%dT00:00:00"),
                 "before": end_date.strftime("%Y-%m-%dT00:00:00")
             })
@@ -151,7 +151,7 @@ class GenerateMSISDNMessageReport(BaseTask):
                 logger.info(
                     'No results from message sender for {0}'.format(msisdn))
 
-                data[msisdn]["messages"] = message_list
+                datum["messages"] = message_list
                 continue
 
             for message in results:
@@ -162,7 +162,7 @@ class GenerateMSISDNMessageReport(BaseTask):
                     "status": 'Delivered' if message['delivered'] else 'Undelivered'  # noqa
                 })
 
-            data[msisdn]["messages"] = message_list
+            datum["messages"] = message_list
             if len(message_list) > longest_list:
                 longest_list = len(message_list)
 
@@ -191,6 +191,7 @@ class GenerateMSISDNMessageReport(BaseTask):
 
         sheet.set_header(header)
 
+        # Use the original list for iteration so that the order is preserved
         for msisdn in msisdns:
             if data[msisdn].get('id', None) is None:
                 sheet.add_row({'Phone number': msisdn})
