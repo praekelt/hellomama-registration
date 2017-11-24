@@ -213,8 +213,9 @@ class MSISDNMessagesReportViewTest(ViewTest):
             content_type='application/json')
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.data, {
-            'msisdn_list': ["Invalid value for: msisdn_list. Msisdns must be "
-                            "12 characters and prefixed with '+234'"]})
+            'msisdn_list': ["Invalid value for: msisdn_list. Msisdns must "
+                            "only contain digits, be 12 characters long and "
+                            "contain the prefix '+234'"]})
 
         response = self.normalclient.post(
             '/api/v1/reports/msisdn-messages/',
@@ -223,8 +224,9 @@ class MSISDNMessagesReportViewTest(ViewTest):
             content_type='application/json')
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.data, {
-            'msisdn_list': ["Invalid value for: msisdn_list. Msisdns must be "
-                            "12 characters and prefixed with '+234'"]})
+            'msisdn_list': ["Invalid value for: msisdn_list. Msisdns must "
+                            "only contain digits, be 12 characters long and "
+                            "contain the prefix '+234'"]})
 
         response = self.normalclient.post(
             '/api/v1/reports/msisdn-messages/',
@@ -234,4 +236,5 @@ class MSISDNMessagesReportViewTest(ViewTest):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.data, {
             'msisdn_list': ["Invalid value for: msisdn_list. Msisdns must "
-                            "only contain digits or '+'"]})
+                            "only contain digits, be 12 characters long and "
+                            "contain the prefix '+234'"]})

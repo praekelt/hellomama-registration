@@ -1,8 +1,9 @@
 from django.conf import settings
 from django.utils import timezone
 from rest_framework import serializers
+from hellomama_registration.utils import normalize_msisdn
 from reports.utils import midnight, midnight_validator, one_month_after
-from .models import ReportTaskStatus
+from reports.models import ReportTaskStatus
 
 
 class ReportGenerationSerializer(serializers.Serializer):
@@ -43,18 +44,14 @@ class MSISDNMessagesReportSerializer(ReportGenerationSerializer):
 
         for msisdn in value:
             # Check element is a number
-            msisdn = msisdn.replace(" ", "").replace("+", "")
-            if not msisdn.isdigit():
-                raise serializers.ValidationError(
-                    "Invalid value for: msisdn_list. Msisdns must only "
-                    "contain digits or '+'")
+            msisdn = normalize_msisdn(msisdn, '234')
 
             # Check number is Nigerian
-            if msisdn[:3] != '234' or len(msisdn) != 11:
+            if len(msisdn) != 12 or msisdn[1:4] != '234':
                 raise serializers.ValidationError(
-                    "Invalid value for: msisdn_list. Msisdns must be 12 "
-                    "characters and prefixed with '+234'")
-            msisdn = ''.join(('+', msisdn))
+                    "Invalid value for: msisdn_list. Msisdns must only "
+                    "contain digits, be 12 characters long and contain the "
+                    "prefix '+234'")
             msisdn_list.append(msisdn)
         return msisdn_list
 
