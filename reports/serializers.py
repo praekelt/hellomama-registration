@@ -47,10 +47,10 @@ class MSISDNMessagesReportSerializer(ReportGenerationSerializer):
             msisdn = normalize_msisdn(msisdn, '234')
 
             # Check number is Nigerian
-            if len(msisdn) != 12 or msisdn[1:4] != '234':
+            if len(msisdn) != 14 or msisdn[1:4] != '234':
                 raise serializers.ValidationError(
                     "Invalid value for: msisdn_list. Msisdns must only "
-                    "contain digits, be 12 characters long and contain the "
+                    "contain digits, be 14 characters long and contain the "
                     "prefix '+234'")
             msisdn_list.append(msisdn)
         return msisdn_list
