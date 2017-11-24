@@ -160,6 +160,8 @@ class GenerateMSISDNMessageReport(BaseTask):
                 content = message['content']
                 if message['content'] is None:
                     content = message['metadata'].get('voice_speech_url', None)
+                    if isinstance(content, list):
+                        content = ", ".join(content)
                 message_list.append({
                     "content": content,
                     # Reformat the date

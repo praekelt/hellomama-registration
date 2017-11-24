@@ -394,9 +394,15 @@ class RetrieveMessagesTest(GenerateReportTest):
         self.add_response_get_messages(
             '54cc71b7-533f-4a83-93c1-e02340000000', [
                 {'content': None, 'delivered': True,
-                 'created_at': '2017-01-02T00:00:00.000000Z',
+                 'created_at': '2017-01-01T00:00:00.000000Z',
                  'metadata': {
                     'voice_speech_url': 'http://registration/voice_url_1.mp3'
+                 }},
+                {'content': None, 'delivered': True,
+                 'created_at': '2017-01-02T00:00:00.000000Z',
+                 'metadata': {
+                    'voice_speech_url': ['http://registration/voice_url_1.mp3',
+                                         'http://registration/voice_url_2.mp3']
                  }}
             ])
 
@@ -408,6 +414,9 @@ class RetrieveMessagesTest(GenerateReportTest):
 
         self.assertEqual(data['+2340000000']['messages'], [
             {'content': 'http://registration/voice_url_1.mp3',
+             'status': 'Delivered', 'date_sent': "2017-01-01 00:00:00"},
+            {'content': 'http://registration/voice_url_1.mp3, '
+                        'http://registration/voice_url_2.mp3',
              'status': 'Delivered', 'date_sent': "2017-01-02 00:00:00"}
         ])
 
