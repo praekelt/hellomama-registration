@@ -59,3 +59,21 @@ cache backend for them.
 
 ##### registrations.role.{{role}}.last
 `last` Total number of registrations per role
+
+## Releasing
+Releasing is done by building a new docker image. This is done automatically as
+part of the travis build.
+
+For every merge into develop, a new versioned develop release is created, with
+the tag of the commit has.
+
+For every new tag, a new versioned released is created, tagged with the git
+tag.
+
+To release a version for QA purposes, just merge to develop and a new image
+will be built.
+
+To release a version for production purposes, update the version in setup.py,
+and tag the commit that updates the version to the version that it updates to,
+and then push that tag. A new docker image and tag will be created according to
+the version specified in the git tag.
