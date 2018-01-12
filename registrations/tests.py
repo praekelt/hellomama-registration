@@ -3584,6 +3584,27 @@ class TestThirdPartyRegistrations(AuthenticatedAPITestCase):
             match_querystring=True
         )
 
+    def mock_subscription_lookup(self, identity_id, result=[]):
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/subscriptions/'
+            '?active=True&identity={}'.format(identity_id),
+            json={
+                "next": None, "previous": None,
+                "results": result
+            },
+            status=200, content_type='application/json', match_querystring=True
+        )
+
+    def mock_messageset_lookup(self, messageset_id, details):
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/{}/'.format(
+                messageset_id),
+            json=details, status=200, content_type='application/json',
+            match_querystring=True
+        )
+
     def mock_identity_patch(self, identity_id):
         responses.add(
             responses.PATCH,
@@ -3657,6 +3678,7 @@ class TestThirdPartyRegistrations(AuthenticatedAPITestCase):
         self.mock_identity_lookup("%2B2347031221927", mother_id)
         self.mock_identity_lookup("%2B2347031221928", father_id)
         self.mock_operator_lookup("11111", operator_id)
+        self.mock_subscription_lookup(mother_id)
 
         self.mock_identity_patch(mother_id)
         self.mock_identity_patch(father_id)
@@ -3679,9 +3701,9 @@ class TestThirdPartyRegistrations(AuthenticatedAPITestCase):
         self.assertEqual(r.data["voice_days"], "tue_thu")
         self.assertEqual(r.data["last_period_date"], "20150518")
 
-        self.assertEqual(len(responses.calls), 5)
-        patch_father = responses.calls[3].request.body
-        patch_mother = responses.calls[4].request.body
+        self.assertEqual(len(responses.calls), 6)
+        patch_father = responses.calls[4].request.body
+        patch_mother = responses.calls[5].request.body
         self.assertEqual(
             json.loads(patch_father),
             {
@@ -3735,6 +3757,7 @@ class TestThirdPartyRegistrations(AuthenticatedAPITestCase):
 
         self.mock_identity_lookup("%2B2347031221927", mother_id)
         self.mock_operator_lookup("11111", operator_id)
+        self.mock_subscription_lookup(mother_id)
 
         self.mock_identity_patch(mother_id)
 
@@ -3756,8 +3779,8 @@ class TestThirdPartyRegistrations(AuthenticatedAPITestCase):
         self.assertEqual(r.data["voice_days"], "tue_thu")
         self.assertEqual(r.data["last_period_date"], "20150518")
 
-        self.assertEqual(len(responses.calls), 3)
-        patch_mother = responses.calls[2].request.body
+        self.assertEqual(len(responses.calls), 4)
+        patch_mother = responses.calls[3].request.body
         self.assertEqual(
             json.loads(patch_mother),
             {
@@ -3839,6 +3862,7 @@ class TestAddRegistrationsAPI(TestThirdPartyRegistrations):
 
         self.mock_identity_lookup("%2B2347031221927", mother_id)
         self.mock_operator_lookup("11111", operator_id)
+        self.mock_subscription_lookup(mother_id)
 
         self.mock_identity_patch(mother_id)
 
@@ -3859,7 +3883,7 @@ class TestAddRegistrationsAPI(TestThirdPartyRegistrations):
         self.assertEqual(
             reg.updated_by, User.objects.get(username='testadminuser'))
 
-        patch_identity = responses.calls[2]
+        patch_identity = responses.calls[3]
 
         self.assertEqual(
             patch_identity.request.url,
@@ -3899,6 +3923,7 @@ class TestAddRegistrationsAPI(TestThirdPartyRegistrations):
 
         self.mock_identity_lookup("%2B2347031221927", mother_id)
         self.mock_operator_lookup("11111", operator_id)
+        self.mock_subscription_lookup(mother_id)
 
         self.mock_identity_patch(mother_id)
 
@@ -3921,7 +3946,7 @@ class TestAddRegistrationsAPI(TestThirdPartyRegistrations):
         self.assertEqual(
             reg.updated_by, User.objects.get(username='testadminuser'))
 
-        patch_identity = responses.calls[2]
+        patch_identity = responses.calls[3]
 
         self.assertEqual(
             patch_identity.request.url,
@@ -4051,6 +4076,7 @@ class TestAddRegistrationsAPI(TestThirdPartyRegistrations):
 
         self.mock_identity_lookup("%2B2347031221927", mother_id)
         self.mock_operator_lookup("11111", operator_id)
+        self.mock_subscription_lookup(mother_id)
 
         self.mock_identity_patch(mother_id)
 
@@ -4082,13 +4108,11 @@ class TestAddRegistrationsAPI(TestThirdPartyRegistrations):
         self.mock_identity_lookup("%2B2347031221927", mother_id)
         self.mock_operator_lookup("11111", operator_id)
 
-        self.mock_identity_patch(mother_id)
-
         data = override_get_data_bad(None)[0]
 
-        response = self.adminclient.post('/api/v1/addregistration/',
-                                         json.dumps(data),
-                                         content_type='application/json')
+        response = self.adminclient.post(
+            '/api/v1/addregistration/', json.dumps(data),
+            content_type='application/json')
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.data['registration_added'], False)
@@ -4121,6 +4145,42 @@ class TestAddRegistrationsAPI(TestThirdPartyRegistrations):
         self.assertEqual(response.data['registration_added'], False)
         self.assertTrue(
             response.data['error'].find("Operator not found") != -1)
+
+        self.assertEqual(Registration.objects.count(), 0)
+
+    @responses.activate
+    def test_add_registration_existing_subscription(self):
+        """
+        If the mother already has a prebirth subscription, then an error should
+        be returned, and the registration shouldn't be created.
+        """
+
+        self.make_source_adminuser()
+
+        mother_id = "4038a518-2940-4b15-9c5c-2b7b123b8735"
+        operator_id = "4038a518-1111-1111-1111-hfud7383gfyt"
+
+        self.mock_identity_lookup("%2B2347031221927", mother_id)
+        self.mock_operator_lookup("11111", operator_id)
+        self.mock_subscription_lookup(mother_id, [{
+            "active": True,
+            "completed": False,
+            "process_status": 0,
+            "messageset": 1,
+        }])
+        self.mock_messageset_lookup(1, {
+            'short_name': 'prebirth.mother.text.10_42',
+        })
+
+        data = override_get_data_mother_only(None)[0]
+
+        response = self.adminclient.post('/api/v1/addregistration/',
+                                         json.dumps(data),
+                                         content_type='application/json')
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data['registration_added'], False)
+        self.assertIn('prebirth.mother.text.10_42', response.data['error'])
 
         self.assertEqual(Registration.objects.count(), 0)
 
