@@ -488,7 +488,6 @@ class PullThirdPartyRegistrations(Task):
         """
         subscriptions = utils.get_subscriptions(identity_id)
         for subscription in subscriptions:
-            print subscription
             if (
                     not subscription['active'] or subscription['completed'] or
                     subscription['process_status'] not in (0, 1)):
