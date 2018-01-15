@@ -491,7 +491,7 @@ class PullThirdPartyRegistrations(Task):
             if (
                     not subscription['active'] or subscription['completed'] or
                     subscription['process_status'] not in (0, 1)):
-                pass
+                continue
             messageset = utils.get_messageset(subscription['messageset'])
             if 'prebirth.mother' in messageset['short_name']:
                 raise AlreadySubscribedError(

@@ -4184,6 +4184,45 @@ class TestAddRegistrationsAPI(TestThirdPartyRegistrations):
 
         self.assertEqual(Registration.objects.count(), 0)
 
+    @responses.activate
+    def test_add_registration_existing_subscription_skips_inactive_subs(self):
+        """
+        We shouldn't count inactive subscriptions as existing subscriptions.
+        """
+        self.make_source_adminuser()
+
+        mother_id = "4038a518-2940-4b15-9c5c-2b7b123b8735"
+        operator_id = "4038a518-1111-1111-1111-hfud7383gfyt"
+
+        self.mock_identity_lookup("%2B2347031221927", mother_id)
+        self.mock_operator_lookup("11111", operator_id)
+        self.mock_subscription_lookup(mother_id, [{
+            "active": False,
+            "completed": False,
+            "process_status": 0,
+            "messageset": 1,
+        }, {
+            "active": True,
+            "completed": False,
+            "process_status": 0,
+            "messageset": 2,
+        }])
+        self.mock_messageset_lookup(2, {
+            'short_name': 'prebirth.mother.text.10_42',
+        })
+
+        data = override_get_data_mother_only(None)[0]
+
+        response = self.adminclient.post('/api/v1/addregistration/',
+                                         json.dumps(data),
+                                         content_type='application/json')
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data['registration_added'], False)
+        self.assertIn('prebirth.mother.text.10_42', response.data['error'])
+
+        self.assertEqual(Registration.objects.count(), 0)
+
 
 class TestPersonnelCodeView(AuthenticatedAPITestCase):
 
