@@ -395,6 +395,13 @@ class RepopulateMetrics(Task):
 repopulate_metrics = RepopulateMetrics()
 
 
+class AlreadySubscribedError(Exception):
+    """
+    For when a mother is already subscribed, but a new registration is being
+    requested
+    """
+
+
 class PullThirdPartyRegistrations(Task):
 
     def get_or_create_identity(
@@ -474,11 +481,31 @@ class PullThirdPartyRegistrations(Task):
 
         return data
 
+    def check_already_subscribed(self, identity_id):
+        """
+        Ensures that the mother doesn't have any existing prebirth
+        subscriptions
+        """
+        subscriptions = utils.get_subscriptions(identity_id)
+        for subscription in subscriptions:
+            if (
+                    not subscription['active'] or subscription['completed'] or
+                    subscription['process_status'] not in (0, 1)):
+                continue
+            messageset = utils.get_messageset(subscription['messageset'])
+            if 'prebirth.mother' in messageset['short_name']:
+                raise AlreadySubscribedError(
+                    "Mother already has a subscription to messageset "
+                    "{}".format(messageset['short_name']))
+
     def create_registration(self, line, source):
         mother_identity = self.get_or_create_identity(
             line['mothers_phone_number'], details={})
         operator_identity = self.get_operator_identity(
             line['health_worker_personnel_code'])
+
+        if mother_identity.get('id') is not None:
+            self.check_already_subscribed(mother_identity['id'])
 
         language = utils.get_language(line['preferred_msg_language'])
         receiver = utils.get_receiver(line['message_receiver'])
