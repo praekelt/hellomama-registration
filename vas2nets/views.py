@@ -47,7 +47,6 @@ class SyncWelcomeAudioView(APIView):
         vas2nets sftp folder
     """
     def post(self, request, *args, **kwargs):
-        print 'post'
         status = 202
 
         task_id = sync_welcome_audio.apply_async()
