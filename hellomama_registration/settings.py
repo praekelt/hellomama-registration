@@ -347,4 +347,12 @@ THIRDPARTY_REGISTRATIONS_PASSWORD = os.environ.get(
 V2N_VOICE_URL = os.environ.get(
     'V2N_VOICE_URL', 'http://197.253.23.121:8087/praekelt/download.php')
 
+
+V2N_FTP_HOST = os.environ.get('V2N_FTP_HOST')
+V2N_FTP_PORT = os.environ.get('V2N_FTP_PORT')
+V2N_FTP_USER = os.environ.get('V2N_FTP_USER')
+V2N_FTP_PASS = os.environ.get('V2N_FTP_PASS')
+V2N_FTP_ROOT = os.environ.get('V2N_FTP_ROOT')
+
+
 djcelery.setup_loader()

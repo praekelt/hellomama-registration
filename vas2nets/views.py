@@ -4,7 +4,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from hellomama_registration import utils
-from .tasks import fetch_voice_data, fetch_voice_data_history
+from .tasks import (
+    fetch_voice_data, fetch_voice_data_history, sync_welcome_audio)
 
 
 class FetchVoiceDataView(APIView):
@@ -33,6 +34,26 @@ class FetchVoiceDataView(APIView):
 
         resp = {
             "%s_initiated" % (task_name): True,
+            "task_id": str(task_id),
+        }
+
+        return Response(resp, status=status)
+
+
+class SyncWelcomeAudioView(APIView):
+
+    """ SyncWelcomeAudio Interaction
+        POST - starts up the task that sync the welcome audio files with the
+        vas2nets sftp folder
+    """
+    def post(self, request, *args, **kwargs):
+        print 'post'
+        status = 202
+
+        task_id = sync_welcome_audio.apply_async()
+
+        resp = {
+            "sync_welcome_audio_initiated": True,
             "task_id": str(task_id),
         }
 

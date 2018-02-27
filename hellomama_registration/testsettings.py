@@ -21,3 +21,9 @@ PASSWORD_HASHERS = ('django.contrib.auth.hashers.MD5PasswordHasher',)
 REST_FRAMEWORK['PAGE_SIZE'] = 2
 
 V2N_VOICE_URL = 'http://v2n.com/praekelt/download.php'
+
+V2N_FTP_HOST = 'localhost'
+V2N_FTP_PORT = '2222'
+V2N_FTP_USER = 'test'
+V2N_FTP_PASS = 'secret'
+V2N_FTP_ROOT = 'test_directory'
