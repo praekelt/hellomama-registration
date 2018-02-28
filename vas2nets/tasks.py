@@ -73,7 +73,8 @@ class SyncWelcomeAudio(Task):
             cloner = sftpclone.SFTPClone(
                 src,
                 "{}:{}@{}:{}".format(username, password, host, root),
-                port=port
+                port=port,
+                delete=False
             )
             cloner.run()
 

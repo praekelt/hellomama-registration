@@ -151,4 +151,4 @@ class TestSyncWelcomeAudio(AuthenticatedAPITestCase):
         sftp_mock.assert_called_with(
             '{}/registrations/static/audio/registration/'.format(
                 settings.BASE_DIR),
-            'test:secret@localhost:test_directory', port=2222)
+            'test:secret@localhost:test_directory', port=2222, delete=False)
