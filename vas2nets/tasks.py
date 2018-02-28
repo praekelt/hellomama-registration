@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from django.conf import settings
 from django.utils.dateparse import parse_datetime
 from celery.task import Task
+from sftpclone import sftpclone
 
 from .models import VoiceCall
 
@@ -53,3 +54,28 @@ class FetchVoiceDataHistory(Task):
                 args=[day.strftime('%Y-%m-%d')])
 
 fetch_voice_data_history = FetchVoiceDataHistory()
+
+
+class SyncWelcomeAudio(Task):
+
+    def run(self, **kwargs):
+
+        if settings.V2N_FTP_HOST:
+            src = '{}/registrations/static/audio/registration/'.format(
+                settings.BASE_DIR)
+
+            root = settings.V2N_FTP_ROOT
+            host = settings.V2N_FTP_HOST
+            username = settings.V2N_FTP_USER
+            password = settings.V2N_FTP_PASS
+            port = int(settings.V2N_FTP_PORT)
+
+            cloner = sftpclone.SFTPClone(
+                src,
+                "{}:{}@{}:{}".format(username, password, host, root),
+                port=port,
+                delete=False
+            )
+            cloner.run()
+
+sync_welcome_audio = SyncWelcomeAudio()

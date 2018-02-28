@@ -4,6 +4,7 @@ import responses
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.test import TestCase
+from mock import patch
 from rest_framework import status
 from rest_framework.test import APIClient
 from rest_framework.authtoken.models import Token
@@ -130,3 +131,24 @@ class TestFetchVoiceData(AuthenticatedAPITestCase):
         self.assertEqual(call.msisdn, "08164033333")
         self.assertEqual(call.duration, 65)
         self.assertEqual(call.reason, "Network failure")
+
+
+class TestSyncWelcomeAudio(AuthenticatedAPITestCase):
+
+    @responses.activate
+    @patch('sftpclone.sftpclone.SFTPClone.__init__')
+    @patch('sftpclone.sftpclone.SFTPClone.run')
+    def test_sync_welcome_audio(self, sftp_run_mock, sftp_mock):
+
+        sftp_run_mock.return_value = None
+        sftp_mock.return_value = None
+
+        response = self.normalclient.post('/api/v1/sync_welcome_audio/',
+                                          content_type='application/json')
+
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+
+        sftp_mock.assert_called_with(
+            '{}/registrations/static/audio/registration/'.format(
+                settings.BASE_DIR),
+            'test:secret@localhost:test_directory', port=2222, delete=False)

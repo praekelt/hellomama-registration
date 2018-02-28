@@ -29,6 +29,7 @@ setup(
         'seed-services-client>=0.31.0',
         'drfdocs==0.0.11',
         'pika==0.10.0',
+        'sftpclone==1.2',
     ],
     classifiers=[
         'Development Status :: 4 - Beta',
