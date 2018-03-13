@@ -197,6 +197,10 @@ def patch_subscription(subscription, data):
         subscription["id"], data)
 
 
+def resend_subscription(subscription_id):
+    return stage_based_messaging_client.resend_subscription(subscription_id)
+
+
 def deactivate_subscription(subscription):
     """ Sets a subscription deactive via a Patch request
     """

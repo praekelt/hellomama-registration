@@ -57,3 +57,54 @@ class SyncWelcomeAudioView(APIView):
         }
 
         return Response(resp, status=status)
+
+
+class ResendLastMessageView(APIView):
+
+    """ Triggers a re-send on the msisdn
+    """
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request, *args, **kwargs):
+        """ Finds the identity and subscriptions linked to the MSISDN and
+            triggers a resend on each subscription.
+        """
+        try:
+            msisdn = request.data["msisdn"]
+            msisdn = utils.normalize_msisdn(msisdn, '234')
+
+            identity = self.get_identity(msisdn)
+
+            if identity:
+                subscriptions = utils.get_subscriptions(identity['id'])
+                resent = 0
+                for subscription in subscriptions:
+                    if (
+                            subscription['completed'] or
+                            subscription['process_status'] not in (0, 1)):
+                        continue
+
+                    utils.resend_subscription(subscription['id'])
+                    resent += 1
+
+                status = 202
+                response = {"accepted": True, "resent_count": resent}
+            else:
+                status = 400
+                response = {
+                    "accepted": False,
+                    "reason": "Cannot find identity for MSISDN {}".format(
+                        msisdn)}
+        except KeyError as error:
+            status = 400
+            response = {"accepted": False,
+                        "reason": 'Missing field: {}'.format(error)}
+
+        return Response(response, status=status)
+
+    def get_identity(self, msisdn):
+        identities = utils.search_identities(
+            "details__addresses__msisdn", msisdn)
+
+        for identity in identities:
+            return identity

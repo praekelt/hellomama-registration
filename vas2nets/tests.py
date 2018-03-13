@@ -1,5 +1,6 @@
 from datetime import datetime
 import responses
+import json
 
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -152,3 +153,129 @@ class TestSyncWelcomeAudio(AuthenticatedAPITestCase):
             '{}/registrations/static/audio/registration/'.format(
                 settings.BASE_DIR),
             'test:secret@localhost:test_directory', port=2222, delete=False)
+
+
+class TestResendLastMessage(AuthenticatedAPITestCase):
+
+    def mock_identity_lookup(self, msisdn, identity_id, results=None):
+        responses.add(
+            responses.GET,
+            'http://localhost:8001/api/v1/identities/search/?details__addresses__msisdn=%s' % msisdn,  # noqa
+            json={
+                "next": None, "previous": None,
+                "results": results or []
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+
+    def mock_get_subscriptions(self, identity, results=None):
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/subscriptions/?active=True&identity={}'.format(identity),  # noqa
+            json={
+                "next": None,
+                "previous": None,
+                "results": results or [],
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+
+    def mock_resend_subscription(self, subscription_id):
+        responses.add(
+            responses.POST,
+            'http://localhost:8005/api/v1/subscriptions/{}/resend'.format(
+                subscription_id),
+            status=202, content_type='application/json',
+        )
+
+    @responses.activate
+    def test_resend_last_message(self):
+        """
+        If a resend request is received it should request a resend from the
+        stage based messenger for each active subscription that is not
+        completed or in the wrong process status.
+        """
+
+        mother_id = "4038a518-2940-4b15-9c5c-2b7b123b8735"
+        identity_results = [{
+            "id": mother_id,
+            "details": {
+                "addresses": {
+                    'msisdn': {
+                        '+2347031221927'.replace('%2B', '+'): {'default': True}
+                    }
+                }
+            }
+        }]
+        self.mock_identity_lookup("%2B2347031221927", mother_id,
+                                  identity_results)
+
+        results = [{
+            "id": "test_id",
+            "messageset": 1,
+            "active": True,
+            "completed": False,
+            "process_status": 0,
+            "next_sequence_number": 1,
+        }, {
+            "id": "test_id2",
+            "messageset": 1,
+            "active": True,
+            "completed": True,
+            "process_status": 0,
+            "next_sequence_number": 1,
+        }, {
+            "id": "test_id3",
+            "messageset": 1,
+            "active": True,
+            "completed": False,
+            "process_status": 2,
+            "next_sequence_number": 1,
+        }]
+        self.mock_get_subscriptions(mother_id, results=results)
+        self.mock_resend_subscription("test_id")
+
+        response = self.normalclient.post(
+            '/api/v1/resend_last_message/',
+            json.dumps({"msisdn": "07031221927"}),
+            content_type='application/json')
+
+        self.assertEqual(response.json().get('accepted'), True)
+        self.assertEqual(response.json().get('resent_count'), 1)
+
+    @responses.activate
+    def test_resend_last_message_no_identity(self):
+        """
+        If a resend request is received and no identity is found it should
+        raise an appropraite error.
+        """
+
+        mother_id = "4038a518-2940-4b15-9c5c-2b7b123b8735"
+        self.mock_identity_lookup("%2B2347031221928", mother_id)
+
+        response = self.normalclient.post(
+            '/api/v1/resend_last_message/',
+            json.dumps({"msisdn": "07031221928"}),
+            content_type='application/json')
+
+        self.assertEqual(response.json().get('accepted'), False)
+        self.assertEqual(response.json().get('reason'),
+                         "Cannot find identity for MSISDN +2347031221928")
+
+    @responses.activate
+    def test_resend_last_message_no_msisdn(self):
+        """
+        If a resend request is received and no msisdn is received it should
+        raise an appropraite error.
+        """
+
+        response = self.normalclient.post(
+            '/api/v1/resend_last_message/',
+            json.dumps({"to_addr": "07031221928"}),
+            content_type='application/json')
+
+        self.assertEqual(response.json().get('accepted'), False)
+        self.assertEqual(response.json().get('reason'),
+                         "Missing field: 'msisdn'")

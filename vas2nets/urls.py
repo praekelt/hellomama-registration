@@ -6,4 +6,6 @@ urlpatterns = [
         views.FetchVoiceDataView.as_view()),
     url(r'^api/v1/sync_welcome_audio/$',
         views.SyncWelcomeAudioView.as_view()),
+    url(r'^api/v1/resend_last_message/$',
+        views.ResendLastMessageView.as_view()),
 ]
