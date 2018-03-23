@@ -143,6 +143,13 @@ REG_DATA = {
         "gravida": "2",
         "loss_reason": "miscarriage"
     },
+    "public": {
+        "receiver_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
+        "operator_id": str(uuid.uuid4()),
+        "language": "eng_NG",
+        "msg_type": "text",
+        "msg_receiver": "mother_only"
+    },
     "missing_field": {
         "receiver_id": str(uuid.uuid4()),
         "operator_id": str(uuid.uuid4()),
@@ -996,6 +1003,22 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
         # Check
         self.assertEqual(v, True)
         self.assertEqual(registration.data["reg_type"], "pbl_loss")
+        self.assertEqual(registration.validated, True)
+
+    def test_validate_public(self):
+        # Setup
+        registration_data = {
+            "stage": "public",
+            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
+            "data": REG_DATA["public"].copy(),
+            "source": self.make_source_normaluser()
+        }
+        registration = Registration.objects.create(**registration_data)
+        # Execute
+        v = validate_registration.validate(registration)
+        # Check
+        self.assertEqual(v, True)
+        self.assertEqual(registration.data["reg_type"], "public")
         self.assertEqual(registration.validated, True)
 
     def test_validate_pregnancy_too_long(self):
@@ -1967,6 +1990,307 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         self.assertEqual(d_family.next_sequence_number, 30)
         self.assertEqual(d_family.lang, "eng_NG")
         self.assertEqual(d_family.schedule, 3)
+
+    @responses.activate
+    def test_mother_only_public_audio(self):
+        # Setup
+        # mock mother messageset lookup
+        query_string = '?short_name=public.mother.audio.0_4.tue.6_8'
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/%s' % query_string,
+            json={
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 4,
+                    "short_name": 'public.mother.audio.0_4.tue.6_8',
+                    "default_schedule": 6
+                }]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock mother schedule lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/schedule/6/',
+            json={"id": 6, "day_of_week": "2"},
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # prepare registration data
+        registration_data = {
+            "stage": "public",
+            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
+            "data": REG_DATA["public"].copy(),
+            "source": self.make_source_adminuser()
+        }
+        registration_data["data"]["msg_type"] = "audio"
+        registration_data["data"]["voice_times"] = "6_8"
+        registration_data["data"]["voice_days"] = "tue"
+        registration = Registration.objects.create(**registration_data)
+        # Execute
+        result = validate_registration.create_subscriptionrequests(
+            registration)
+        # Check
+        self.assertEqual(result, "1 SubscriptionRequest created")
+        d_mom = SubscriptionRequest.objects.last()
+        self.assertEqual(d_mom.identity,
+                         "mother00-9d89-4aa6-99ff-13c225365b5d")
+        self.assertEqual(d_mom.messageset, 4)
+        self.assertEqual(d_mom.next_sequence_number, 1)
+        self.assertEqual(d_mom.lang, "eng_NG")
+        self.assertEqual(d_mom.schedule, 6)
+
+    @responses.activate
+    def test_mother_only_public_text(self):
+        # Setup
+        # mock mother messageset lookup
+        query_string = '?short_name=public.mother.text.0_4'
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/%s' % query_string,
+            json={
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 5,
+                    "short_name": 'public.mother.audio.0_4.tue.6_8',
+                    "default_schedule": 6
+                }]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock mother schedule lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/schedule/6/',
+            json={"id": 6, "day_of_week": "2"},
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # prepare registration data
+        registration_data = {
+            "stage": "public",
+            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
+            "data": REG_DATA["public"].copy(),
+            "source": self.make_source_adminuser()
+        }
+        # mock mother MSISDN lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8001/api/v1/identities/mother00-9d89-4aa6-99ff-13c225365b5d/addresses/msisdn?default=True',  # noqa
+            json={
+                "next": None, "previous": None,
+                "results": [{"address": "+234123"}]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock mother welcome SMS send
+        responses.add(
+            responses.POST,
+            'http://localhost:8006/api/v1/outbound/',
+            json={"id": 1},
+            status=200, content_type='application/json',
+        )
+
+        registration = Registration.objects.create(**registration_data)
+        # Execute
+        result = validate_registration.create_subscriptionrequests(
+            registration)
+        # Check
+        self.assertEqual(result, "1 SubscriptionRequest created")
+        d_mom = SubscriptionRequest.objects.last()
+        self.assertEqual(d_mom.identity,
+                         "mother00-9d89-4aa6-99ff-13c225365b5d")
+        self.assertEqual(d_mom.messageset, 5)
+        self.assertEqual(d_mom.next_sequence_number, 1)
+        self.assertEqual(d_mom.lang, "eng_NG")
+        self.assertEqual(d_mom.schedule, 6)
+
+    @responses.activate
+    def test_mother_and_friend_public_audio(self):
+        # Setup
+        # mock mother messageset lookup
+        query_string = '?short_name=public.mother.audio.0_4.tue.6_8'
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/%s' % query_string,
+            json={
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 4,
+                    "short_name": 'public.mother.audio.0_4.tue.6_8',
+                    "default_schedule": 6
+                }]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock mother schedule lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/schedule/6/',
+            json={"id": 6, "day_of_week": "2"},
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock friend messageset lookup
+        query_string = '?short_name=public.household.audio.0_4.tue.6_8'
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/%s' % query_string,
+            json={
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 5,
+                    "short_name": 'public.mother.audio.0_4.tue.6_8',
+                    "default_schedule": 6
+                }]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # prepare registration data
+        registration_data = {
+            "stage": "public",
+            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
+            "data": REG_DATA["public"].copy(),
+            "source": self.make_source_adminuser()
+        }
+        registration_data["data"]["msg_type"] = "audio"
+        registration_data["data"]["msg_receiver"] = "mother_friend"
+        registration_data["data"]["voice_times"] = "6_8"
+        registration_data["data"]["voice_days"] = "tue"
+        registration_data["data"]["receiver_id"] = \
+            "friend00-73a2-4d89-b045-d52004c025fe"
+
+        registration = Registration.objects.create(**registration_data)
+        # Execute
+        result = validate_registration.create_subscriptionrequests(
+            registration)
+        # Check
+        self.assertEqual(result, "2 SubscriptionRequests created")
+        d_mom = SubscriptionRequest.objects.get(
+            identity="mother00-9d89-4aa6-99ff-13c225365b5d")
+        self.assertEqual(d_mom.identity,
+                         "mother00-9d89-4aa6-99ff-13c225365b5d")
+        self.assertEqual(d_mom.messageset, 4)
+        self.assertEqual(d_mom.next_sequence_number, 1)
+        self.assertEqual(d_mom.lang, "eng_NG")
+        self.assertEqual(d_mom.schedule, 6)
+
+        d_friend = SubscriptionRequest.objects.get(
+            identity="friend00-73a2-4d89-b045-d52004c025fe")
+        self.assertEqual(d_friend.identity,
+                         "friend00-73a2-4d89-b045-d52004c025fe")
+        self.assertEqual(d_friend.messageset, 5)
+        self.assertEqual(d_friend.next_sequence_number, 1)
+        self.assertEqual(d_friend.lang, "eng_NG")
+        self.assertEqual(d_friend.schedule, 6)
+
+    @responses.activate
+    def test_mother_and_father_public_text(self):
+        # Setup
+        # mock mother messageset lookup
+        query_string = '?short_name=public.mother.text.0_4'
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/%s' % query_string,
+            json={
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 4,
+                    "short_name": 'public.mother.text.0_4',
+                    "default_schedule": 6
+                }]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock mother schedule lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/schedule/6/',
+            json={"id": 6, "day_of_week": "2"},
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock friend messageset lookup
+        query_string = '?short_name=public.household.audio.0_4.tue.6_8'
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/%s' % query_string,
+            json={
+                "next": None,
+                "previous": None,
+                "results": [{
+                    "id": 5,
+                    "short_name": 'public.household.audio.0_4.tue.6_8',
+                    "default_schedule": 6
+                }]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock mother MSISDN lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8001/api/v1/identities/mother00-9d89-4aa6-99ff-13c225365b5d/addresses/msisdn?default=True',  # noqa
+            json={
+                "next": None, "previous": None,
+                "results": [{"address": "+234123"}]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+        # mock mother welcome SMS send
+        responses.add(
+            responses.POST,
+            'http://localhost:8006/api/v1/outbound/',
+            json={"id": 1},
+            status=200, content_type='application/json',
+        )
+        # prepare registration data
+        registration_data = {
+            "stage": "public",
+            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
+            "data": REG_DATA["public"].copy(),
+            "source": self.make_source_adminuser()
+        }
+        registration_data["data"]["msg_receiver"] = "mother_father"
+        registration_data["data"]["receiver_id"] = \
+            "friend00-73a2-4d89-b045-d52004c025fe"
+
+        registration = Registration.objects.create(**registration_data)
+        # Execute
+        result = validate_registration.create_subscriptionrequests(
+            registration)
+        # Check
+        self.assertEqual(result, "2 SubscriptionRequests created")
+        d_mom = SubscriptionRequest.objects.get(
+            identity="mother00-9d89-4aa6-99ff-13c225365b5d")
+        self.assertEqual(d_mom.identity,
+                         "mother00-9d89-4aa6-99ff-13c225365b5d")
+        self.assertEqual(d_mom.messageset, 4)
+        self.assertEqual(d_mom.next_sequence_number, 1)
+        self.assertEqual(d_mom.lang, "eng_NG")
+        self.assertEqual(d_mom.schedule, 6)
+
+        d_friend = SubscriptionRequest.objects.get(
+            identity="friend00-73a2-4d89-b045-d52004c025fe")
+        self.assertEqual(d_friend.identity,
+                         "friend00-73a2-4d89-b045-d52004c025fe")
+        self.assertEqual(d_friend.messageset, 5)
+        self.assertEqual(d_friend.next_sequence_number, 1)
+        self.assertEqual(d_friend.lang, "eng_NG")
+        self.assertEqual(d_friend.schedule, 6)
 
 
 class TestMetricsAPI(AuthenticatedAPITestCase):
