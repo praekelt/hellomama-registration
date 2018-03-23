@@ -56,7 +56,8 @@ class Registration(models.Model):
     STAGE_CHOICES = (
         ('prebirth', "Mother is pregnant"),
         ('postbirth', "Baby has been born"),
-        ('loss', "Baby loss")
+        ('loss', "Baby loss"),
+        ('public', "Public")
     )
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

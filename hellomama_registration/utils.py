@@ -224,6 +224,8 @@ def get_messageset_short_name(stage, recipient, msg_type, weeks, voice_days,
             week_range = "0_12"
         elif 13 <= weeks <= 52:
             week_range = "13_52"
+    elif stage == "public":
+        week_range = "0_4"
 
     if msg_type == "text":
         short_name = "%s.%s.%s.%s" % (
@@ -251,7 +253,9 @@ def get_messageset_schedule_sequence(short_name, weeks):
     msgs_per_week = len(days_of_week.split(','))
     # determine starting message
     # check if in prebirth stage - only starting messaging in week 10
-    if 'miscarriage' in short_name:
+    if 'public' in short_name:
+        next_sequence_number = 1  # always start public messages at 1
+    elif 'miscarriage' in short_name:
         next_sequence_number = 1  # always start loss messages at 1
     elif 'prebirth' in short_name:
         next_sequence_number = msgs_per_week * (

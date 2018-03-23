@@ -189,6 +189,20 @@ class ValidateRegistration(Task):
                 registration.data["invalid_fields"] = invalid_fields
                 registration.save()
                 return False
+        # Public Registration
+        elif (registration.stage == "public" and
+                set(fields_general).issubset(data_fields)):
+            invalid_fields = self.check_field_values(
+                fields_general, registration.data)
+            if invalid_fields == []:
+                registration.data["reg_type"] = "public"
+                registration.validated = True
+                registration.save()
+                return True
+            else:
+                registration.data["invalid_fields"] = invalid_fields
+                registration.save()
+                return False
         else:
             registration.data[
                 "invalid_fields"] = "Invalid combination of fields"
@@ -201,7 +215,10 @@ class ValidateRegistration(Task):
         """
 
         voice_days, voice_times = registration.get_voice_days_and_times()
-        weeks = registration.get_weeks_pregnant_or_age()
+
+        weeks = None
+        if registration.stage != 'public':
+            weeks = registration.get_weeks_pregnant_or_age()
 
         mother_short_name = utils.get_messageset_short_name(
             registration.stage, 'mother', registration.data["msg_type"],
@@ -246,14 +263,21 @@ class ValidateRegistration(Task):
         SubscriptionRequest.objects.create(**mother_sub)
 
         if registration.data["msg_receiver"] != 'mother_only':
-            if 'preg_week' in registration.data:
-                weeks = registration.data["preg_week"]
-            else:
-                weeks = registration.data["baby_age"]
+            weeks = None
+            days = "tue"
+            times = "6_8"
+            if registration.stage != 'public':
+                if 'preg_week' in registration.data:
+                    weeks = registration.data["preg_week"]
+                else:
+                    weeks = registration.data["baby_age"]
+
+                days = "fri"
+                times = "9_11"
 
             household_short_name = utils.get_messageset_short_name(
                 registration.stage, 'household', registration.data["msg_type"],
-                registration.data["preg_week"], "fri", "9_11"
+                weeks, days, times
             )
 
             household_msgset_id, household_msgset_schedule, seq_number =\
