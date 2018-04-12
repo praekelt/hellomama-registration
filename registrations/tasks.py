@@ -238,7 +238,25 @@ class ValidateRegistration(Task):
         }
 
         # Add mother welcome message
-        if 'voice_days' in registration.data and \
+        if registration.stage == 'public':
+            if registration.data["msg_receiver"] not in [
+                    "father_only", "friend_only", "family_only"]:
+                payload = {
+                    "to_identity": registration.id,
+                    "content": settings.MOTHER_WELCOME_TEXT_NG_ENG,
+                    "metadata": {}
+                }
+                utils.post_message(payload)
+
+            if registration.data["msg_receiver"] != 'mother_only':
+                payload = {
+                    "to_identity": registration.data["receiver_id"],
+                    "content": settings.MOTHER_WELCOME_TEXT_NG_ENG,
+                    "metadata": {}
+                }
+                utils.post_message(payload)
+
+        elif 'voice_days' in registration.data and \
                 registration.data["voice_days"] != "":
             mother_sub["metadata"]["prepend_next_delivery"] = \
                 "%s/static/audio/registration/%s/welcome_mother.mp3" % (
