@@ -1948,7 +1948,6 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             status=200, content_type='application/json',
             match_querystring=True
         )
-
         # mock mother SMS send
         responses.add(
             responses.POST,
@@ -2018,6 +2017,13 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             json={"id": 6, "day_of_week": "2"},
             status=200, content_type='application/json',
             match_querystring=True
+        )
+        # mock mother SMS send
+        responses.add(
+            responses.POST,
+            'http://localhost:8006/api/v1/outbound/',
+            json={"id": 1},
+            status=200, content_type='application/json',
         )
         # prepare registration data
         registration_data = {
@@ -2155,6 +2161,13 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
             },
             status=200, content_type='application/json',
             match_querystring=True
+        )
+        # mock mother welcome SMS send
+        responses.add(
+            responses.POST,
+            'http://localhost:8006/api/v1/outbound/',
+            json={"id": 1},
+            status=200, content_type='application/json',
         )
         # prepare registration data
         registration_data = {
