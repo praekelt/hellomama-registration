@@ -10,6 +10,7 @@ from django.conf import settings
 from seed_services_client.metrics import MetricsApiClient
 from openpyxl import load_workbook
 from io import BytesIO
+from collections import defaultdict
 
 from hellomama_registration import utils
 from .graphite import RetentionScheme
@@ -652,3 +653,50 @@ class PullThirdPartyRegistrations(Task):
             raise
 
 pull_third_party_registrations = PullThirdPartyRegistrations()
+
+
+class SendPublicRegistrationNotifications(Task):
+    """
+    Send out a notification SMS to the CORP for public registrations not
+    converted to full registrations
+    """
+
+    def run(self):
+
+        messagesets = utils.search_messagesets(
+            {'short_name__contains': 'public'})
+        messageset_ids = [str(messageset['id']) for messageset in messagesets]
+
+        subscriptions = utils.search_subscriptions(
+            {'completed': True, 'metadata_not_has_key': 'public_notification',
+             'messageset__in': ','.join(messageset_ids)})
+
+        corp_details = defaultdict(list)
+
+        for subscription in subscriptions:
+            active_subscriptions = utils.get_subscriptions(
+                subscription['identity'])
+
+            if not next(active_subscriptions, None):
+                identity = utils.get_identity(subscription['identity'])
+
+                corp_details[identity['operator_id']].append(
+                    utils.get_address_from_identity(identity))
+
+            utils.patch_subscription(
+                subscription, {"public_notification": "true"})
+
+        for corp_id, msisdns in corp_details.items():
+            payload = {
+                "to_identity": corp_id,
+                "content":
+                    "Public registrations not on full set: {}".format(
+                        ', '.join(msisdns)),
+                "metadata": {}
+            }
+            utils.post_message(payload)
+
+        return '{} CORP notification(s) sent'.format(len(corp_details))
+
+
+send_public_registration_notifications = SendPublicRegistrationNotifications()
