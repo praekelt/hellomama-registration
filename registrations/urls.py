@@ -25,4 +25,6 @@ urlpatterns = [
         views.AddRegistrationView.as_view()),
     url(r'^api/v1/personnelcode/$',
         views.PersonnelCodeView.as_view()),
+    url(r'^api/v1/send_public_notifications/$',
+        views.SendPublicRegistrationNotificationView.as_view()),
 ]

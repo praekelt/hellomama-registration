@@ -4858,7 +4858,7 @@ class TestSendPublicRegistrationNotifications(AuthenticatedAPITestCase):
             match_querystring=True
         )
 
-    def mock_identity_get(self, identity_id, operator_id):
+    def mock_identity_get(self, identity_id, operator_id, msisdn="+234123"):
         responses.add(
             responses.GET,
             'http://localhost:8001/api/v1/identities/{}/'.format(identity_id),
@@ -4867,7 +4867,7 @@ class TestSendPublicRegistrationNotifications(AuthenticatedAPITestCase):
                 "details": {
                     "addresses": {
                         'msisdn': {
-                            "+234123": {'default': True}
+                            msisdn: {'default': True}
                         }
                     }
                 },
@@ -4914,9 +4914,11 @@ class TestSendPublicRegistrationNotifications(AuthenticatedAPITestCase):
         subscriptions then notifications should be sent.
         """
         # Setup
-        mother_id = "mother00-9d89-4aa6-99ff-13c225365b5d"
+        mother_id1 = "mother01-9d89-4aa6-99ff-13c225365b5d"
+        mother_id2 = "mother02-9d89-4aa6-99ff-13c225365b5d"
         operator_id = "nurse000-6a07-4377-a4f6-c0485ccba234"
-        subscription_id = "subscription1-4bf1-8779-c47b428e89d0"
+        subscription_id1 = "subscription1-4bf1-8779-c47b428e89d0"
+        subscription_id2 = "subscription2-4bf1-8779-c47b428e89d0"
         # mock public messageset lookup
         self.mock_messageset_search()
 
@@ -4924,22 +4926,33 @@ class TestSendPublicRegistrationNotifications(AuthenticatedAPITestCase):
         self.mock_subscription_search(
             'completed=True&metadata_not_has_key=public_notification&'
             'messageset__in=1%2C2', [{
-                "id": subscription_id,
+                "id": subscription_id1,
                 "active": False,
                 "completed": True,
                 "process_status": 0,
                 "messageset": 1,
-                "identity": mother_id
+                "identity": mother_id1
+            }, {
+                "id": subscription_id2,
+                "active": False,
+                "completed": True,
+                "process_status": 0,
+                "messageset": 1,
+                "identity": mother_id2
             }])
 
         # mock full subscription lookup
         self.mock_subscription_search(
-            'active=True&identity={}'.format(mother_id))
+            'active=True&identity={}'.format(mother_id1))
+        self.mock_subscription_search(
+            'active=True&identity={}'.format(mother_id2))
 
         # mock mother identity lookup
-        self.mock_identity_get(mother_id, operator_id)
+        self.mock_identity_get(mother_id1, operator_id)
+        self.mock_identity_get(mother_id2, operator_id, "+234222")
 
-        self.mock_patch_subscription(subscription_id)
+        self.mock_patch_subscription(subscription_id1)
+        self.mock_patch_subscription(subscription_id2)
         self.mock_outbound()
 
         # Execute
@@ -4947,20 +4960,21 @@ class TestSendPublicRegistrationNotifications(AuthenticatedAPITestCase):
         # Check
         self.assertEqual(result.get(), "1 CORP notification(s) sent")
 
-        self.assertEqual(len(responses.calls), 6)
+        self.assertEqual(len(responses.calls), 9)
 
         # check the subscription patch
         call = responses.calls[-2]
         self.assertEqual(
             call.request.url,
             'http://localhost:8005/api/v1/subscriptions/{}/'.format(
-                subscription_id))
+                subscription_id2))
         self.assertEqual(call.request.body, '{"public_notification": "true"}')
 
         # check the outbound post
         call = responses.calls[-1]
-        self.assertEqual(json.loads(call.request.body)['content'],
-                         'Public registrations not on full set: +234123')
+        self.assertEqual(
+            json.loads(call.request.body)['content'],
+            'Public registrations not on full set: +234123, +234222')
         self.assertEqual(json.loads(call.request.body)['to_identity'],
                          operator_id)
 
@@ -5015,3 +5029,12 @@ class TestSendPublicRegistrationNotifications(AuthenticatedAPITestCase):
             'http://localhost:8005/api/v1/subscriptions/{}/'.format(
                 subscription_id))
         self.assertEqual(call.request.body, '{"public_notification": "true"}')
+
+    @mock.patch('registrations.views.send_public_registration_notifications')
+    def test_send_notifications_api(self, task):
+
+        response = self.normalclient.post('/api/v1/send_public_notifications/')
+
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+
+        task.delay.assert_called_once()

@@ -14,7 +14,8 @@ from .serializers import (UserSerializer, GroupSerializer,
 from hellomama_registration import utils
 # Uncomment line below if scheduled metrics are added
 # from .tasks import scheduled_metrics
-from .tasks import pull_third_party_registrations
+from .tasks import (
+    pull_third_party_registrations, send_public_registration_notifications)
 
 
 class CreatedAtCursorPagination(CursorPagination):
@@ -256,3 +257,18 @@ class PersonnelCodeView(APIView):
             codes.add(identity['details'].get('personnel_code'))
 
         return Response({"results": list(codes)}, status=200)
+
+
+class SendPublicRegistrationNotificationView(APIView):
+
+    """ Triggers a notification send to operators about subscribers not on the
+        full set
+    """
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request, *args, **kwargs):
+
+        status = 202
+        accepted = {"accepted": True}
+        send_public_registration_notifications.delay()
+        return Response(accepted, status=status)
