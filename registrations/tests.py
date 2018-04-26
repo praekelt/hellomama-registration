@@ -5005,9 +5005,58 @@ class TestSendPublicRegistrationNotifications(AuthenticatedAPITestCase):
 
     @mock.patch('registrations.views.send_public_registration_notifications')
     def test_send_notifications_api(self, task):
+        """
+        When the API endpoint is called the task should be started to send out
+        the notifications.
+        """
 
         response = self.normalclient.post('/api/v1/send_public_notifications/')
 
         self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         task.delay.assert_called_once()
+
+    @responses.activate
+    def test_send_notifications_one_chunk(self):
+        """
+        """
+        operator_id = "nurse000-6a07-4377-a4f6-c0485ccba234"
+        corp_details = {operator_id: ["+2348056756756", "+2348056756757"]}
+
+        self.mock_outbound()
+
+        send_public_registration_notifications.send_notifications(corp_details)
+
+        self.assertEqual(len(responses.calls), 1)
+        # check the outbound post
+        call = responses.calls[-1]
+        self.assertEqual(
+            json.loads(call.request.body)['content'],
+            'Public registrations not on full set: +2348056756756, '
+            '+2348056756757')
+
+    @responses.activate
+    def test_send_notifications_multiple_chunks(self):
+        """
+        """
+        operator_id = "nurse000-6a07-4377-a4f6-c0485ccba234"
+        corp_details = {operator_id: []}
+
+        for i in range(0, 40):
+            msisdn = "+2348056756{:03d}".format(i)
+            corp_details[operator_id].append(msisdn)
+
+        self.mock_outbound()
+
+        send_public_registration_notifications.send_notifications(corp_details)
+
+        self.assertEqual(len(responses.calls), 3)
+        # check the outbound post
+        content = json.loads(responses.calls[-1].request.body)['content']
+        self.assertEqual(content.count('+234'), 10)
+
+        content = json.loads(responses.calls[-2].request.body)['content']
+        self.assertEqual(content.count('+234'), 15)
+
+        content = json.loads(responses.calls[-3].request.body)['content']
+        self.assertEqual(content.count('+234'), 15)

@@ -661,6 +661,22 @@ class SendPublicRegistrationNotifications(Task):
     converted to full registrations
     """
 
+    def send_notifications(self, details):
+
+        def chunker(seq, size):
+            return (seq[pos:pos + size] for pos in xrange(0, len(seq), size))
+
+        for corp_id, msisdns in details.items():
+            for group in chunker(msisdns, 15):
+                payload = {
+                    "to_identity": corp_id,
+                    "content":
+                        "Public registrations not on full set: {}".format(
+                            ', '.join(group)),
+                    "metadata": {}
+                }
+                utils.post_message(payload)
+
     def run(self):
 
         subscriptions = utils.search_subscriptions(
@@ -682,15 +698,7 @@ class SendPublicRegistrationNotifications(Task):
             utils.patch_subscription(
                 subscription, {"public_notification": "true"})
 
-        for corp_id, msisdns in corp_details.items():
-            payload = {
-                "to_identity": corp_id,
-                "content":
-                    "Public registrations not on full set: {}".format(
-                        ', '.join(msisdns)),
-                "metadata": {}
-            }
-            utils.post_message(payload)
+        self.send_notifications(corp_details)
 
         return '{} CORP notification(s) sent'.format(len(corp_details))
 
