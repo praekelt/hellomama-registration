@@ -695,7 +695,7 @@ class SendPublicRegistrationNotifications(Task):
             if not next(active_subscriptions, None):
                 identity = utils.get_identity(subscription['identity'])
 
-                corp_details[identity['operator_id']].append(
+                corp_details[identity['operator']].append(
                     utils.get_address_from_identity(identity))
 
             utils.patch_subscription(

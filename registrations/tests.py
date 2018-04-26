@@ -4851,7 +4851,7 @@ class TestSendPublicRegistrationNotifications(AuthenticatedAPITestCase):
                     }
                 },
                 "communicate_through": None,
-                "operator_id": operator_id,
+                "operator": operator_id,
             },
             status=200, content_type='application/json',
             match_querystring=True
