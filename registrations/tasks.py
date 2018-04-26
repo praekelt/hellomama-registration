@@ -698,8 +698,10 @@ class SendPublicRegistrationNotifications(Task):
                 corp_details[identity['operator']].append(
                     utils.get_address_from_identity(identity))
 
+            metadata = subscription['metadata']
+            metadata['public_notification'] = 'true'
             utils.patch_subscription(
-                subscription, {"public_notification": "true"})
+                subscription, {"metadata": metadata})
 
         self.send_notifications(corp_details)
 
