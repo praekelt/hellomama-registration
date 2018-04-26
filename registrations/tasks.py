@@ -10,6 +10,7 @@ from django.conf import settings
 from seed_services_client.metrics import MetricsApiClient
 from openpyxl import load_workbook
 from io import BytesIO
+from collections import defaultdict
 
 from hellomama_registration import utils
 from .graphite import RetentionScheme
@@ -652,3 +653,55 @@ class PullThirdPartyRegistrations(Task):
             raise
 
 pull_third_party_registrations = PullThirdPartyRegistrations()
+
+
+class SendPublicRegistrationNotifications(Task):
+    """
+    Send out a notification SMS to the CORP for public registrations not
+    converted to full registrations
+    """
+
+    def send_notifications(self, details):
+
+        def chunker(l, n):
+            for i in range(0, len(l), n):
+                yield l[i:i + n]
+
+        for corp_id, msisdns in details.items():
+            for group in chunker(msisdns, 15):
+                payload = {
+                    "to_identity": corp_id,
+                    "content":
+                        "Public registrations not on full set: {}".format(
+                            ', '.join(group)),
+                    "metadata": {}
+                }
+                utils.post_message(payload)
+
+    def run(self):
+
+        subscriptions = utils.search_subscriptions(
+            {'completed': True, 'metadata_not_has_key': 'public_notification',
+             'messageset_contains': 'public'})
+
+        corp_details = defaultdict(list)
+
+        for subscription in subscriptions:
+            active_subscriptions = utils.get_subscriptions(
+                subscription['identity'])
+
+            if not next(active_subscriptions, None):
+                identity = utils.get_identity(subscription['identity'])
+
+                corp_details[identity['operator_id']].append(
+                    utils.get_address_from_identity(identity))
+
+            utils.patch_subscription(
+                subscription, {"public_notification": "true"})
+
+        self.send_notifications(corp_details)
+
+        return '{} CORP notification(s) sent'.format(len(corp_details))
+
+
+send_public_registration_notifications = SendPublicRegistrationNotifications()

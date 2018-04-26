@@ -45,7 +45,7 @@ from .tasks import (
     validate_registration,
     is_valid_date, is_valid_uuid, is_valid_lang, is_valid_msg_type,
     is_valid_msg_receiver, is_valid_loss_reason, is_valid_state, is_valid_role,
-    repopulate_metrics)
+    repopulate_metrics, send_public_registration_notifications)
 
 
 def override_get_today():
@@ -4811,3 +4811,252 @@ class TestFixV2NRegistrationsCommand(AuthenticatedAPITestCase):
         self.assertEqual(
             Registration.objects.filter(
                 data__operator_id="operator-id-12345").count(), 1)
+
+
+class TestSendPublicRegistrationNotifications(AuthenticatedAPITestCase):
+
+    def mock_subscription_search(self, query_string='', result=[]):
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/subscriptions/?{}'.format(
+                query_string),
+            json={
+                "next": None, "previous": None,
+                "results": result
+            },
+            status=200, content_type='application/json', match_querystring=True
+        )
+
+    def mock_patch_subscription(self, subscription_id, data={}):
+        responses.add(
+            responses.PATCH,
+            'http://localhost:8005/api/v1/subscriptions/{}/'.format(
+                subscription_id),
+            json=data,
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+
+    def mock_identity_get(self, identity_id, operator_id, msisdn="+234123"):
+        responses.add(
+            responses.GET,
+            'http://localhost:8001/api/v1/identities/{}/'.format(identity_id),
+            json={
+                "id": identity_id,
+                "details": {
+                    "addresses": {
+                        'msisdn': {
+                            msisdn: {'default': True}
+                        }
+                    }
+                },
+                "communicate_through": None,
+                "operator_id": operator_id,
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+
+    def mock_outbound(self):
+        responses.add(
+            responses.POST,
+            'http://localhost:8006/api/v1/outbound/',
+            json={"id": 1},
+            status=200, content_type='application/json',
+        )
+
+    @responses.activate
+    def test_send_notifications_no_subscriptions(self):
+        """
+        If there are no subscriptions found then no notifications should be
+        sent.
+        """
+        # Setup
+        # mock public subscription lookup
+        self.mock_subscription_search(
+            'completed=True&metadata_not_has_key=public_notification&'
+            'messageset_contains=public')
+
+        # Execute
+        result = send_public_registration_notifications.apply_async()
+        # Check
+        self.assertEqual(result.get(), "0 CORP notification(s) sent")
+
+        self.assertEqual(len(responses.calls), 1)
+
+    @responses.activate
+    def test_send_notifications_no_active(self):
+        """
+        If there are completed public subscriptions found with no active full
+        subscriptions then notifications should be sent.
+        """
+        # Setup
+        mother_id1 = "mother01-9d89-4aa6-99ff-13c225365b5d"
+        mother_id2 = "mother02-9d89-4aa6-99ff-13c225365b5d"
+        operator_id = "nurse000-6a07-4377-a4f6-c0485ccba234"
+        subscription_id1 = "subscription1-4bf1-8779-c47b428e89d0"
+        subscription_id2 = "subscription2-4bf1-8779-c47b428e89d0"
+
+        # mock public subscription lookup
+        self.mock_subscription_search(
+            'completed=True&metadata_not_has_key=public_notification&'
+            'messageset_contains=public', [{
+                "id": subscription_id1,
+                "active": False,
+                "completed": True,
+                "process_status": 0,
+                "messageset": 1,
+                "identity": mother_id1
+            }, {
+                "id": subscription_id2,
+                "active": False,
+                "completed": True,
+                "process_status": 0,
+                "messageset": 1,
+                "identity": mother_id2
+            }])
+
+        # mock full subscription lookup
+        self.mock_subscription_search(
+            'active=True&identity={}'.format(mother_id1))
+        self.mock_subscription_search(
+            'active=True&identity={}'.format(mother_id2))
+
+        # mock mother identity lookup
+        self.mock_identity_get(mother_id1, operator_id)
+        self.mock_identity_get(mother_id2, operator_id, "+234222")
+
+        self.mock_patch_subscription(subscription_id1)
+        self.mock_patch_subscription(subscription_id2)
+        self.mock_outbound()
+
+        # Execute
+        result = send_public_registration_notifications.apply_async()
+        # Check
+        self.assertEqual(result.get(), "1 CORP notification(s) sent")
+
+        self.assertEqual(len(responses.calls), 8)
+
+        # check the subscription patch
+        call = responses.calls[-2]
+        self.assertEqual(
+            call.request.url,
+            'http://localhost:8005/api/v1/subscriptions/{}/'.format(
+                subscription_id2))
+        self.assertEqual(call.request.body, '{"public_notification": "true"}')
+
+        # check the outbound post
+        call = responses.calls[-1]
+        self.assertEqual(
+            json.loads(call.request.body)['content'],
+            'Public registrations not on full set: +234123, +234222')
+        self.assertEqual(json.loads(call.request.body)['to_identity'],
+                         operator_id)
+
+    @responses.activate
+    def test_send_notifications_with_active(self):
+        """
+        If there are completed public subscriptions found with active full
+        subscriptions then no notifications should be sent.
+        """
+        # Setup
+        mother_id = "mother00-9d89-4aa6-99ff-13c225365b5d"
+        subscription_id = "subscription1-4bf1-8779-c47b428e89d0"
+
+        # mock public subscription lookup
+        self.mock_subscription_search(
+            'completed=True&metadata_not_has_key=public_notification&'
+            'messageset_contains=public', [{
+                "id": subscription_id,
+                "active": False,
+                "completed": True,
+                "process_status": 0,
+                "messageset": 1,
+                "identity": mother_id
+            }])
+
+        # mock full subscription lookup
+        self.mock_subscription_search(
+            'active=True&identity={}'.format(mother_id), [{
+                "id": "subscription2-4bf1-8779-c47b428e89d0",
+                "active": True,
+                "completed": False,
+                "process_status": 0,
+                "messageset": 2,
+                "identity": mother_id
+            }])
+
+        self.mock_patch_subscription(subscription_id)
+
+        # Execute
+        result = send_public_registration_notifications.apply_async()
+        # Check
+        self.assertEqual(result.get(), "0 CORP notification(s) sent")
+
+        self.assertEqual(len(responses.calls), 3)
+
+        # check the subscription patch
+        call = responses.calls[-1]
+        self.assertEqual(
+            call.request.url,
+            'http://localhost:8005/api/v1/subscriptions/{}/'.format(
+                subscription_id))
+        self.assertEqual(call.request.body, '{"public_notification": "true"}')
+
+    @mock.patch('registrations.views.send_public_registration_notifications')
+    def test_send_notifications_api(self, task):
+        """
+        When the API endpoint is called the task should be started to send out
+        the notifications.
+        """
+
+        response = self.normalclient.post('/api/v1/send_public_notifications/')
+
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+
+        task.delay.assert_called_once()
+
+    @responses.activate
+    def test_send_notifications_one_chunk(self):
+        """
+        """
+        operator_id = "nurse000-6a07-4377-a4f6-c0485ccba234"
+        corp_details = {operator_id: ["+2348056756756", "+2348056756757"]}
+
+        self.mock_outbound()
+
+        send_public_registration_notifications.send_notifications(corp_details)
+
+        self.assertEqual(len(responses.calls), 1)
+        # check the outbound post
+        call = responses.calls[-1]
+        self.assertEqual(
+            json.loads(call.request.body)['content'],
+            'Public registrations not on full set: +2348056756756, '
+            '+2348056756757')
+
+    @responses.activate
+    def test_send_notifications_multiple_chunks(self):
+        """
+        """
+        operator_id = "nurse000-6a07-4377-a4f6-c0485ccba234"
+        corp_details = {operator_id: []}
+
+        for i in range(0, 40):
+            msisdn = "+2348056756{:03d}".format(i)
+            corp_details[operator_id].append(msisdn)
+
+        self.mock_outbound()
+
+        send_public_registration_notifications.send_notifications(corp_details)
+
+        self.assertEqual(len(responses.calls), 3)
+        # check the outbound post
+        content = json.loads(responses.calls[-1].request.body)['content']
+        self.assertEqual(content.count('+234'), 10)
+
+        content = json.loads(responses.calls[-2].request.body)['content']
+        self.assertEqual(content.count('+234'), 15)
+
+        content = json.loads(responses.calls[-3].request.body)['content']
+        self.assertEqual(content.count('+234'), 15)

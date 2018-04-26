@@ -108,6 +108,18 @@ def get_identity_address(identity):
     return identity_store_client.get_identity_address(identity)
 
 
+def get_address_from_identity(identity):
+    last_address = None
+    for address, detail in identity['details'].get(
+            'addresses', {}).get('msisdn', {}).items():
+        if detail.get('optedout', False) is True:
+            pass
+        if detail.get('default', False) is True:
+            return address
+        last_address = address
+    return last_address
+
+
 def search_identities(search_key, search_value):
     """
     Returns the identities matching the given parameters
@@ -178,6 +190,11 @@ def get_messageset(messageset_id):
     return stage_based_messaging_client.get_messageset(messageset_id)
 
 
+def search_messagesets(params):
+    r = stage_based_messaging_client.get_messagesets(params=params)
+    return r["results"]
+
+
 def get_schedule(schedule_id):
     return stage_based_messaging_client.get_schedule(schedule_id)
 
@@ -186,6 +203,12 @@ def get_subscriptions(identity):
     """ Gets the active subscriptions for an identity
     """
     params = {'identity': identity, 'active': True}
+    return search_subscriptions(params)
+
+
+def search_subscriptions(params):
+    """ Gets the subscriptions based on the params
+    """
     r = stage_based_messaging_client.get_subscriptions(params=params)
     return r["results"]
 
