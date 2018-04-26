@@ -663,13 +663,9 @@ class SendPublicRegistrationNotifications(Task):
 
     def run(self):
 
-        messagesets = utils.search_messagesets(
-            {'short_name__contains': 'public'})
-        messageset_ids = [str(messageset['id']) for messageset in messagesets]
-
         subscriptions = utils.search_subscriptions(
             {'completed': True, 'metadata_not_has_key': 'public_notification',
-             'messageset__in': ','.join(messageset_ids)})
+             'messageset_contains': 'public'})
 
         corp_details = defaultdict(list)
 

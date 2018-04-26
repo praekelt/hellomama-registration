@@ -4837,27 +4837,6 @@ class TestSendPublicRegistrationNotifications(AuthenticatedAPITestCase):
             match_querystring=True
         )
 
-    def mock_messageset_search(self):
-        responses.add(
-            responses.GET,
-            'http://localhost:8005/api/v1/messageset/?short_name__contains'
-            '=public',
-            json={
-                "next": None,
-                "previous": None,
-                "results": [{
-                    "id": 1,
-                    "short_name": 'public.mother.audio.0_4.tue.6_8',
-                    "default_schedule": 1
-                }, {
-                    "id": 2,
-                    "short_name": 'public.mother.text.0_4',
-                    "default_schedule": 2
-                }]
-            }, status=200, content_type='application/json',
-            match_querystring=True
-        )
-
     def mock_identity_get(self, identity_id, operator_id, msisdn="+234123"):
         responses.add(
             responses.GET,
@@ -4896,16 +4875,14 @@ class TestSendPublicRegistrationNotifications(AuthenticatedAPITestCase):
         # mock public subscription lookup
         self.mock_subscription_search(
             'completed=True&metadata_not_has_key=public_notification&'
-            'messageset__in=1%2C2')
-        # mock public messageset lookup
-        self.mock_messageset_search()
+            'messageset_contains=public')
 
         # Execute
         result = send_public_registration_notifications.apply_async()
         # Check
         self.assertEqual(result.get(), "0 CORP notification(s) sent")
 
-        self.assertEqual(len(responses.calls), 2)
+        self.assertEqual(len(responses.calls), 1)
 
     @responses.activate
     def test_send_notifications_no_active(self):
@@ -4919,13 +4896,11 @@ class TestSendPublicRegistrationNotifications(AuthenticatedAPITestCase):
         operator_id = "nurse000-6a07-4377-a4f6-c0485ccba234"
         subscription_id1 = "subscription1-4bf1-8779-c47b428e89d0"
         subscription_id2 = "subscription2-4bf1-8779-c47b428e89d0"
-        # mock public messageset lookup
-        self.mock_messageset_search()
 
         # mock public subscription lookup
         self.mock_subscription_search(
             'completed=True&metadata_not_has_key=public_notification&'
-            'messageset__in=1%2C2', [{
+            'messageset_contains=public', [{
                 "id": subscription_id1,
                 "active": False,
                 "completed": True,
@@ -4960,7 +4935,7 @@ class TestSendPublicRegistrationNotifications(AuthenticatedAPITestCase):
         # Check
         self.assertEqual(result.get(), "1 CORP notification(s) sent")
 
-        self.assertEqual(len(responses.calls), 9)
+        self.assertEqual(len(responses.calls), 8)
 
         # check the subscription patch
         call = responses.calls[-2]
@@ -4987,13 +4962,11 @@ class TestSendPublicRegistrationNotifications(AuthenticatedAPITestCase):
         # Setup
         mother_id = "mother00-9d89-4aa6-99ff-13c225365b5d"
         subscription_id = "subscription1-4bf1-8779-c47b428e89d0"
-        # mock public messageset lookup
-        self.mock_messageset_search()
 
         # mock public subscription lookup
         self.mock_subscription_search(
             'completed=True&metadata_not_has_key=public_notification&'
-            'messageset__in=1%2C2', [{
+            'messageset_contains=public', [{
                 "id": subscription_id,
                 "active": False,
                 "completed": True,
@@ -5020,7 +4993,7 @@ class TestSendPublicRegistrationNotifications(AuthenticatedAPITestCase):
         # Check
         self.assertEqual(result.get(), "0 CORP notification(s) sent")
 
-        self.assertEqual(len(responses.calls), 4)
+        self.assertEqual(len(responses.calls), 3)
 
         # check the subscription patch
         call = responses.calls[-1]
