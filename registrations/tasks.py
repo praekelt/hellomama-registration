@@ -682,13 +682,15 @@ class SendPublicRegistrationNotifications(Task):
 
         subscriptions = utils.search_subscriptions(
             {'completed': True, 'metadata_not_has_key': 'public_notification',
-             'messageset_contains': 'public'})
+             'messageset_contains': 'public.mother'})
 
         corp_details = defaultdict(list)
 
         for subscription in subscriptions:
-            active_subscriptions = utils.get_subscriptions(
-                subscription['identity'])
+            active_subscriptions = utils.search_subscriptions({
+                'identity': subscription['identity'],
+                'messageset_contains': 'birth.mother',
+                'active': True})
 
             if not next(active_subscriptions, None):
                 identity = utils.get_identity(subscription['identity'])
