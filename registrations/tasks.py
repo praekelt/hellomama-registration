@@ -663,8 +663,9 @@ class SendPublicRegistrationNotifications(Task):
 
     def send_notifications(self, details):
 
-        def chunker(seq, size):
-            return (seq[pos:pos + size] for pos in xrange(0, len(seq), size))
+        def chunker(l, n):
+            for i in range(0, len(l), n):
+                yield l[i:i + n]
 
         for corp_id, msisdns in details.items():
             for group in chunker(msisdns, 15):
