@@ -4906,14 +4906,22 @@ class TestSendPublicRegistrationNotifications(AuthenticatedAPITestCase):
                 "completed": True,
                 "process_status": 0,
                 "messageset": 1,
-                "identity": mother_id1
+                "identity": mother_id1,
+                "metadata": {
+                    "scheduler_schedule_id":
+                        "schedule-1111-4d2f-ada6-ac73482014bc"
+                }
             }, {
                 "id": subscription_id2,
                 "active": False,
                 "completed": True,
                 "process_status": 0,
                 "messageset": 1,
-                "identity": mother_id2
+                "identity": mother_id2,
+                "metadata": {
+                    "scheduler_schedule_id":
+                        "schedule-2222-4d2f-ada6-ac73482014bc"
+                }
             }])
 
         # mock full subscription lookup
@@ -4945,7 +4953,13 @@ class TestSendPublicRegistrationNotifications(AuthenticatedAPITestCase):
             call.request.url,
             'http://localhost:8005/api/v1/subscriptions/{}/'.format(
                 subscription_id2))
-        self.assertEqual(call.request.body, '{"public_notification": "true"}')
+        self.assertEqual(
+            json.loads(call.request.body)['metadata'],
+            {
+                "scheduler_schedule_id":
+                    "schedule-2222-4d2f-ada6-ac73482014bc",
+                "public_notification": "true"
+            })
 
         # check the outbound post
         call = responses.calls[-1]
@@ -4974,7 +4988,11 @@ class TestSendPublicRegistrationNotifications(AuthenticatedAPITestCase):
                 "completed": True,
                 "process_status": 0,
                 "messageset": 1,
-                "identity": mother_id
+                "identity": mother_id,
+                "metadata": {
+                    "scheduler_schedule_id":
+                        "schedule-1111-4d2f-ada6-ac73482014bc"
+                }
             }])
 
         # mock full subscription lookup
@@ -5004,7 +5022,13 @@ class TestSendPublicRegistrationNotifications(AuthenticatedAPITestCase):
             call.request.url,
             'http://localhost:8005/api/v1/subscriptions/{}/'.format(
                 subscription_id))
-        self.assertEqual(call.request.body, '{"public_notification": "true"}')
+        self.assertEqual(
+            json.loads(call.request.body)['metadata'],
+            {
+                "scheduler_schedule_id":
+                    "schedule-1111-4d2f-ada6-ac73482014bc",
+                "public_notification": "true"
+            })
 
     @mock.patch('registrations.views.send_public_registration_notifications')
     def test_send_notifications_api(self, task):
