@@ -4875,7 +4875,7 @@ class TestSendPublicRegistrationNotifications(AuthenticatedAPITestCase):
         # mock public subscription lookup
         self.mock_subscription_search(
             'completed=True&metadata_not_has_key=public_notification&'
-            'messageset_contains=public')
+            'messageset_contains=public.mother')
 
         # Execute
         result = send_public_registration_notifications.apply_async()
@@ -4900,7 +4900,7 @@ class TestSendPublicRegistrationNotifications(AuthenticatedAPITestCase):
         # mock public subscription lookup
         self.mock_subscription_search(
             'completed=True&metadata_not_has_key=public_notification&'
-            'messageset_contains=public', [{
+            'messageset_contains=public.mother', [{
                 "id": subscription_id1,
                 "active": False,
                 "completed": True,
@@ -4918,9 +4918,11 @@ class TestSendPublicRegistrationNotifications(AuthenticatedAPITestCase):
 
         # mock full subscription lookup
         self.mock_subscription_search(
-            'active=True&identity={}'.format(mother_id1))
+            'active=True&messageset_contains=birth.mother&identity={}'.format(
+                mother_id1))
         self.mock_subscription_search(
-            'active=True&identity={}'.format(mother_id2))
+            'active=True&messageset_contains=birth.mother&identity={}'.format(
+                mother_id2))
 
         # mock mother identity lookup
         self.mock_identity_get(mother_id1, operator_id)
@@ -4966,7 +4968,7 @@ class TestSendPublicRegistrationNotifications(AuthenticatedAPITestCase):
         # mock public subscription lookup
         self.mock_subscription_search(
             'completed=True&metadata_not_has_key=public_notification&'
-            'messageset_contains=public', [{
+            'messageset_contains=public.mother', [{
                 "id": subscription_id,
                 "active": False,
                 "completed": True,
@@ -4977,14 +4979,15 @@ class TestSendPublicRegistrationNotifications(AuthenticatedAPITestCase):
 
         # mock full subscription lookup
         self.mock_subscription_search(
-            'active=True&identity={}'.format(mother_id), [{
-                "id": "subscription2-4bf1-8779-c47b428e89d0",
-                "active": True,
-                "completed": False,
-                "process_status": 0,
-                "messageset": 2,
-                "identity": mother_id
-            }])
+            'active=True&messageset_contains=birth.mother&identity={}'.format(
+                mother_id), [{
+                    "id": "subscription2-4bf1-8779-c47b428e89d0",
+                    "active": True,
+                    "completed": False,
+                    "process_status": 0,
+                    "messageset": 2,
+                    "identity": mother_id
+                }])
 
         self.mock_patch_subscription(subscription_id)
 
@@ -5019,6 +5022,7 @@ class TestSendPublicRegistrationNotifications(AuthenticatedAPITestCase):
     @responses.activate
     def test_send_notifications_one_chunk(self):
         """
+        When there is only a few msisdns then there will only be one chunk
         """
         operator_id = "nurse000-6a07-4377-a4f6-c0485ccba234"
         corp_details = {operator_id: ["+2348056756756", "+2348056756757"]}
@@ -5038,6 +5042,8 @@ class TestSendPublicRegistrationNotifications(AuthenticatedAPITestCase):
     @responses.activate
     def test_send_notifications_multiple_chunks(self):
         """
+        When there is a lot of msisdns then it should be broken into chunks of
+        15
         """
         operator_id = "nurse000-6a07-4377-a4f6-c0485ccba234"
         corp_details = {operator_id: []}
