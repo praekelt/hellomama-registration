@@ -260,7 +260,7 @@ class ValidateRegistration(Task):
         elif 'voice_days' in registration.data and \
                 registration.data["voice_days"] != "":
             mother_sub["metadata"]["prepend_next_delivery"] = \
-                "%s/static/audio/registration/%s/welcome_mother.mp3" % (
+                "%s/static/audio/registration/%s_welcome_mother.mp3" % (
                 settings.PUBLIC_HOST,
                 registration.data["language"])
         else:
@@ -312,7 +312,7 @@ class ValidateRegistration(Task):
             }
             # Add household welcome message
             household_sub["metadata"]["prepend_next_delivery"] = \
-                "%s/static/audio/registration/%s/welcome_household.mp3" % (
+                "%s/static/audio/registration/%s_welcome_household.mp3" % (
                 settings.PUBLIC_HOST,
                 registration.data["language"])
             SubscriptionRequest.objects.create(**household_sub)
