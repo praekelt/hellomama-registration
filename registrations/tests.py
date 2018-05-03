@@ -1605,7 +1605,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         self.assertEqual(d_mom.lang, "eng_NG")
         self.assertEqual(d_mom.schedule, 5)
         self.assertEqual(d_mom.metadata["prepend_next_delivery"],
-                         "http://registration.dev.example.org/static/audio/registration/eng_NG/welcome_mother.mp3")  # noqa
+                         "http://registration.dev.example.org/static/audio/registration/eng_NG_welcome_mother.mp3")  # noqa
 
         d_friend = SubscriptionRequest.objects.get(
             identity="friend00-73a2-4d89-b045-d52004c025fe")
@@ -1616,7 +1616,7 @@ class TestSubscriptionRequest(AuthenticatedAPITestCase):
         self.assertEqual(d_friend.lang, "eng_NG")
         self.assertEqual(d_friend.schedule, 3)
         self.assertEqual(d_friend.metadata["prepend_next_delivery"],
-                         "http://registration.dev.example.org/static/audio/registration/eng_NG/welcome_household.mp3")  # noqa
+                         "http://registration.dev.example.org/static/audio/registration/eng_NG_welcome_household.mp3")  # noqa
 
     @responses.activate
     def test_family_only_prebirth_sms(self):
