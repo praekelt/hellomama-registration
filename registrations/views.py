@@ -1,6 +1,7 @@
 import django_filters
 from django.conf import settings
 from django.contrib.auth.models import User, Group
+from django.db.models import Q
 from .models import Source, Registration
 from rest_hooks.models import Hook
 from rest_framework import viewsets, mixins, generics, status, filters
@@ -291,16 +292,12 @@ class MissedCallNotification(APIView):
 
         if data.get('identity', None) is not None and data['identity'] != "":
             registrations = Registration.objects.filter(
-                mother_id=data['identity']).order_by('-created_at')
+                Q(mother_id=data['identity']) |
+                Q(data__receiver_id=data['identity'])).order_by('-created_at')
             if len(registrations) > 0:
                 registration = registrations[0]
             else:
-                registrations = Registration.objects.filter(
-                    data__receiver_id=data['identity']).order_by('-created_at')
-                if len(registrations) > 0:
-                    registration = registrations[0]
-                else:
-                    raise ValidationError('No registration found for identity')
+                raise ValidationError('No registration found for identity')
         else:
             raise ValidationError(
                 '"data" must contain "identity" key')
