@@ -210,6 +210,31 @@ class ValidateRegistration(Task):
             registration.save()
             return False
 
+    def stop_public_subscriptions(self, registration):
+        if registration.stage != 'public':
+            subscriptions = utils.search_subscriptions(
+                {"identity": registration.mother_id, "completed": False,
+                 "active": True, "messageset_contains": "public.mother"})
+
+            for subscription in subscriptions:
+                utils.deactivate_subscription(subscription)
+
+            registrations = Registration.objects.filter(
+                mother_id=registration.mother_id, stage='public',
+                validated=True).order_by("-created_at")
+
+            if registrations.exists():
+                household_id = registrations[0].data['receiver_id']
+
+                if household_id != registration.mother_id:
+                    subscriptions = utils.search_subscriptions(
+                        {"identity": household_id, "completed": False,
+                         "messageset_contains": "public.household",
+                         "active": True})
+
+                    for subscription in subscriptions:
+                        utils.deactivate_subscription(subscription)
+
     def create_subscriptionrequests(self, registration):
         """ Create SubscriptionRequest(s) based on the
         validated registration.
@@ -331,6 +356,7 @@ class ValidateRegistration(Task):
 
         validation_string = "Validation completed - "
         if reg_validates:
+            self.stop_public_subscriptions(registration)
             self.create_subscriptionrequests(registration)
             validation_string += "Success"
         else:
