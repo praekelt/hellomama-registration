@@ -216,8 +216,14 @@ class ValidateRegistration(Task):
                 {"identity": registration.mother_id, "completed": False,
                  "active": True, "messageset_contains": "public.mother"})
 
+            def deactivate_subscription(sub):
+                metadata = sub['metadata']
+                metadata['converted_full'] = 'true'
+                utils.patch_subscription(
+                    sub, {"metadata": metadata, "active": False})
+
             for subscription in subscriptions:
-                utils.deactivate_subscription(subscription)
+                deactivate_subscription(subscription)
 
             registrations = Registration.objects.filter(
                 mother_id=registration.mother_id, stage='public',
@@ -233,7 +239,7 @@ class ValidateRegistration(Task):
                          "active": True})
 
                     for subscription in subscriptions:
-                        utils.deactivate_subscription(subscription)
+                        deactivate_subscription(subscription)
 
     def create_subscriptionrequests(self, registration):
         """ Create SubscriptionRequest(s) based on the

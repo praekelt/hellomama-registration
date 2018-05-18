@@ -5149,7 +5149,8 @@ class TestStopPublicRegistrations(AuthenticatedAPITestCase):
                 "completed": False,
                 "process_status": 0,
                 "messageset": 1,
-                "identity": mother_id
+                "identity": mother_id,
+                "metadata": {"existing": "key"}
             }])
         self.mock_patch_subscription(subscription_id)
 
@@ -5162,7 +5163,13 @@ class TestStopPublicRegistrations(AuthenticatedAPITestCase):
             call.request.url,
             'http://localhost:8005/api/v1/subscriptions/{}/'.format(
                 subscription_id))
-        self.assertEqual(json.loads(call.request.body), {"active": False})
+        self.assertEqual(json.loads(call.request.body), {
+            "active": False,
+            "metadata": {
+                "converted_full": "true",
+                "existing": "key"
+            }
+        })
 
     @responses.activate
     def test_stop_public_subscription_household(self):
@@ -5193,7 +5200,8 @@ class TestStopPublicRegistrations(AuthenticatedAPITestCase):
                 "completed": False,
                 "process_status": 0,
                 "messageset": 1,
-                "identity": household_id
+                "identity": household_id,
+                "metadata": {"existing": "key"}
             }])
         self.mock_patch_subscription(subscription_id)
 
@@ -5206,4 +5214,10 @@ class TestStopPublicRegistrations(AuthenticatedAPITestCase):
             call.request.url,
             'http://localhost:8005/api/v1/subscriptions/{}/'.format(
                 subscription_id))
-        self.assertEqual(json.loads(call.request.body), {"active": False})
+        self.assertEqual(json.loads(call.request.body), {
+            "active": False,
+            "metadata": {
+                "converted_full": "true",
+                "existing": "key"
+            }
+        })
