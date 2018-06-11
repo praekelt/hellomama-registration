@@ -1,5 +1,4 @@
 import csv
-import codecs
 import io
 
 from django.contrib import admin
