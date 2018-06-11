@@ -34,8 +34,8 @@ class Migration(migrations.Migration):
             name='PersonnelUpload',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('csv_file', models.FileField(upload_to=b'')),
-                ('import_type', models.CharField(choices=[(b'personnel', b'Personnel'), (b'corps', b'CORPs')], default=b'personnel', max_length=30)),
+                ('csv_file', models.FileField(upload_to='')),
+                ('import_type', models.CharField(choices=[('personnel', 'Personnel'), ('corps', 'CORPs')], default='personnel', max_length=30)),
                 ('valid', models.BooleanField(default=False)),
                 ('error', models.TextField(null=True)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),

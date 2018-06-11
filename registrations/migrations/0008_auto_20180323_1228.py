@@ -15,6 +15,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='registration',
             name='stage',
-            field=models.CharField(choices=[(b'prebirth', b'Mother is pregnant'), (b'postbirth', b'Baby has been born'), (b'loss', b'Baby loss'), (b'public', b'Public')], max_length=30),
+            field=models.CharField(choices=[('prebirth', 'Mother is pregnant'), ('postbirth', 'Baby has been born'), ('loss', 'Baby loss'), ('public', 'Public')], max_length=30),
         ),
     ]
