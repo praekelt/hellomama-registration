@@ -59,8 +59,8 @@ class PersonnelUploadAdmin(admin.ModelAdmin):
             "uniqueid_field_length", "name", "surname"]
 
         required_keys_type = {
-            "corps": ["community"],
-            "personnel": ["role", "facility_name", "state"]
+            PersonnelUpload.CORP_TYPE: ["community"],
+            PersonnelUpload.PERSONNEL_TYPE: ["role", "facility_name", "state"]
         }
 
         missing = []
@@ -81,10 +81,10 @@ class PersonnelUploadAdmin(admin.ModelAdmin):
         facilities = []
         communities = []
 
-        if obj.import_type == 'personnel':
+        if obj.import_type == PersonnelUpload.PERSONNEL_TYPE:
             states = State.objects.values_list('name', flat=True)
             facilities = Facility.objects.values_list('name', flat=True)
-        elif obj.import_type == 'corps':
+        elif obj.import_type == PersonnelUpload.CORP_TYPE:
             communities = Community.objects.values_list('name', flat=True)
 
         missing_states = []
@@ -108,7 +108,7 @@ class PersonnelUploadAdmin(admin.ModelAdmin):
                             missing_fields.append(key)
                     obj.valid = False
 
-                if obj.import_type == 'personnel':
+                if obj.import_type == PersonnelUpload.PERSONNEL_TYPE:
 
                     state = line.get('state')
                     if state and state not in states:
@@ -122,7 +122,7 @@ class PersonnelUploadAdmin(admin.ModelAdmin):
                             missing_facilities.append(facility)
                         obj.valid = False
 
-                elif obj.import_type == 'corps':
+                elif obj.import_type == PersonnelUpload.CORP_TYPE:
                     community = line.get('community')
                     if community and community not in communities:
                         if community not in missing_communities:

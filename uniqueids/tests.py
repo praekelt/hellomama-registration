@@ -572,7 +572,8 @@ class TestPersonnelUploadAdmin(AuthenticatedAPITestCase):
         csv_file = SimpleUploadedFile(
             'import.csv', 'these are the file contents!'.encode())
 
-        data = {"csv_file": csv_file, "import_type": "personnel"}
+        data = {"csv_file": csv_file,
+                "import_type": PersonnelUpload.PERSONNEL_TYPE}
 
         self.adminclient.post(
             reverse('admin:uniqueids_personnelupload_add'), data, follow=True)
@@ -589,7 +590,8 @@ class TestPersonnelUploadAdmin(AuthenticatedAPITestCase):
             "role": "CHEW"
         })
 
-        data = {"csv_file": csv_file, "import_type": "personnel"}
+        data = {"csv_file": csv_file,
+                "import_type": PersonnelUpload.PERSONNEL_TYPE}
 
         self.adminclient.post(
             reverse('admin:uniqueids_personnelupload_add'), data, follow=True)
@@ -604,7 +606,7 @@ class TestPersonnelUploadAdmin(AuthenticatedAPITestCase):
             "uniqueid_field_name": "corp_code"
         })
 
-        data = {"csv_file": csv_file, "import_type": "corps"}
+        data = {"csv_file": csv_file, "import_type": PersonnelUpload.CORP_TYPE}
 
         self.adminclient.post(
             reverse('admin:uniqueids_personnelupload_add'), data, follow=True)
@@ -622,7 +624,8 @@ class TestPersonnelUploadAdmin(AuthenticatedAPITestCase):
             "role": "CHEW"
         })
 
-        data = {"csv_file": csv_file, "import_type": "personnel"}
+        data = {"csv_file": csv_file,
+                "import_type": PersonnelUpload.PERSONNEL_TYPE}
 
         self.mock_identity_post("test-id-personnel")
 

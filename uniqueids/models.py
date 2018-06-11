@@ -68,9 +68,11 @@ class Community(models.Model):
 
 @python_2_unicode_compatible
 class PersonnelUpload(models.Model):
+    PERSONNEL_TYPE = 'p'
+    CORP_TYPE = 'c'
     PERSONNEL_CHOICES = (
-        ("personnel", "Personnel"),
-        ("corps", "CORPs")
+        (PERSONNEL_TYPE, "Personnel"),
+        (CORP_TYPE, "CORPs")
     )
     csv_file = models.FileField()
     import_type = models.CharField(max_length=30, null=False, blank=False,
