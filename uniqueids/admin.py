@@ -63,10 +63,8 @@ class PersonnelUploadAdmin(admin.ModelAdmin):
             PersonnelUpload.PERSONNEL_TYPE: ["role", "facility_name", "state"]
         }
 
-        missing = []
-        for key in required_keys + required_keys_type[import_type]:
-            if key not in record.keys():
-                missing.append(key)
+        required = set(required_keys + required_keys_type[import_type])
+        missing = required - record.keys()
 
         return missing
 
@@ -87,10 +85,10 @@ class PersonnelUploadAdmin(admin.ModelAdmin):
         elif obj.import_type == PersonnelUpload.CORP_TYPE:
             communities = Community.objects.values_list('name', flat=True)
 
-        missing_states = []
-        missing_facilities = []
-        missing_communities = []
-        missing_fields = []
+        missing_states = set()
+        missing_facilities = set()
+        missing_communities = set()
+        missing_fields = set()
         errors = []
 
         rows = list(reader)
@@ -104,29 +102,25 @@ class PersonnelUploadAdmin(admin.ModelAdmin):
 
                 if missing_keys:
                     for key in missing_keys:
-                        if key not in missing_fields:
-                            missing_fields.append(key)
+                        missing_fields.add(key)
                     obj.valid = False
 
                 if obj.import_type == PersonnelUpload.PERSONNEL_TYPE:
 
                     state = line.get('state')
                     if state and state not in states:
-                        if state not in missing_states:
-                            missing_states.append(state)
+                        missing_states.add(state)
                         obj.valid = False
 
                     facility = line.get('facility_name')
                     if facility and facility not in facilities:
-                        if facility not in missing_facilities:
-                            missing_facilities.append(facility)
+                        missing_facilities.add(facility)
                         obj.valid = False
 
                 elif obj.import_type == PersonnelUpload.CORP_TYPE:
                     community = line.get('community')
                     if community and community not in communities:
-                        if community not in missing_communities:
-                            missing_communities.append(community)
+                        missing_communities.add(community)
                         obj.valid = False
 
             if missing_fields:
