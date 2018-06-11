@@ -565,7 +565,8 @@ class TestPersonnelUploadAdmin(AuthenticatedAPITestCase):
 
         return SimpleUploadedFile(
             "import.csv", '{}\n{}'.format(
-                ','.join(standard.keys()), ','.join(standard.values())))
+                ','.join(standard.keys()),
+                ','.join(standard.values())).encode())
 
     def test_personnel_upload_no_rows(self):
         csv_file = SimpleUploadedFile(

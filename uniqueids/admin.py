@@ -1,5 +1,6 @@
 import csv
 import codecs
+import io
 
 from django.contrib import admin
 
@@ -71,9 +72,8 @@ class PersonnelUploadAdmin(admin.ModelAdmin):
         return missing
 
     def save_model(self, request, obj, form, change):
-        csvfile = request.FILES['csv_file']
-        reader = csv.DictReader(
-            codecs.EncodedFile(csvfile, "utf-8"), delimiter=',')
+        csvfile = io.StringIO(request.FILES['csv_file'].read().decode())
+        reader = csv.DictReader(csvfile, delimiter=',')
 
         obj.valid = True
         obj.error = ''
