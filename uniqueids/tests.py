@@ -1,4 +1,5 @@
 import json
+import os
 import responses
 
 try:
@@ -8,6 +9,7 @@ except ImportError:
 
 from django.test import TestCase
 from django.contrib.auth.models import User
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.urlresolvers import reverse
 from django.db.models.signals import post_save
 
@@ -16,7 +18,8 @@ from rest_framework.test import APIClient
 from rest_framework.authtoken.models import Token
 from rest_hooks.models import model_saved
 
-from .models import Record, record_post_save
+from .models import (
+    Record, record_post_save, PersonnelUpload, State, Facility, Community)
 from .tasks import add_unique_id_to_identity, send_personnel_code
 
 
@@ -519,3 +522,112 @@ class TestRecordAdmin(AuthenticatedAPITestCase):
 
         mock_send_code.assert_called_once_with(kwargs={"identity": str(
             record1.identity), "personnel_code": record1.id})
+
+
+class TestPersonnelUploadAdmin(AuthenticatedAPITestCase):
+    def setUp(self):
+        super(TestPersonnelUploadAdmin, self).setUp()
+        self.adminclient.login(username=self.adminusername,
+                               password=self.adminpassword)
+
+        State.objects.create(name="Test State")
+        Facility.objects.create(name="Test Facility")
+        Community.objects.create(name="Test Community")
+
+    def tearDown(self):
+        super(TestPersonnelUploadAdmin, self).tearDown()
+
+        os.remove("import.csv")
+
+    def mock_identity_post(self, identity_id):
+        responses.add(
+            responses.POST,
+            'http://localhost:8001/api/v1/identities/',
+            json={
+                "id": identity_id,
+                "details": {}
+            },
+
+        )
+
+    def create_file(self, detail):
+        standard = {
+            "address_type": "msisdn",
+            "address": "0701231234",
+            "preferred_language": "eng_NG",
+            "receiver_role": "health care worker",
+            "uniqueid_field_length": "5",
+            "name": "Peter",
+            "surname": "Pan"
+        }
+
+        standard.update(detail)
+
+        return SimpleUploadedFile(
+            "import.csv", '{}\n{}'.format(
+                ','.join(standard.keys()), ','.join(standard.values())))
+
+    def test_personnel_upload_no_rows(self):
+        csv_file = SimpleUploadedFile(
+            'import.csv', 'these are the file contents!')
+
+        data = {"csv_file": csv_file, "import_type": "personnel"}
+
+        self.adminclient.post(
+            reverse('admin:uniqueids_personnelupload_add'), data, follow=True)
+
+        upload = PersonnelUpload.objects.first()
+        self.assertFalse(upload.valid)
+        self.assertEqual(upload.error, "No Rows")
+
+    def test_personnel_upload_invalid_data(self):
+        csv_file = self.create_file({
+            "uniqueid_field_name": "personnel_code",
+            "facility_name": "Another Facility",
+            "state": "Another State",
+            "role": "CHEW"
+        })
+
+        data = {"csv_file": csv_file, "import_type": "personnel"}
+
+        self.adminclient.post(
+            reverse('admin:uniqueids_personnelupload_add'), data, follow=True)
+
+        upload = PersonnelUpload.objects.first()
+        self.assertFalse(upload.valid)
+        self.assertEqual(upload.error, "Invalid States: Another State, Invalid"
+                         " Facilities: Another Facility")
+
+    def test_personnel_upload_missing_fields(self):
+        csv_file = self.create_file({
+            "uniqueid_field_name": "corp_code"
+        })
+
+        data = {"csv_file": csv_file, "import_type": "corps"}
+
+        self.adminclient.post(
+            reverse('admin:uniqueids_personnelupload_add'), data, follow=True)
+
+        upload = PersonnelUpload.objects.first()
+        self.assertFalse(upload.valid)
+        self.assertEqual(upload.error, "Missing fields: community")
+
+    @responses.activate
+    def test_personnel_upload_good(self):
+        csv_file = self.create_file({
+            "uniqueid_field_name": "personnel_code",
+            "facility_name": "Test Facility",
+            "state": "Test State",
+            "role": "CHEW"
+        })
+
+        data = {"csv_file": csv_file, "import_type": "personnel"}
+
+        self.mock_identity_post("test-id-personnel")
+
+        self.adminclient.post(
+            reverse('admin:uniqueids_personnelupload_add'), data, follow=True)
+
+        upload = PersonnelUpload.objects.first()
+        self.assertTrue(upload.valid)
+        self.assertEqual(upload.error, "")

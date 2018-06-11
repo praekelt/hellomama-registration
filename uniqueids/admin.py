@@ -1,6 +1,10 @@
+import csv
+import codecs
+
 from django.contrib import admin
 
-from .models import Record
+from hellomama_registration import utils
+from .models import Record, State, Facility, Community, PersonnelUpload
 from .tasks import send_personnel_code
 
 
@@ -27,4 +31,129 @@ class RecordAdmin(admin.ModelAdmin):
     resend_personnel_code.short_description = (
         "Send code by SMS (personnel code only)")
 
+
+class StateAdmin(admin.ModelAdmin):
+    list_display = ["name", "created_at", "updated_at"]
+    search_fields = ["name"]
+
+
+class FacilityAdmin(admin.ModelAdmin):
+    list_display = ["name", "created_at", "updated_at"]
+    search_fields = ["name"]
+
+
+class CommunityAdmin(admin.ModelAdmin):
+    list_display = ["name", "created_at", "updated_at"]
+    search_fields = ["name"]
+
+
+class PersonnelUploadAdmin(admin.ModelAdmin):
+    list_display_links = None
+    list_display = ["import_type", "created_at", "valid", "error"]
+    exclude = ["valid", "error"]
+
+    def validate_keys(self, record, import_type):
+        required_keys = [
+            "address_type", "address", "preferred_language",
+            "receiver_role", "uniqueid_field_name",
+            "uniqueid_field_length", "name", "surname"]
+
+        required_keys_type = {
+            "corps": ["community"],
+            "personnel": ["role", "facility_name", "state"]
+        }
+
+        missing = []
+        for key in required_keys + required_keys_type[import_type]:
+            if key not in record.keys():
+                missing.append(key)
+
+        return missing
+
+    def save_model(self, request, obj, form, change):
+        csvfile = request.FILES['csv_file']
+        reader = csv.DictReader(
+            codecs.EncodedFile(csvfile, "utf-8"), delimiter=',')
+
+        obj.valid = True
+        obj.error = ''
+
+        states = []
+        facilities = []
+        communities = []
+
+        if obj.import_type == 'personnel':
+            states = State.objects.values_list('name', flat=True)
+            facilities = Facility.objects.values_list('name', flat=True)
+        elif obj.import_type == 'corps':
+            communities = Community.objects.values_list('name', flat=True)
+
+        missing_states = []
+        missing_facilities = []
+        missing_communities = []
+        missing_fields = []
+        errors = []
+
+        rows = list(reader)
+
+        if not rows:
+            errors.append("No Rows")
+            obj.valid = False
+        else:
+            for line in rows:
+                missing_keys = self.validate_keys(line, obj.import_type)
+
+                if missing_keys:
+                    for key in missing_keys:
+                        if key not in missing_fields:
+                            missing_fields.append(key)
+                    obj.valid = False
+
+                if obj.import_type == 'personnel':
+
+                    state = line.get('state')
+                    if state and state not in states:
+                        if state not in missing_states:
+                            missing_states.append(state)
+                        obj.valid = False
+
+                    facility = line.get('facility_name')
+                    if facility and facility not in facilities:
+                        if facility not in missing_facilities:
+                            missing_facilities.append(facility)
+                        obj.valid = False
+
+                elif obj.import_type == 'corps':
+                    community = line.get('community')
+                    if community and community not in communities:
+                        if community not in missing_communities:
+                            missing_communities.append(community)
+                        obj.valid = False
+
+            if missing_fields:
+                errors.append("Missing fields: {}".format(', '.join(
+                    missing_fields)))
+            if missing_states:
+                errors.append("Invalid States: {}".format(', '.join(
+                    missing_states)))
+            if missing_facilities:
+                errors.append("Invalid Facilities: {}".format(', '.join(
+                    missing_facilities)))
+            if missing_communities:
+                errors.append("Invalid Communities: {}".format(', '.join(
+                    missing_communities)))
+
+        if obj.valid:
+            for line in rows:
+                utils.create_identity(line)
+        else:
+            obj.error = ', '.join(errors)
+
+        obj.save()
+
+
+admin.site.register(PersonnelUpload, PersonnelUploadAdmin)
 admin.site.register(Record, RecordAdmin)
+admin.site.register(State, StateAdmin)
+admin.site.register(Facility, FacilityAdmin)
+admin.site.register(Community, CommunityAdmin)
