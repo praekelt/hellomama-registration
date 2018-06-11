@@ -64,7 +64,7 @@ class PersonnelUploadAdmin(admin.ModelAdmin):
         }
 
         required = set(required_keys + required_keys_type[import_type])
-        missing = required - record.keys()
+        missing = required - set(record.keys())
 
         return missing
 

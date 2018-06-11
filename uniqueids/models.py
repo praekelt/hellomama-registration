@@ -77,7 +77,7 @@ class PersonnelUpload(models.Model):
     csv_file = models.FileField()
     import_type = models.CharField(max_length=30, null=False, blank=False,
                                    choices=PERSONNEL_CHOICES,
-                                   default="personnel")
+                                   default="p")
     valid = models.BooleanField(default=False)
     error = models.TextField(null=True)
     created_at = models.DateTimeField(auto_now_add=True)
