@@ -570,7 +570,7 @@ class TestPersonnelUploadAdmin(AuthenticatedAPITestCase):
 
     def test_personnel_upload_no_rows(self):
         csv_file = SimpleUploadedFile(
-            'import.csv', 'these are the file contents!')
+            'import.csv', 'these are the file contents!'.encode())
 
         data = {"csv_file": csv_file, "import_type": "personnel"}
 
