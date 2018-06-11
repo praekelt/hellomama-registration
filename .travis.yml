@@ -12,6 +12,7 @@ install:
 script:
   - flake8
   - py.test
+  - python manage.py makemigrations registrations changes uniqueids vas2nets reports --dry-run | grep 'No changes detected' || (echo 'There are changes which require migrations.' && exit 1)
 
 matrix:
   include:
