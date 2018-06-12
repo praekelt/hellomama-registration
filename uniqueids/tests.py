@@ -641,5 +641,25 @@ class TestPersonnelUploadAdmin(AuthenticatedAPITestCase):
         self.assertTrue(upload.valid)
         self.assertEqual(upload.error, "")
 
+        [identity_post] = responses.calls
+        self.assertEqual(
+            json.loads(identity_post.request.body),
+            {
+                'communicate_through': None,
+                'details': {
+                    'addresses': {'msisdn': {'0701231234': {}}},
+                    'default_addr_type': 'msisdn',
+                    'facility_name': 'Test Facility',
+                    'name': 'Peter',
+                    'preferred_language': 'eng_NG',
+                    'receiver_role': 'health care worker',
+                    'role': 'CHEW',
+                    'state': 'Test State',
+                    'surname': 'Pan',
+                    'uniqueid_field_length': '5',
+                    'uniqueid_field_name': 'personnel_code'
+                }
+            })
+
         filepath = '{}/{}'.format(settings.MEDIA_ROOT, upload.csv_file)
         self.assertFalse(os.path.exists(filepath))

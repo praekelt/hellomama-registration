@@ -140,7 +140,23 @@ class PersonnelUploadAdmin(admin.ModelAdmin):
 
         if obj.valid:
             for line in rows:
-                utils.create_identity(line)
+                identity = {
+                    "communicate_through": line.get("communicate_through"),
+                    "details": {
+                        "addresses": {
+                            line["address_type"]: {
+                                line["address"]: {}
+                            }
+                        },
+                        "default_addr_type": line["address_type"]
+                    }
+                }
+                for key, value in line.items():
+                    if key not in (
+                            "address_type", "address", "communicate_through"):
+                        identity["details"][key] = value
+
+                utils.create_identity(identity)
         else:
             obj.error = ', '.join(errors)
 
