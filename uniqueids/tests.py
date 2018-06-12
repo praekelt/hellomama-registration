@@ -8,6 +8,7 @@ except ImportError:
     from unittest import mock
 
 from django.test import TestCase
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.urlresolvers import reverse
@@ -534,11 +535,6 @@ class TestPersonnelUploadAdmin(AuthenticatedAPITestCase):
         Facility.objects.create(name="Test Facility")
         Community.objects.create(name="Test Community")
 
-    def tearDown(self):
-        super(TestPersonnelUploadAdmin, self).tearDown()
-
-        os.remove("import.csv")
-
     def mock_identity_post(self, identity_id):
         responses.add(
             responses.POST,
@@ -582,6 +578,9 @@ class TestPersonnelUploadAdmin(AuthenticatedAPITestCase):
         self.assertFalse(upload.valid)
         self.assertEqual(upload.error, "No Rows")
 
+        filepath = '{}/{}'.format(settings.MEDIA_ROOT, upload.csv_file)
+        self.assertFalse(os.path.exists(filepath))
+
     def test_personnel_upload_invalid_data(self):
         csv_file = self.create_file({
             "uniqueid_field_name": "personnel_code",
@@ -601,6 +600,9 @@ class TestPersonnelUploadAdmin(AuthenticatedAPITestCase):
         self.assertEqual(upload.error, "Invalid States: Another State, Invalid"
                          " Facilities: Another Facility")
 
+        filepath = '{}/{}'.format(settings.MEDIA_ROOT, upload.csv_file)
+        self.assertFalse(os.path.exists(filepath))
+
     def test_personnel_upload_missing_fields(self):
         csv_file = self.create_file({
             "uniqueid_field_name": "corp_code"
@@ -614,6 +616,9 @@ class TestPersonnelUploadAdmin(AuthenticatedAPITestCase):
         upload = PersonnelUpload.objects.first()
         self.assertFalse(upload.valid)
         self.assertEqual(upload.error, "Missing fields: community")
+
+        filepath = '{}/{}'.format(settings.MEDIA_ROOT, upload.csv_file)
+        self.assertFalse(os.path.exists(filepath))
 
     @responses.activate
     def test_personnel_upload_good(self):
@@ -635,3 +640,6 @@ class TestPersonnelUploadAdmin(AuthenticatedAPITestCase):
         upload = PersonnelUpload.objects.first()
         self.assertTrue(upload.valid)
         self.assertEqual(upload.error, "")
+
+        filepath = '{}/{}'.format(settings.MEDIA_ROOT, upload.csv_file)
+        self.assertFalse(os.path.exists(filepath))
