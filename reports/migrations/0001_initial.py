@@ -21,7 +21,7 @@ class Migration(migrations.Migration):
                 ('end_date', models.CharField(max_length=30)),
                 ('email_subject', models.CharField(max_length=100)),
                 ('file_size', models.IntegerField(null=True)),
-                ('status', models.CharField(choices=[(b'P', b'Pending'), (b'R', b'Running'), (b'A', b'Sending'), (b'F', b'Failed'), (b'D', b'Done')], max_length=1)),
+                ('status', models.CharField(choices=[('P', 'Pending'), ('R', 'Running'), ('A', 'Sending'), ('F', 'Failed'), ('D', 'Done')], max_length=1)),
                 ('error', models.TextField(null=True)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),

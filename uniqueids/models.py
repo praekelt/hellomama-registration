@@ -30,6 +30,63 @@ class Record(models.Model):
         return "%s for %s" % (self.id, str(self.identity))
 
 
+@python_2_unicode_compatible
+class State(models.Model):
+    """ List of states that are available in HelloMama
+    """
+    name = models.CharField(max_length=100, null=False, blank=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+
+
+@python_2_unicode_compatible
+class Facility(models.Model):
+    """ List of facilities that are available in HelloMama
+    """
+    name = models.CharField(max_length=100, null=False, blank=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+
+
+@python_2_unicode_compatible
+class Community(models.Model):
+    """ List of communities that are available in HelloMama
+    """
+    name = models.CharField(max_length=100, null=False, blank=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+
+
+@python_2_unicode_compatible
+class PersonnelUpload(models.Model):
+    PERSONNEL_TYPE = 'p'
+    CORP_TYPE = 'c'
+    PERSONNEL_CHOICES = (
+        (PERSONNEL_TYPE, "Personnel"),
+        (CORP_TYPE, "CORPs")
+    )
+    csv_file = models.FileField()
+    import_type = models.CharField(max_length=30, null=False, blank=False,
+                                   choices=PERSONNEL_CHOICES,
+                                   default="p")
+    valid = models.BooleanField(default=False)
+    error = models.TextField(null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return '{} - {}'.format(self.import_type, str(self.created_at))
+
+
 @receiver(pre_save, sender=Record)
 def record_pre_save(sender, instance, **kwargs):
     """ Pre save hook to generate a unique ID
