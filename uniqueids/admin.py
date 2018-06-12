@@ -1,7 +1,9 @@
 import csv
+import os
 import io
 
 from django.contrib import admin
+from django.conf import settings
 
 from hellomama_registration import utils
 from .models import Record, State, Facility, Community, PersonnelUpload
@@ -143,6 +145,8 @@ class PersonnelUploadAdmin(admin.ModelAdmin):
             obj.error = ', '.join(errors)
 
         obj.save()
+
+        os.remove('{}/{}'.format(settings.MEDIA_ROOT, obj.csv_file))
 
 
 admin.site.register(PersonnelUpload, PersonnelUploadAdmin)
