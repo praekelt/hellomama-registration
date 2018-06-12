@@ -145,7 +145,7 @@ class PersonnelUploadAdmin(admin.ModelAdmin):
                     "details": {
                         "addresses": {
                             line["address_type"]: {
-                                line["address"]: {}
+                                line["address"]: {"default": True}
                             }
                         },
                         "default_addr_type": line["address_type"]
