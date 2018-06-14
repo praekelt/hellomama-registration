@@ -54,21 +54,57 @@ class PersonnelUploadAdmin(admin.ModelAdmin):
     list_display = ["import_type", "created_at", "valid", "error"]
     exclude = ["valid", "error"]
 
+    required_keys = [
+        "address_type", "address", "preferred_language",
+        "receiver_role", "uniqueid_field_name",
+        "uniqueid_field_length", "name", "surname"]
+
+    required_keys_type = {
+        PersonnelUpload.CORP_TYPE: ["community"],
+        PersonnelUpload.PERSONNEL_TYPE: ["role", "facility_name", "state"]
+    }
+
     def validate_keys(self, record, import_type):
-        required_keys = [
-            "address_type", "address", "preferred_language",
-            "receiver_role", "uniqueid_field_name",
-            "uniqueid_field_length", "name", "surname"]
-
-        required_keys_type = {
-            PersonnelUpload.CORP_TYPE: ["community"],
-            PersonnelUpload.PERSONNEL_TYPE: ["role", "facility_name", "state"]
-        }
-
-        required = set(required_keys + required_keys_type[import_type])
+        required = set(
+            self.required_keys + self.required_keys_type[import_type])
         missing = required - set(record.keys())
 
         return missing
+
+    def validate_values(self, record, import_type):
+        invalid_values = set()
+        required = set(
+            self.required_keys + self.required_keys_type[import_type])
+
+        for key, value in record.items():
+            if key in required and not value:
+                invalid_values.add(key)
+            elif key == "address_type" and value != "msisdn":
+                invalid_values.add(key)
+            elif (key == "preferred_language" and
+                    value not in settings.LANGUAGES):
+                invalid_values.add(key)
+            elif (key == "uniqueid_field_name" and
+                    value not in ['personnel_code', 'corp_code']):
+                invalid_values.add(key)
+            elif key == "uniqueid_field_length" and not value.isdigit():
+                invalid_values.add(key)
+
+        return invalid_values
+
+    def is_valid_address(self, record):
+        msisdn = utils.normalize_msisdn(record["address"], '234')
+
+        identities = utils.search_identities(
+            "details__addresses__{}".format(record["address_type"]), msisdn)
+
+        for key in identities:
+            return False
+
+        if len(msisdn) != 13:
+            return False
+
+        return True
 
     def save_model(self, request, obj, form, change):
         csvfile = io.StringIO(request.FILES['csv_file'].read().decode())
@@ -91,6 +127,8 @@ class PersonnelUploadAdmin(admin.ModelAdmin):
         missing_facilities = set()
         missing_communities = set()
         missing_fields = set()
+        invalid_values = set()
+        existing_address = set()
         errors = []
 
         rows = list(reader)
@@ -100,45 +138,52 @@ class PersonnelUploadAdmin(admin.ModelAdmin):
             obj.valid = False
         else:
             for line in rows:
-                missing_keys = self.validate_keys(line, obj.import_type)
+                if ("address" in line and "address_type" in line):
+                    if not self.is_valid_address(line):
+                        existing_address.add(line["address"])
 
-                if missing_keys:
-                    for key in missing_keys:
-                        missing_fields.add(key)
-                    obj.valid = False
+                missing_fields |= self.validate_keys(line, obj.import_type)
+                invalid_values |= self.validate_values(line, obj.import_type)
 
                 if obj.import_type == PersonnelUpload.PERSONNEL_TYPE:
 
                     state = line.get('state')
                     if state and state not in states:
                         missing_states.add(state)
-                        obj.valid = False
 
                     facility = line.get('facility_name')
                     if facility and facility not in facilities:
                         missing_facilities.add(facility)
-                        obj.valid = False
 
                 elif obj.import_type == PersonnelUpload.CORP_TYPE:
                     community = line.get('community')
                     if community and community not in communities:
                         missing_communities.add(community)
-                        obj.valid = False
 
+            if existing_address:
+                errors.append(
+                    "Address invalid or already exists: {}".format(
+                        ', '.join(sorted(existing_address))))
             if missing_fields:
                 errors.append("Missing fields: {}".format(', '.join(
-                    missing_fields)))
+                    sorted(missing_fields))))
+            if invalid_values:
+                errors.append("Missing or invalid values: {}".format(', '.join(
+                    sorted(invalid_values))))
             if missing_states:
                 errors.append("Invalid States: {}".format(', '.join(
-                    missing_states)))
+                    sorted(missing_states))))
             if missing_facilities:
                 errors.append("Invalid Facilities: {}".format(', '.join(
-                    missing_facilities)))
+                    sorted(missing_facilities))))
             if missing_communities:
                 errors.append("Invalid Communities: {}".format(', '.join(
-                    missing_communities)))
+                    sorted(missing_communities))))
 
-        if obj.valid:
+        if errors:
+            obj.valid = False
+            obj.error = ', '.join(errors)
+        else:
             for line in rows:
                 identity = {
                     "communicate_through": line.get("communicate_through"),
@@ -157,8 +202,6 @@ class PersonnelUploadAdmin(admin.ModelAdmin):
                         identity["details"][key] = value
 
                 utils.create_identity(identity)
-        else:
-            obj.error = ', '.join(errors)
 
         obj.save()
 
