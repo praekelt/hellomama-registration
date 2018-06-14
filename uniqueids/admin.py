@@ -72,40 +72,40 @@ class PersonnelUploadAdmin(admin.ModelAdmin):
         return missing
 
     def validate_values(self, record, import_type):
-        missing = set()
+        invalid_values = set()
         required = set(
             self.required_keys + self.required_keys_type[import_type])
 
         for key, value in record.items():
             if key in required and not value:
-                missing.add(key)
+                invalid_values.add(key)
             elif key == "address_type" and value != "msisdn":
-                missing.add(key)
+                invalid_values.add(key)
             elif (key == "preferred_language" and
                     value not in settings.LANGUAGES):
-                missing.add(key)
+                invalid_values.add(key)
             elif (key == "uniqueid_field_name" and
                     value not in ['personnel_code', 'corp_code']):
-                missing.add(key)
+                invalid_values.add(key)
             elif (key == "uniqueid_field_length" and not value.isdigit() and
                     value.find('-') == -1):
-                missing.add(key)
+                invalid_values.add(key)
 
-        return missing
+        return invalid_values
 
-    def validate_address(self, record):
+    def is_valid_address(self, record):
         msisdn = utils.normalize_msisdn(record["address"], '234')
 
         identities = utils.search_identities(
             "details__addresses__{}".format(record["address_type"]), msisdn)
 
         for key in identities:
-            return True
+            return False
 
         if len(msisdn) != 13:
-            return True
+            return False
 
-        return False
+        return True
 
     def save_model(self, request, obj, form, change):
         csvfile = io.StringIO(request.FILES['csv_file'].read().decode())
@@ -140,20 +140,11 @@ class PersonnelUploadAdmin(admin.ModelAdmin):
         else:
             for line in rows:
                 if ("address" in line and "address_type" in line):
-                    if (self.validate_address(line)):
+                    if not self.is_valid_address(line):
                         existing_address.add(line["address"])
 
-                missing_keys = self.validate_keys(line, obj.import_type)
-
-                if missing_keys:
-                    for key in missing_keys:
-                        missing_fields.add(key)
-
-                missing_keys = self.validate_values(line, obj.import_type)
-
-                if missing_keys:
-                    for key in missing_keys:
-                        invalid_values.add(key)
+                missing_fields |= self.validate_keys(line, obj.import_type)
+                invalid_values |= self.validate_values(line, obj.import_type)
 
                 if obj.import_type == PersonnelUpload.PERSONNEL_TYPE:
 
@@ -177,9 +168,9 @@ class PersonnelUploadAdmin(admin.ModelAdmin):
             if missing_fields:
                 errors.append("Missing fields: {}".format(', '.join(
                     sorted(missing_fields))))
-            if missing_keys:
+            if invalid_values:
                 errors.append("Missing or invalid values: {}".format(', '.join(
-                    sorted(missing_keys))))
+                    sorted(invalid_values))))
             if missing_states:
                 errors.append("Invalid States: {}".format(', '.join(
                     sorted(missing_states))))
