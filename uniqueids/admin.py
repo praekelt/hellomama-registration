@@ -81,14 +81,14 @@ class PersonnelUploadAdmin(admin.ModelAdmin):
                 missing.add(key)
             elif key == "address_type" and value != "msisdn":
                 missing.add(key)
-            elif (key == "preferred_language"
-                    and value not in settings.LANGUAGES):
+            elif (key == "preferred_language" and
+                    value not in settings.LANGUAGES):
                 missing.add(key)
-            elif (key == "uniqueid_field_name"
-                    and value not in ['personnel_code', 'corp_code']):
+            elif (key == "uniqueid_field_name" and
+                    value not in ['personnel_code', 'corp_code']):
                 missing.add(key)
-            elif (key == "uniqueid_field_length" and not value.isdigit()
-                    and value.find('-') == -1):
+            elif (key == "uniqueid_field_length" and not value.isdigit() and
+                    value.find('-') == -1):
                 missing.add(key)
 
         return missing
