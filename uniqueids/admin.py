@@ -79,15 +79,30 @@ class PersonnelUploadAdmin(admin.ModelAdmin):
         for key, value in record.items():
             if key in required and not value:
                 missing.add(key)
+            elif key == "address_type" and value != "msisdn":
+                missing.add(key)
+            elif (key == "preferred_language"
+                    and value not in settings.LANGUAGES):
+                missing.add(key)
+            elif (key == "uniqueid_field_name"
+                    and value not in ['personnel_code', 'corp_code']):
+                missing.add(key)
+            elif (key == "uniqueid_field_length" and not value.isdigit()
+                    and value.find('-') == -1):
+                missing.add(key)
 
         return missing
 
     def validate_address(self, record):
+        msisdn = utils.normalize_msisdn(record["address"], '234')
+
         identities = utils.search_identities(
-            "details__addresses__{}".format(record["address_type"]),
-            record["address"])
+            "details__addresses__{}".format(record["address_type"]), msisdn)
 
         for key in identities:
+            return True
+
+        if len(msisdn) != 13:
             return True
 
         return False
@@ -113,7 +128,7 @@ class PersonnelUploadAdmin(admin.ModelAdmin):
         missing_facilities = set()
         missing_communities = set()
         missing_fields = set()
-        missing_values = set()
+        invalid_values = set()
         existing_address = set()
         errors = []
 
@@ -124,8 +139,9 @@ class PersonnelUploadAdmin(admin.ModelAdmin):
             obj.valid = False
         else:
             for line in rows:
-                if (self.validate_address(line)):
-                    existing_address.add(line["address"])
+                if ("address" in line and "address_type" in line):
+                    if (self.validate_address(line)):
+                        existing_address.add(line["address"])
 
                 missing_keys = self.validate_keys(line, obj.import_type)
 
@@ -137,7 +153,7 @@ class PersonnelUploadAdmin(admin.ModelAdmin):
 
                 if missing_keys:
                     for key in missing_keys:
-                        missing_values.add(key)
+                        invalid_values.add(key)
 
                 if obj.import_type == PersonnelUpload.PERSONNEL_TYPE:
 
@@ -155,23 +171,24 @@ class PersonnelUploadAdmin(admin.ModelAdmin):
                         missing_communities.add(community)
 
             if existing_address:
-                errors.append("Address already exists: {}".format(', '.join(
-                    existing_address)))
+                errors.append(
+                    "Address invalid or already exists: {}".format(
+                        ', '.join(sorted(existing_address))))
             if missing_fields:
                 errors.append("Missing fields: {}".format(', '.join(
-                    missing_fields)))
-            if missing_values:
-                errors.append("Missing values: {}".format(', '.join(
-                    missing_values)))
+                    sorted(missing_fields))))
+            if missing_keys:
+                errors.append("Missing or invalid values: {}".format(', '.join(
+                    sorted(missing_keys))))
             if missing_states:
                 errors.append("Invalid States: {}".format(', '.join(
-                    missing_states)))
+                    sorted(missing_states))))
             if missing_facilities:
                 errors.append("Invalid Facilities: {}".format(', '.join(
-                    missing_facilities)))
+                    sorted(missing_facilities))))
             if missing_communities:
                 errors.append("Invalid Communities: {}".format(', '.join(
-                    missing_communities)))
+                    sorted(missing_communities))))
 
         if errors:
             obj.valid = False
