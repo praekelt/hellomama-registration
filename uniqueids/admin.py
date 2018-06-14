@@ -87,8 +87,7 @@ class PersonnelUploadAdmin(admin.ModelAdmin):
             elif (key == "uniqueid_field_name" and
                     value not in ['personnel_code', 'corp_code']):
                 invalid_values.add(key)
-            elif (key == "uniqueid_field_length" and not value.isdigit() and
-                    value.find('-') == -1):
+            elif key == "uniqueid_field_length" and not value.isdigit():
                 invalid_values.add(key)
 
         return invalid_values
