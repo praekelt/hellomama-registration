@@ -561,7 +561,7 @@ class TestPersonnelUploadAdmin(AuthenticatedAPITestCase):
     def create_file(self, detail):
         standard = {
             "address_type": "msisdn",
-            "address": "0701231234",
+            "address": "07012312341",
             "preferred_language": "eng_NG",
             "receiver_role": "health care worker",
             "uniqueid_field_length": "5",
@@ -605,7 +605,7 @@ class TestPersonnelUploadAdmin(AuthenticatedAPITestCase):
         data = {"csv_file": csv_file,
                 "import_type": PersonnelUpload.PERSONNEL_TYPE}
 
-        self.mock_identity_lookup("+234701231234")
+        self.mock_identity_lookup("+2347012312341")
 
         self.adminclient.post(
             reverse('admin:uniqueids_personnelupload_add'), data, follow=True)
@@ -626,7 +626,7 @@ class TestPersonnelUploadAdmin(AuthenticatedAPITestCase):
 
         data = {"csv_file": csv_file, "import_type": PersonnelUpload.CORP_TYPE}
 
-        self.mock_identity_lookup("+234701231234")
+        self.mock_identity_lookup("+2347012312341")
 
         self.adminclient.post(
             reverse('admin:uniqueids_personnelupload_add'), data, follow=True)
@@ -648,7 +648,7 @@ class TestPersonnelUploadAdmin(AuthenticatedAPITestCase):
 
         data = {"csv_file": csv_file, "import_type": PersonnelUpload.CORP_TYPE}
 
-        self.mock_identity_lookup("+234701231234")
+        self.mock_identity_lookup("+2347012312341")
 
         self.adminclient.post(
             reverse('admin:uniqueids_personnelupload_add'), data, follow=True)
@@ -669,7 +669,7 @@ class TestPersonnelUploadAdmin(AuthenticatedAPITestCase):
 
         data = {"csv_file": csv_file, "import_type": PersonnelUpload.CORP_TYPE}
 
-        self.mock_identity_lookup("+234701231234", results=[{"id": "test"}])
+        self.mock_identity_lookup("+2347012312341", results=[{"id": "test"}])
 
         self.adminclient.post(
             reverse('admin:uniqueids_personnelupload_add'), data, follow=True)
@@ -677,7 +677,7 @@ class TestPersonnelUploadAdmin(AuthenticatedAPITestCase):
         upload = PersonnelUpload.objects.first()
         self.assertFalse(upload.valid)
         self.assertEqual(upload.error,
-                         "Address invalid or already exists: 0701231234")
+                         "Address invalid or already exists: 07012312341")
 
         filepath = '{}/{}'.format(settings.MEDIA_ROOT, upload.csv_file)
         self.assertFalse(os.path.exists(filepath))
@@ -687,12 +687,12 @@ class TestPersonnelUploadAdmin(AuthenticatedAPITestCase):
         csv_file = self.create_file({
             "uniqueid_field_name": "corp_code",
             "community": "Test Community",
-            "msisdn": "123"
+            "address": "123123"
         })
 
         data = {"csv_file": csv_file, "import_type": PersonnelUpload.CORP_TYPE}
 
-        self.mock_identity_lookup("+234701231234", results=[{"id": "test"}])
+        # self.mock_identity_lookup("+234701231234", results=[{"id": "test"}])
 
         self.adminclient.post(
             reverse('admin:uniqueids_personnelupload_add'), data, follow=True)
@@ -700,7 +700,7 @@ class TestPersonnelUploadAdmin(AuthenticatedAPITestCase):
         upload = PersonnelUpload.objects.first()
         self.assertFalse(upload.valid)
         self.assertEqual(upload.error,
-                         "Address invalid or already exists: 0701231234")
+                         "Address invalid or already exists: 123123")
 
         filepath = '{}/{}'.format(settings.MEDIA_ROOT, upload.csv_file)
         self.assertFalse(os.path.exists(filepath))
@@ -717,14 +717,14 @@ class TestPersonnelUploadAdmin(AuthenticatedAPITestCase):
 
         data = {"csv_file": csv_file, "import_type": PersonnelUpload.CORP_TYPE}
 
-        self.mock_identity_lookup("+234701231234", field="email")
+        self.mock_identity_lookup("+2347012312341", field="email")
 
         self.adminclient.post(
             reverse('admin:uniqueids_personnelupload_add'), data, follow=True)
 
         upload = PersonnelUpload.objects.first()
         self.assertFalse(upload.valid)
-        print(upload.error)
+
         self.assertEqual(
             upload.error, "Missing or invalid values: address_type, "
             "preferred_language, uniqueid_field_length, uniqueid_field_name")
@@ -745,7 +745,7 @@ class TestPersonnelUploadAdmin(AuthenticatedAPITestCase):
                 "import_type": PersonnelUpload.PERSONNEL_TYPE}
 
         self.mock_identity_post("test-id-personnel")
-        self.mock_identity_lookup("+234701231234")
+        self.mock_identity_lookup("+2347012312341")
 
         self.adminclient.post(
             reverse('admin:uniqueids_personnelupload_add'), data, follow=True)
@@ -760,7 +760,8 @@ class TestPersonnelUploadAdmin(AuthenticatedAPITestCase):
             {
                 'communicate_through': None,
                 'details': {
-                    'addresses': {'msisdn': {'0701231234': {"default": True}}},
+                    'addresses': {
+                        'msisdn': {'+2347012312341': {"default": True}}},
                     'default_addr_type': 'msisdn',
                     'facility_name': 'Test Facility',
                     'name': 'Peter',

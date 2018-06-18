@@ -95,16 +95,16 @@ class PersonnelUploadAdmin(admin.ModelAdmin):
     def is_valid_address(self, record):
         msisdn = utils.normalize_msisdn(record["address"], '234')
 
+        if len(msisdn) != 14:
+            return False
+
         identities = utils.search_identities(
             "details__addresses__{}".format(record["address_type"]), msisdn)
 
         for key in identities:
             return False
 
-        if len(msisdn) != 13:
-            return False
-
-        return True
+        return msisdn
 
     def save_model(self, request, obj, form, change):
         csvfile = io.StringIO(request.FILES['csv_file'].read().decode())
@@ -139,8 +139,11 @@ class PersonnelUploadAdmin(admin.ModelAdmin):
         else:
             for line in rows:
                 if ("address" in line and "address_type" in line):
-                    if not self.is_valid_address(line):
+                    address = self.is_valid_address(line)
+                    if not address:
                         existing_address.add(line["address"])
+                    else:
+                        line['address'] = address
 
                 missing_fields |= self.validate_keys(line, obj.import_type)
                 invalid_values |= self.validate_values(line, obj.import_type)
