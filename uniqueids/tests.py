@@ -760,7 +760,8 @@ class TestPersonnelUploadAdmin(AuthenticatedAPITestCase):
             {
                 'communicate_through': None,
                 'details': {
-                    'addresses': {'msisdn': {'+2347012312341': {"default": True}}},
+                    'addresses': {
+                        'msisdn': {'+2347012312341': {"default": True}}},
                     'default_addr_type': 'msisdn',
                     'facility_name': 'Test Facility',
                     'name': 'Peter',
