@@ -621,7 +621,8 @@ class TestPersonnelUploadAdmin(AuthenticatedAPITestCase):
     @responses.activate
     def test_personnel_upload_missing_fields(self):
         csv_file = self.create_file({
-            "uniqueid_field_name": "corp_code"
+            "uniqueid_field_name": "corp_code",
+            "state": "Test State"
         })
 
         data = {"csv_file": csv_file, "import_type": PersonnelUpload.CORP_TYPE}
@@ -643,7 +644,8 @@ class TestPersonnelUploadAdmin(AuthenticatedAPITestCase):
         csv_file = self.create_file({
             "uniqueid_field_name": "corp_code",
             "community": "Test Community",
-            "name": ""
+            "name": "",
+            "state": "Test State"
         })
 
         data = {"csv_file": csv_file, "import_type": PersonnelUpload.CORP_TYPE}
@@ -665,6 +667,7 @@ class TestPersonnelUploadAdmin(AuthenticatedAPITestCase):
         csv_file = self.create_file({
             "uniqueid_field_name": "corp_code",
             "community": "Test Community",
+            "state": "Test State"
         })
 
         data = {"csv_file": csv_file, "import_type": PersonnelUpload.CORP_TYPE}
@@ -687,7 +690,8 @@ class TestPersonnelUploadAdmin(AuthenticatedAPITestCase):
         csv_file = self.create_file({
             "uniqueid_field_name": "corp_code",
             "community": "Test Community",
-            "address": "123123"
+            "address": "123123",
+            "state": "Test State"
         })
 
         data = {"csv_file": csv_file, "import_type": PersonnelUpload.CORP_TYPE}
@@ -713,6 +717,7 @@ class TestPersonnelUploadAdmin(AuthenticatedAPITestCase):
             "address_type": "email",
             "preferred_language": "klingon",
             "uniqueid_field_length": "long",
+            "state": "Test State"
         })
 
         data = {"csv_file": csv_file, "import_type": PersonnelUpload.CORP_TYPE}

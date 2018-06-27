@@ -57,11 +57,11 @@ class PersonnelUploadAdmin(admin.ModelAdmin):
     required_keys = [
         "address_type", "address", "preferred_language",
         "receiver_role", "uniqueid_field_name",
-        "uniqueid_field_length", "name", "surname"]
+        "uniqueid_field_length", "name", "surname", "state"]
 
     required_keys_type = {
         PersonnelUpload.CORP_TYPE: ["community"],
-        PersonnelUpload.PERSONNEL_TYPE: ["role", "facility_name", "state"]
+        PersonnelUpload.PERSONNEL_TYPE: ["role", "facility_name"]
     }
 
     def validate_keys(self, record, import_type):
