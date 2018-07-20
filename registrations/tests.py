@@ -5105,6 +5105,78 @@ class TestSendPublicRegistrationNotifications(AuthenticatedAPITestCase):
         self.assertEqual(content.count('+234'), 15)
 
 
+class TestUserDetailListView(AuthenticatedAPITestCase):
+
+    @mock.patch("registrations.views.UserDetailList.get_data")
+    def test_user_details_list(self, mock_get_data):
+
+        mock_get_data.return_value = []
+
+        response = self.adminclient.get('/api/v1/user_details/',
+                                        content_type='application/json')
+
+        body = json.loads(response.content)
+        self.assertEqual(body["has_next"], False)
+        self.assertEqual(body["has_previous"], False)
+        self.assertEqual(len(body["results"]), 0)
+
+        mock_get_data.assert_called_once_with(20, 0)
+
+    @mock.patch("registrations.views.UserDetailList.get_data")
+    def test_user_details_list_has_next(self, mock_get_data):
+
+        mock_get_data.return_value = [{
+            "identity_id": "316e8bf5-091e-430f-a8af-665ba5bc9692",
+            "msisdn": "+234123123123",
+            "receiver_role": "mother",
+            "validated": "true",
+            "created_at": "20/07/18 08:14",
+            "updated_at": "20/07/18 08:14",
+            "state": "Ebonyi",
+            "facility_name": "Chidera Health Clinic and Maternity",
+            "linked_to_id": "1c79b593-78bf-4dd3-bc99-cc4e179c880f",
+            "linked_to_msisdn": "+2347068430547",
+            "linked_to_receiver_role": "father",
+        }] * 21
+
+        response = self.adminclient.get('/api/v1/user_details/',
+                                        content_type='application/json')
+
+        body = json.loads(response.content)
+        self.assertEqual(body["has_next"], True)
+        self.assertEqual(body["has_previous"], False)
+        self.assertEqual(len(body["results"]), 20)
+
+        mock_get_data.assert_called_once_with(20, 0)
+
+    @mock.patch("registrations.views.UserDetailList.get_data")
+    def test_user_details_list_has_previous(self, mock_get_data):
+
+        mock_get_data.return_value = [{
+            "identity_id": "316e8bf5-091e-430f-a8af-665ba5bc9692",
+            "msisdn": "+234123123123",
+            "receiver_role": "mother",
+            "validated": "true",
+            "created_at": "20/07/18 08:14",
+            "updated_at": "20/07/18 08:14",
+            "state": "Ebonyi",
+            "facility_name": "Chidera Health Clinic and Maternity",
+            "linked_to_id": "1c79b593-78bf-4dd3-bc99-cc4e179c880f",
+            "linked_to_msisdn": "+2347068430547",
+            "linked_to_receiver_role": "father",
+        }] * 3
+
+        response = self.adminclient.get('/api/v1/user_details/?page=3',
+                                        content_type='application/json')
+
+        body = json.loads(response.content)
+        self.assertEqual(body["has_next"], False)
+        self.assertEqual(body["has_previous"], True)
+        self.assertEqual(len(body["results"]), 3)
+
+        mock_get_data.assert_called_once_with(20, 40)
+
+
 class TestStopPublicRegistrations(AuthenticatedAPITestCase):
 
     @responses.activate
