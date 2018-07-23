@@ -59,6 +59,10 @@ sql = """
     LANGUAGE 'plpgsql';
 """
 
+reverse_sql = """
+DROP FUNCTION IF EXISTS get_registrations(VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, INT, INT);
+"""
+
 
 class Migration(migrations.Migration):
 
@@ -67,5 +71,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunSQL(sql)
+        migrations.RunSQL(sql, reverse_sql)
     ]
