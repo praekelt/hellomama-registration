@@ -295,7 +295,7 @@ class UserDetailList(APIView):
 
         sql = """
             select *
-            from get_registrations('%s', '*', '*', '*', '*', %s, %s)"""
+            from get_registrations(%s, '*', '*', '*', '*', %s, %s)"""
 
         with connection.cursor() as cursor:
             cursor.execute(sql, [settings.DBLINK_CONN, page_size, offset])
