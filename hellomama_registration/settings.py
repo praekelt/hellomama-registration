@@ -356,5 +356,7 @@ V2N_FTP_USER = os.environ.get('V2N_FTP_USER')
 V2N_FTP_PASS = os.environ.get('V2N_FTP_PASS')
 V2N_FTP_ROOT = os.environ.get('V2N_FTP_ROOT')
 
+DBLINK_CONN = os.environ.get('DBLINK_CONN')
+
 
 djcelery.setup_loader()
