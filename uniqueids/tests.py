@@ -782,3 +782,19 @@ class TestPersonnelUploadAdmin(AuthenticatedAPITestCase):
 
         filepath = '{}/{}'.format(settings.MEDIA_ROOT, upload.csv_file)
         self.assertFalse(os.path.exists(filepath))
+
+
+class TestUniqueIdApi(AuthenticatedAPITestCase):
+
+    def test_get_states(self):
+        """
+        The states endpoint should return a list of all the states.
+        """
+
+        State.objects.create(name="Test State")
+
+        result = self.normalclient.get('/api/v1/states/')
+        items = json.loads(result.content)['results']
+
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]['name'], 'Test State')
