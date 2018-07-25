@@ -7,7 +7,7 @@ from django.db import migrations
 sql = """
     CREATE OR REPLACE FUNCTION get_registrations (
         db_link_conn VARCHAR, filter_state VARCHAR, filter_facility VARCHAR, filter_msisdn VARCHAR,
-        status VARCHAR, page_size INT, page_offset INT)
+        status VARCHAR, filter_date VARCHAR, page_size INT, page_offset INT)
      RETURNS TABLE (
      identity_id VARCHAR,
      msisdn VARCHAR,
@@ -51,6 +51,8 @@ sql = """
             AND (identities_identity.details->'addresses'->'msisdn'?filter_msisdn OR '*' = filter_msisdn )
             AND (identities_identity_operator.details->'state'?filter_state OR '*' = filter_state)
             AND (identities_identity_operator.details->'facility_name'?filter_facility OR '*' = filter_facility)
+            AND (filter_date is null OR registrations_registration.created_at::date = filter_date)
+            AND (identities_identity_operator.details->>'facility_name' ilike filter_facility OR '%*%' = filter_facility)
             AND ((registrations_registration.validated = TRUE and status in ('valid', '*')) OR (registrations_registration.validated = FALSE and status in ('invalid', '*')))
         ORDER BY created_at DESC
         LIMIT page_size + 1 OFFSET page_offset;
@@ -60,7 +62,7 @@ sql = """
 """
 
 reverse_sql = """
-DROP FUNCTION IF EXISTS get_registrations(VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, INT, INT);
+DROP FUNCTION IF EXISTS get_registrations(VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR, INT, INT);
 """
 
 

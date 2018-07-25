@@ -5120,7 +5120,26 @@ class TestUserDetailListView(AuthenticatedAPITestCase):
         self.assertEqual(body["has_previous"], False)
         self.assertEqual(len(body["results"]), 0)
 
-        mock_get_data.assert_called_once_with(20, 0)
+        mock_get_data.assert_called_once_with(
+            '*', '%*%', '*', '*', None, 20, 0)
+
+    @mock.patch("registrations.views.UserDetailList.get_data")
+    def test_user_details_list_with_filters(self, mock_get_data):
+
+        mock_get_data.return_value = []
+
+        response = self.adminclient.get(
+            '/api/v1/user_details/?msisdn=%2B234123&state=ebonyi&facility='
+            'Umuakuma&status=valid&date=2016-01-01',
+            content_type='application/json')
+
+        body = json.loads(response.content)
+        self.assertEqual(body["has_next"], False)
+        self.assertEqual(body["has_previous"], False)
+        self.assertEqual(len(body["results"]), 0)
+
+        mock_get_data.assert_called_once_with(
+            'ebonyi', '%Umuakuma%', '+234123', 'valid', '2016-01-01', 20, 0)
 
     @mock.patch("registrations.views.UserDetailList.get_data")
     def test_user_details_list_has_next(self, mock_get_data):
@@ -5147,7 +5166,8 @@ class TestUserDetailListView(AuthenticatedAPITestCase):
         self.assertEqual(body["has_previous"], False)
         self.assertEqual(len(body["results"]), 20)
 
-        mock_get_data.assert_called_once_with(20, 0)
+        mock_get_data.assert_called_once_with(
+            '*', '%*%', '*', '*', None, 20, 0)
 
     @mock.patch("registrations.views.UserDetailList.get_data")
     def test_user_details_list_has_previous(self, mock_get_data):
@@ -5174,7 +5194,8 @@ class TestUserDetailListView(AuthenticatedAPITestCase):
         self.assertEqual(body["has_previous"], True)
         self.assertEqual(len(body["results"]), 3)
 
-        mock_get_data.assert_called_once_with(20, 40)
+        mock_get_data.assert_called_once_with(
+            '*', '%*%', '*', '*', None, 20, 40)
 
 
 class TestStopPublicRegistrations(AuthenticatedAPITestCase):

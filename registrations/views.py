@@ -283,7 +283,8 @@ class UserDetailList(APIView):
     """
     permission_classes = (IsAuthenticated,)
 
-    def get_data(self, page_size, offset):
+    def get_data(self, state, facility, msisdn, status, date, page_size,
+                 offset):
 
         def dictfetchall(cursor):
             """Return all rows from a cursor as a dict"""
@@ -295,10 +296,12 @@ class UserDetailList(APIView):
 
         sql = """
             select *
-            from get_registrations(%s, '*', '*', '*', '*', %s, %s)"""
+            from get_registrations(%s, %s, %s, %s, %s, %s, %s, %s)"""
 
         with connection.cursor() as cursor:
-            cursor.execute(sql, [settings.DBLINK_CONN, page_size, offset])
+            cursor.execute(sql,
+                           [settings.DBLINK_CONN, state, facility, msisdn,
+                            status, date, page_size, offset])
             rows = dictfetchall(cursor)
 
         return rows
@@ -309,7 +312,15 @@ class UserDetailList(APIView):
         page = int(self.request.query_params.get('page', 1))
         offset = (page - 1) * page_size
 
-        rows = self.get_data(page_size, offset)
+        state = self.request.query_params.get('state', '*')
+        facility = '%{}%'.format(
+            self.request.query_params.get('facility', '*'))
+        msisdn = self.request.query_params.get('msisdn', '*')
+        status = self.request.query_params.get('status', '*')
+        date = self.request.query_params.get('date')
+
+        rows = self.get_data(
+            state, facility, msisdn, status, date, page_size, offset)
 
         has_previous = False
         has_next = False
