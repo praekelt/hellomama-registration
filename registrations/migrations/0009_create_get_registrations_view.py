@@ -50,8 +50,7 @@ sql = """
             AND identities_identity.operator_id = identities_identity_operator.id
             AND (identities_identity.details->'addresses'->'msisdn'?filter_msisdn OR '*' = filter_msisdn )
             AND (identities_identity_operator.details->'state'?filter_state OR '*' = filter_state)
-            AND (identities_identity_operator.details->'facility_name'?filter_facility OR '*' = filter_facility)
-            AND (filter_date is null OR registrations_registration.created_at::date = filter_date)
+            AND (filter_date = 'None' OR registrations_registration.created_at::date = filter_date::date)
             AND (identities_identity_operator.details->>'facility_name' ilike filter_facility OR '%*%' = filter_facility)
             AND ((registrations_registration.validated = TRUE and status in ('valid', '*')) OR (registrations_registration.validated = FALSE and status in ('invalid', '*')))
         ORDER BY created_at DESC
