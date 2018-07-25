@@ -5121,7 +5121,7 @@ class TestUserDetailListView(AuthenticatedAPITestCase):
         self.assertEqual(len(body["results"]), 0)
 
         mock_get_data.assert_called_once_with(
-            '*', '%*%', '*', '*', None, 20, 0)
+            '*', '%*%', '*', '*', "None", 20, 0)
 
     @mock.patch("registrations.views.UserDetailList.get_data")
     def test_user_details_list_with_filters(self, mock_get_data):
@@ -5167,7 +5167,7 @@ class TestUserDetailListView(AuthenticatedAPITestCase):
         self.assertEqual(len(body["results"]), 20)
 
         mock_get_data.assert_called_once_with(
-            '*', '%*%', '*', '*', None, 20, 0)
+            '*', '%*%', '*', '*', "None", 20, 0)
 
     @mock.patch("registrations.views.UserDetailList.get_data")
     def test_user_details_list_has_previous(self, mock_get_data):
@@ -5195,7 +5195,7 @@ class TestUserDetailListView(AuthenticatedAPITestCase):
         self.assertEqual(len(body["results"]), 3)
 
         mock_get_data.assert_called_once_with(
-            '*', '%*%', '*', '*', None, 20, 40)
+            '*', '%*%', '*', '*', "None", 20, 40)
 
 
 class TestStopPublicRegistrations(AuthenticatedAPITestCase):
