@@ -317,7 +317,7 @@ class UserDetailList(APIView):
             self.request.query_params.get('facility', '*'))
         msisdn = self.request.query_params.get('msisdn', '*')
         status = self.request.query_params.get('status', '*')
-        date = self.request.query_params.get('date')
+        date = self.request.query_params.get('date', 'None')
 
         rows = self.get_data(
             state, facility, msisdn, status, date, page_size, offset)
