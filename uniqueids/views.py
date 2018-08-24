@@ -1,7 +1,14 @@
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from .models import Record
+from rest_framework.pagination import CursorPagination
+from rest_framework import viewsets
+from .models import Record, State
+from .serializers import StateSerializer
+
+
+class IdCursorPagination(CursorPagination):
+    ordering = 'id'
 
 
 class RecordPost(APIView):
@@ -37,3 +44,13 @@ class RecordPost(APIView):
             status = 400
             accepted = {"id": ['This field is required.']}
             return Response(accepted, status=status)
+
+
+class StateGetViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    API endpoint that allows States to be viewed.
+    """
+    permission_classes = (IsAuthenticated,)
+    queryset = State.objects.all()
+    pagination_class = IdCursorPagination
+    serializer_class = StateSerializer

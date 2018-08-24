@@ -32,8 +32,6 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'REPLACEME')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'false').lower() == 'true'
 
-TEMPLATE_DEBUG = DEBUG
-
 ALLOWED_HOSTS = ['*']
 
 
@@ -116,6 +114,9 @@ STATICFILES_FINDERS = (
 STATIC_ROOT = 'staticfiles'
 STATIC_URL = '/static/'
 
+MEDIA_ROOT = 'media'
+MEDIA_URL = '/media/'
+
 # TEMPLATE_CONTEXT_PROCESSORS = (
 #     "django.core.context_processors.request",
 # )
@@ -160,7 +161,8 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
-    'DEFAULT_FILTER_BACKENDS': ('rest_framework.filters.DjangoFilterBackend',)
+    'DEFAULT_FILTER_BACKENDS': (
+        'django_filters.rest_framework.DjangoFilterBackend',)
 }
 
 # Webhook event definition
@@ -357,6 +359,8 @@ V2N_FTP_PORT = os.environ.get('V2N_FTP_PORT')
 V2N_FTP_USER = os.environ.get('V2N_FTP_USER')
 V2N_FTP_PASS = os.environ.get('V2N_FTP_PASS')
 V2N_FTP_ROOT = os.environ.get('V2N_FTP_ROOT')
+
+DBLINK_CONN = os.environ.get('DBLINK_CONN')
 
 
 djcelery.setup_loader()

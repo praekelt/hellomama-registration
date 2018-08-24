@@ -1,4 +1,5 @@
 import json
+import os
 import responses
 
 try:
@@ -7,7 +8,9 @@ except ImportError:
     from unittest import mock
 
 from django.test import TestCase
+from django.conf import settings
 from django.contrib.auth.models import User
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.urlresolvers import reverse
 from django.db.models.signals import post_save
 
@@ -16,7 +19,8 @@ from rest_framework.test import APIClient
 from rest_framework.authtoken.models import Token
 from rest_hooks.models import model_saved
 
-from .models import Record, record_post_save
+from .models import (
+    Record, record_post_save, PersonnelUpload, State, Facility, Community)
 from .tasks import add_unique_id_to_identity, send_personnel_code
 
 
@@ -519,3 +523,278 @@ class TestRecordAdmin(AuthenticatedAPITestCase):
 
         mock_send_code.assert_called_once_with(kwargs={"identity": str(
             record1.identity), "personnel_code": record1.id})
+
+
+class TestPersonnelUploadAdmin(AuthenticatedAPITestCase):
+    def setUp(self):
+        super(TestPersonnelUploadAdmin, self).setUp()
+        self.adminclient.login(username=self.adminusername,
+                               password=self.adminpassword)
+
+        State.objects.create(name="Test State")
+        Facility.objects.create(name="Test Facility")
+        Community.objects.create(name="Test Community")
+
+    def mock_identity_post(self, identity_id):
+        responses.add(
+            responses.POST,
+            'http://localhost:8001/api/v1/identities/',
+            json={
+                "id": identity_id,
+                "details": {}
+            },
+
+        )
+
+    def mock_identity_lookup(self, msisdn, field="msisdn", results=[]):
+        responses.add(
+            responses.GET,
+            'http://localhost:8001/api/v1/identities/search/?details__addresses__{}={}'.format(field, msisdn.replace('+', '%2B')),  # noqa
+            json={
+                "next": None, "previous": None,
+                "results": results
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+
+    def create_file(self, detail):
+        standard = {
+            "address_type": "msisdn",
+            "address": "07012312341",
+            "preferred_language": "eng_NG",
+            "receiver_role": "health care worker",
+            "uniqueid_field_length": "5",
+            "name": "Peter",
+            "surname": "Pan"
+        }
+
+        standard.update(detail)
+
+        return SimpleUploadedFile(
+            "import.csv", '{}\n{}'.format(
+                ','.join(standard.keys()),
+                ','.join(standard.values())).encode())
+
+    def test_personnel_upload_no_rows(self):
+        csv_file = SimpleUploadedFile(
+            'import.csv', 'these are the file contents!'.encode())
+
+        data = {"csv_file": csv_file,
+                "import_type": PersonnelUpload.PERSONNEL_TYPE}
+
+        self.adminclient.post(
+            reverse('admin:uniqueids_personnelupload_add'), data, follow=True)
+
+        upload = PersonnelUpload.objects.first()
+        self.assertFalse(upload.valid)
+        self.assertEqual(upload.error, "No Rows")
+
+        filepath = '{}/{}'.format(settings.MEDIA_ROOT, upload.csv_file)
+        self.assertFalse(os.path.exists(filepath))
+
+    @responses.activate
+    def test_personnel_upload_invalid_data(self):
+        csv_file = self.create_file({
+            "uniqueid_field_name": "personnel_code",
+            "facility_name": "Another Facility",
+            "state": "Another State",
+            "role": "CHEW"
+        })
+
+        data = {"csv_file": csv_file,
+                "import_type": PersonnelUpload.PERSONNEL_TYPE}
+
+        self.mock_identity_lookup("+2347012312341")
+
+        self.adminclient.post(
+            reverse('admin:uniqueids_personnelupload_add'), data, follow=True)
+
+        upload = PersonnelUpload.objects.first()
+        self.assertFalse(upload.valid)
+        self.assertEqual(upload.error, "Invalid States: Another State, Invalid"
+                         " Facilities: Another Facility")
+
+        filepath = '{}/{}'.format(settings.MEDIA_ROOT, upload.csv_file)
+        self.assertFalse(os.path.exists(filepath))
+
+    @responses.activate
+    def test_personnel_upload_missing_fields(self):
+        csv_file = self.create_file({
+            "uniqueid_field_name": "corp_code",
+            "state": "Test State"
+        })
+
+        data = {"csv_file": csv_file, "import_type": PersonnelUpload.CORP_TYPE}
+
+        self.mock_identity_lookup("+2347012312341")
+
+        self.adminclient.post(
+            reverse('admin:uniqueids_personnelupload_add'), data, follow=True)
+
+        upload = PersonnelUpload.objects.first()
+        self.assertFalse(upload.valid)
+        self.assertEqual(upload.error, "Missing fields: community")
+
+        filepath = '{}/{}'.format(settings.MEDIA_ROOT, upload.csv_file)
+        self.assertFalse(os.path.exists(filepath))
+
+    @responses.activate
+    def test_personnel_upload_missing_values(self):
+        csv_file = self.create_file({
+            "uniqueid_field_name": "corp_code",
+            "community": "Test Community",
+            "name": "",
+            "state": "Test State"
+        })
+
+        data = {"csv_file": csv_file, "import_type": PersonnelUpload.CORP_TYPE}
+
+        self.mock_identity_lookup("+2347012312341")
+
+        self.adminclient.post(
+            reverse('admin:uniqueids_personnelupload_add'), data, follow=True)
+
+        upload = PersonnelUpload.objects.first()
+        self.assertFalse(upload.valid)
+        self.assertEqual(upload.error, "Missing or invalid values: name")
+
+        filepath = '{}/{}'.format(settings.MEDIA_ROOT, upload.csv_file)
+        self.assertFalse(os.path.exists(filepath))
+
+    @responses.activate
+    def test_personnel_upload_existing_address(self):
+        csv_file = self.create_file({
+            "uniqueid_field_name": "corp_code",
+            "community": "Test Community",
+            "state": "Test State"
+        })
+
+        data = {"csv_file": csv_file, "import_type": PersonnelUpload.CORP_TYPE}
+
+        self.mock_identity_lookup("+2347012312341", results=[{"id": "test"}])
+
+        self.adminclient.post(
+            reverse('admin:uniqueids_personnelupload_add'), data, follow=True)
+
+        upload = PersonnelUpload.objects.first()
+        self.assertFalse(upload.valid)
+        self.assertEqual(upload.error,
+                         "Address invalid or already exists: 07012312341")
+
+        filepath = '{}/{}'.format(settings.MEDIA_ROOT, upload.csv_file)
+        self.assertFalse(os.path.exists(filepath))
+
+    @responses.activate
+    def test_personnel_upload_invalid_address(self):
+        csv_file = self.create_file({
+            "uniqueid_field_name": "corp_code",
+            "community": "Test Community",
+            "address": "123123",
+            "state": "Test State"
+        })
+
+        data = {"csv_file": csv_file, "import_type": PersonnelUpload.CORP_TYPE}
+
+        # self.mock_identity_lookup("+234701231234", results=[{"id": "test"}])
+
+        self.adminclient.post(
+            reverse('admin:uniqueids_personnelupload_add'), data, follow=True)
+
+        upload = PersonnelUpload.objects.first()
+        self.assertFalse(upload.valid)
+        self.assertEqual(upload.error,
+                         "Address invalid or already exists: 123123")
+
+        filepath = '{}/{}'.format(settings.MEDIA_ROOT, upload.csv_file)
+        self.assertFalse(os.path.exists(filepath))
+
+    @responses.activate
+    def test_personnel_upload_invalid_values(self):
+        csv_file = self.create_file({
+            "uniqueid_field_name": "wrong_code",
+            "community": "Test Community",
+            "address_type": "email",
+            "preferred_language": "klingon",
+            "uniqueid_field_length": "long",
+            "state": "Test State"
+        })
+
+        data = {"csv_file": csv_file, "import_type": PersonnelUpload.CORP_TYPE}
+
+        self.mock_identity_lookup("+2347012312341", field="email")
+
+        self.adminclient.post(
+            reverse('admin:uniqueids_personnelupload_add'), data, follow=True)
+
+        upload = PersonnelUpload.objects.first()
+        self.assertFalse(upload.valid)
+
+        self.assertEqual(
+            upload.error, "Missing or invalid values: address_type, "
+            "preferred_language, uniqueid_field_length, uniqueid_field_name")
+
+        filepath = '{}/{}'.format(settings.MEDIA_ROOT, upload.csv_file)
+        self.assertFalse(os.path.exists(filepath))
+
+    @responses.activate
+    def test_personnel_upload_good(self):
+        csv_file = self.create_file({
+            "uniqueid_field_name": "personnel_code",
+            "facility_name": "Test Facility",
+            "state": "Test State",
+            "role": "CHEW"
+        })
+
+        data = {"csv_file": csv_file,
+                "import_type": PersonnelUpload.PERSONNEL_TYPE}
+
+        self.mock_identity_post("test-id-personnel")
+        self.mock_identity_lookup("+2347012312341")
+
+        self.adminclient.post(
+            reverse('admin:uniqueids_personnelupload_add'), data, follow=True)
+
+        upload = PersonnelUpload.objects.first()
+        self.assertTrue(upload.valid)
+        self.assertEqual(upload.error, "")
+
+        [_, identity_post] = responses.calls
+        self.assertEqual(
+            json.loads(identity_post.request.body),
+            {
+                'communicate_through': None,
+                'details': {
+                    'addresses': {
+                        'msisdn': {'+2347012312341': {"default": True}}},
+                    'default_addr_type': 'msisdn',
+                    'facility_name': 'Test Facility',
+                    'name': 'Peter',
+                    'preferred_language': 'eng_NG',
+                    'receiver_role': 'health care worker',
+                    'role': 'CHEW',
+                    'state': 'Test State',
+                    'surname': 'Pan',
+                    'uniqueid_field_length': '5',
+                    'uniqueid_field_name': 'personnel_code'
+                }
+            })
+
+        filepath = '{}/{}'.format(settings.MEDIA_ROOT, upload.csv_file)
+        self.assertFalse(os.path.exists(filepath))
+
+
+class TestUniqueIdApi(AuthenticatedAPITestCase):
+
+    def test_get_states(self):
+        """
+        The states endpoint should return a list of all the states.
+        """
+
+        State.objects.create(name="Test State")
+
+        result = self.normalclient.get('/api/v1/states/')
+        items = json.loads(result.content)['results']
+
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]['name'], 'Test State')

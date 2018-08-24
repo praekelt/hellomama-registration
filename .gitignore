@@ -62,6 +62,7 @@ target/
 .project
 .pydevproject
 /ve/
+/ve3/
 logs/*.log
 *.pid
 local_settings.py

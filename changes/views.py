@@ -1,7 +1,8 @@
 import django_filters
+import django_filters.rest_framework as filters
 from .models import Source, Change
 from registrations.models import Registration, get_or_incr_cache
-from rest_framework import viewsets, mixins, generics, filters, status
+from rest_framework import viewsets, mixins, generics, status
 from rest_framework.pagination import CursorPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -42,9 +43,9 @@ class ChangePost(mixins.CreateModelMixin, generics.GenericAPIView):
 class ChangeFilter(filters.FilterSet):
     """Filter for changes created, using ISO 8601 formatted dates"""
     created_before = django_filters.IsoDateTimeFilter(name="created_at",
-                                                      lookup_type="lte")
+                                                      lookup_expr="lte")
     created_after = django_filters.IsoDateTimeFilter(name="created_at",
-                                                     lookup_type="gte")
+                                                     lookup_expr="gte")
 
     class Meta:
         model = Change
@@ -264,7 +265,7 @@ class ReceiveAdminChange(generics.CreateAPIView):
         changes = []
         if data.get('messageset'):
             change = {
-                "mother_id": data['mother_id'],
+                "mother_id": str(data['mother_id']),
                 "action": "change_messaging",
                 "data": {"new_short_name": data['messageset']},
                 "source": source.id,
@@ -275,7 +276,7 @@ class ReceiveAdminChange(generics.CreateAPIView):
 
         elif data.get('language'):
             change = {
-                "mother_id": data['mother_id'],
+                "mother_id": str(data['mother_id']),
                 "action": "change_language",
                 "data": {"new_language": data['language']},
                 "source": source.id,

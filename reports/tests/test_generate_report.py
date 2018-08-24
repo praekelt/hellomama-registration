@@ -10,6 +10,7 @@ except ImportError:
 
 from datetime import datetime
 from django.conf import settings
+from django.contrib.auth.models import User
 from django.core import mail
 from django.db.models.signals import post_save
 from django.test import TestCase, override_settings
@@ -19,7 +20,7 @@ from rest_hooks.models import model_saved
 from seed_services_client import IdentityStoreApiClient
 
 from registrations.models import (
-    Registration, registration_post_save, fire_created_metric,
+    Registration, Source, registration_post_save, fire_created_metric,
     fire_unique_operator_metric, fire_message_type_metric, fire_source_metric,
     fire_receiver_type_metric, fire_language_metric, fire_state_metric,
     fire_role_metric)
@@ -43,6 +44,10 @@ class mockobj(object):
     STAGE_BASED_MESSAGING_TOKEN='sbmtoken')
 class GenerateReportTest(TestCase):
     def setUp(self):
+        self.adminuser = User.objects.create()
+        self.source = Source.objects.create(
+            name='test_source', user=self.adminuser, authority='hw_full')
+
         def has_listeners(class_name):
             return post_save.has_listeners(class_name)
         assert has_listeners(Registration), (
@@ -129,7 +134,7 @@ class GenerateReportTest(TestCase):
                     'reg_type': 'reg_type',
                 },
                 validated=True,
-                source_id=1
+                source_id=self.source.id
             )
 
     def add_identity_callback(

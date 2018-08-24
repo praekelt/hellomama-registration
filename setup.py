@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="hellomama-registration",
-    version="0.1.2",
+    version="0.1.7",
     url='http://github.com/praekelt/hellomama-registration',
     license='BSD',
     author='Praekelt Foundation',
@@ -10,12 +10,12 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     install_requires=[
-        'Django==1.9.1',
-        'djangorestframework==3.3.2',
+        'Django==1.11.10',
+        'djangorestframework==3.7.7',
         'dj-database-url==0.3.0',
         'psycopg2==2.7.3.1',
         'raven==5.10.0',
-        'django-filter==0.12.0',
+        'django-filter==1.0.2',
         'whitenoise==2.0.6',
         'celery==3.1.19',
         'django-celery==3.1.17',
@@ -25,7 +25,6 @@ setup(
         'python-dateutil==2.5.3',
         'six==1.10.0',
         'django-rest-hooks==1.3.1',
-        'django-filter==0.12.0',
         'seed-services-client>=0.33.0',
         'drfdocs==0.0.11',
         'pika==0.10.0',

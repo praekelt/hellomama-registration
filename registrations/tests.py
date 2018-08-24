@@ -269,9 +269,10 @@ class AuthenticatedAPITestCase(APITestCase):
             }
         return Registration.objects.create(**data)
 
-    def make_registration_normaluser(self):
+    def make_registration_normaluser(self, stage='postbirth'):
         data = {
-            "stage": "postbirth",
+            "mother_id": "mother00-9d89-4aa6-99ff-13c225365b5d",
+            "stage": stage,
             "data": REG_DATA['hw_pre_mother'],
             "source": self.make_source_normaluser()
         }
@@ -289,12 +290,34 @@ class AuthenticatedAPITestCase(APITestCase):
             status=200, content_type='application/json', match_querystring=True
         )
 
+    def mock_subscription_search(self, query_string='', result=[]):
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/subscriptions/?{}'.format(
+                query_string),
+            json={
+                "next": None, "previous": None,
+                "results": result
+            },
+            status=200, content_type='application/json', match_querystring=True
+        )
+
     def mock_messageset_lookup(self, messageset_id, details):
         responses.add(
             responses.GET,
             'http://localhost:8005/api/v1/messageset/{}/'.format(
                 messageset_id),
             json=details, status=200, content_type='application/json',
+            match_querystring=True
+        )
+
+    def mock_patch_subscription(self, subscription_id, data={}):
+        responses.add(
+            responses.PATCH,
+            'http://localhost:8005/api/v1/subscriptions/{}/'.format(
+                subscription_id),
+            json=data,
+            status=200, content_type='application/json',
             match_querystring=True
         )
 
@@ -1191,6 +1214,18 @@ class TestRegistrationValidation(AuthenticatedAPITestCase):
             json={
                 "next": None, "previous": None,
                 "results": [{"address": "+234124"}]
+            },
+            status=200, content_type='application/json',
+            match_querystring=True
+        )
+
+        # mock public subscription lookup
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/subscriptions/?active=True&completed=False&messageset_contains=public.mother&identity=mother00-9d89-4aa6-99ff-13c225365b5d',  # noqa
+            json={
+                "next": None, "previous": None,
+                "results": []
             },
             status=200, content_type='application/json',
             match_querystring=True
@@ -4817,28 +4852,6 @@ class TestFixV2NRegistrationsCommand(AuthenticatedAPITestCase):
 
 class TestSendPublicRegistrationNotifications(AuthenticatedAPITestCase):
 
-    def mock_subscription_search(self, query_string='', result=[]):
-        responses.add(
-            responses.GET,
-            'http://localhost:8005/api/v1/subscriptions/?{}'.format(
-                query_string),
-            json={
-                "next": None, "previous": None,
-                "results": result
-            },
-            status=200, content_type='application/json', match_querystring=True
-        )
-
-    def mock_patch_subscription(self, subscription_id, data={}):
-        responses.add(
-            responses.PATCH,
-            'http://localhost:8005/api/v1/subscriptions/{}/'.format(
-                subscription_id),
-            json=data,
-            status=200, content_type='application/json',
-            match_querystring=True
-        )
-
     def mock_identity_get(self, identity_id, operator_id, msisdn="+234123"):
         responses.add(
             responses.GET,
@@ -5335,3 +5348,214 @@ class TestMissedCallNotification(AuthenticatedAPITestCase):
 
         registration.refresh_from_db()
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+class TestUserDetailListView(AuthenticatedAPITestCase):
+
+    @mock.patch("registrations.views.UserDetailList.get_data")
+    def test_user_details_list(self, mock_get_data):
+
+        mock_get_data.return_value = []
+
+        response = self.adminclient.get('/api/v1/user_details/',
+                                        content_type='application/json')
+
+        body = json.loads(response.content)
+        self.assertEqual(body["has_next"], False)
+        self.assertEqual(body["has_previous"], False)
+        self.assertEqual(len(body["results"]), 0)
+
+        mock_get_data.assert_called_once_with(
+            '*', '%*%', '*', '*', "None", 20, 0)
+
+    @mock.patch("registrations.views.UserDetailList.get_data")
+    def test_user_details_list_with_filters(self, mock_get_data):
+
+        mock_get_data.return_value = []
+
+        response = self.adminclient.get(
+            '/api/v1/user_details/?msisdn=%2B234123&state=ebonyi&facility='
+            'Umuakuma&status=valid&date=2016-01-01',
+            content_type='application/json')
+
+        body = json.loads(response.content)
+        self.assertEqual(body["has_next"], False)
+        self.assertEqual(body["has_previous"], False)
+        self.assertEqual(len(body["results"]), 0)
+
+        mock_get_data.assert_called_once_with(
+            'ebonyi', '%Umuakuma%', '+234123', 'valid', '2016-01-01', 20, 0)
+
+    @mock.patch("registrations.views.UserDetailList.get_data")
+    def test_user_details_list_has_next(self, mock_get_data):
+
+        mock_get_data.return_value = [{
+            "identity_id": "316e8bf5-091e-430f-a8af-665ba5bc9692",
+            "msisdn": "+234123123123",
+            "receiver_role": "mother",
+            "validated": "true",
+            "created_at": "20/07/18 08:14",
+            "updated_at": "20/07/18 08:14",
+            "state": "Ebonyi",
+            "facility_name": "Chidera Health Clinic and Maternity",
+            "linked_to_id": "1c79b593-78bf-4dd3-bc99-cc4e179c880f",
+            "linked_to_msisdn": "+2347068430547",
+            "linked_to_receiver_role": "father",
+        }] * 21
+
+        response = self.adminclient.get('/api/v1/user_details/',
+                                        content_type='application/json')
+
+        body = json.loads(response.content)
+        self.assertEqual(body["has_next"], True)
+        self.assertEqual(body["has_previous"], False)
+        self.assertEqual(len(body["results"]), 20)
+
+        mock_get_data.assert_called_once_with(
+            '*', '%*%', '*', '*', "None", 20, 0)
+
+    @mock.patch("registrations.views.UserDetailList.get_data")
+    def test_user_details_list_has_previous(self, mock_get_data):
+
+        mock_get_data.return_value = [{
+            "identity_id": "316e8bf5-091e-430f-a8af-665ba5bc9692",
+            "msisdn": "+234123123123",
+            "receiver_role": "mother",
+            "validated": "true",
+            "created_at": "20/07/18 08:14",
+            "updated_at": "20/07/18 08:14",
+            "state": "Ebonyi",
+            "facility_name": "Chidera Health Clinic and Maternity",
+            "linked_to_id": "1c79b593-78bf-4dd3-bc99-cc4e179c880f",
+            "linked_to_msisdn": "+2347068430547",
+            "linked_to_receiver_role": "father",
+        }] * 3
+
+        response = self.adminclient.get('/api/v1/user_details/?page=3',
+                                        content_type='application/json')
+
+        body = json.loads(response.content)
+        self.assertEqual(body["has_next"], False)
+        self.assertEqual(body["has_previous"], True)
+        self.assertEqual(len(body["results"]), 3)
+
+        mock_get_data.assert_called_once_with(
+            '*', '%*%', '*', '*', "None", 20, 40)
+
+
+class TestStopPublicRegistrations(AuthenticatedAPITestCase):
+
+    @responses.activate
+    def test_stop_public_subscription_public(self):
+        """
+        If the new registration is public then nothing should happen
+        """
+        registration = self.make_registration_normaluser("public")
+        validate_registration.stop_public_subscriptions(registration)
+        self.assertEqual(len(responses.calls), 0)
+
+    @responses.activate
+    def test_stop_public_subscription_new(self):
+        """
+        If no public subscriptions are found then nothing should be stopped
+        """
+        registration = self.make_registration_normaluser()
+
+        self.mock_subscription_search(
+            'active=True&completed=False&messageset_contains=public.mother&'
+            'identity=mother00-9d89-4aa6-99ff-13c225365b5d')
+
+        validate_registration.stop_public_subscriptions(registration)
+
+        self.assertEqual(len(responses.calls), 1)
+
+    @responses.activate
+    def test_stop_public_subscription_mother(self):
+        """
+        If a public subscription is found for the mother then it should be
+        stopped
+        """
+        mother_id = "mother00-9d89-4aa6-99ff-13c225365b5d"
+        subscription_id = "subscrip-9d89-4aa6-99ff-13c225365b5d"
+        registration = self.make_registration_normaluser()
+
+        self.mock_subscription_search(
+            'active=True&completed=False&messageset_contains=public.mother&'
+            'identity={}'.format(mother_id), [{
+                "id": subscription_id,
+                "active": True,
+                "completed": False,
+                "process_status": 0,
+                "messageset": 1,
+                "identity": mother_id,
+                "metadata": {"existing": "key"}
+            }])
+        self.mock_patch_subscription(subscription_id)
+
+        validate_registration.stop_public_subscriptions(registration)
+
+        self.assertEqual(len(responses.calls), 2)
+        # check the subscription patch
+        call = responses.calls[-1]
+        self.assertEqual(
+            call.request.url,
+            'http://localhost:8005/api/v1/subscriptions/{}/'.format(
+                subscription_id))
+        self.assertEqual(json.loads(call.request.body), {
+            "active": False,
+            "metadata": {
+                "converted_full": "true",
+                "existing": "key"
+            }
+        })
+
+    @responses.activate
+    def test_stop_public_subscription_household(self):
+        """
+        If a public subscription is found for the household then it should be
+        stopped
+        """
+        mother_id = "mother00-9d89-4aa6-99ff-13c225365b5d"
+        household_id = "househ00-9d89-4aa6-99ff-13c225365b5d"
+        subscription_id = "subscrip-9d89-4aa6-99ff-13c225365b5d"
+        registration = self.make_registration_normaluser()
+
+        self.mock_subscription_search(
+            'active=True&completed=False&messageset_contains=public.mother&'
+            'identity={}'.format(mother_id))
+        self.mock_patch_subscription(subscription_id)
+
+        public_registration = self.make_registration_normaluser("public")
+        public_registration.data['receiver_id'] = household_id
+        public_registration.validated = True
+        public_registration.save()
+
+        self.mock_subscription_search(
+            'active=True&completed=False&messageset_contains=public.household&'
+            'identity={}'.format(household_id), [{
+                "id": subscription_id,
+                "active": True,
+                "completed": False,
+                "process_status": 0,
+                "messageset": 1,
+                "identity": household_id,
+                "metadata": {"existing": "key"}
+            }])
+        self.mock_patch_subscription(subscription_id)
+
+        validate_registration.stop_public_subscriptions(registration)
+
+        self.assertEqual(len(responses.calls), 3)
+        # check the subscription patch
+        call = responses.calls[-1]
+        self.assertEqual(
+            call.request.url,
+            'http://localhost:8005/api/v1/subscriptions/{}/'.format(
+                subscription_id))
+        self.assertEqual(json.loads(call.request.body), {
+            "active": False,
+            "metadata": {
+                "converted_full": "true",
+                "existing": "key"
+            }
+        })

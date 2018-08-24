@@ -1,11 +1,11 @@
 import django_filters
-from django.conf import settings
+import django_filters.rest_framework as filters
 from django.contrib.auth.models import User, Group
-from django.db.models import Q
+from django.conf import settings
+from django.db import connection
 from .models import Source, Registration
 from rest_hooks.models import Hook
-from rest_framework import viewsets, mixins, generics, status, filters
-from rest_framework.exceptions import ValidationError
+from rest_framework import viewsets, mixins, generics, status
 from rest_framework.pagination import CursorPagination
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.views import APIView
@@ -148,9 +148,9 @@ class RegistrationPostPatch(mixins.CreateModelMixin, mixins.UpdateModelMixin,
 class RegistrationFilter(filters.FilterSet):
     """Filter for registrations created, using ISO 8601 formatted dates"""
     created_before = django_filters.IsoDateTimeFilter(name="created_at",
-                                                      lookup_type="lte")
+                                                      lookup_expr="lte")
     created_after = django_filters.IsoDateTimeFilter(name="created_at",
-                                                     lookup_type="gte")
+                                                     lookup_expr="gte")
 
     class Meta:
         model = Registration
@@ -329,3 +329,64 @@ class MissedCallNotification(APIView):
                 registration.save(update_fields=['data'])
 
         return Response(status=status.HTTP_200_OK)
+
+
+class UserDetailList(APIView):
+    """ UserDetailList Interaction
+        GET - returns a detailed list of system users
+    """
+    permission_classes = (IsAuthenticated,)
+
+    def get_data(self, state, facility, msisdn, status, date, page_size,
+                 offset):
+
+        def dictfetchall(cursor):
+            """Return all rows from a cursor as a dict"""
+            columns = [col[0] for col in cursor.description]
+            return [
+                dict(zip(columns, row))
+                for row in cursor.fetchall()
+            ]
+
+        sql = """
+            select *
+            from get_registrations(%s, %s, %s, %s, %s, %s, %s, %s)"""
+
+        with connection.cursor() as cursor:
+            cursor.execute(sql,
+                           [settings.DBLINK_CONN, state, facility, msisdn,
+                            status, date, page_size, offset])
+            rows = dictfetchall(cursor)
+
+        return rows
+
+    def get(self, request, *args, **kwargs):
+
+        page_size = 20
+        page = int(self.request.query_params.get('page', 1))
+        offset = (page - 1) * page_size
+
+        state = self.request.query_params.get('state', '*')
+        facility = '%{}%'.format(
+            self.request.query_params.get('facility', '*'))
+        msisdn = self.request.query_params.get('msisdn', '*')
+        status = self.request.query_params.get('status', '*')
+        date = self.request.query_params.get('date', 'None')
+
+        rows = self.get_data(
+            state, facility, msisdn, status, date, page_size, offset)
+
+        has_previous = False
+        has_next = False
+
+        if offset > 0:
+            has_previous = True
+
+        if len(rows) > page_size:
+            has_next = True
+            rows = rows[:page_size]
+
+        return Response({
+            "results": rows,
+            "has_previous": has_previous,
+            "has_next": has_next}, status=200)
