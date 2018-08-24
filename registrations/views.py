@@ -1,11 +1,13 @@
 import django_filters
 import django_filters.rest_framework as filters
 from django.contrib.auth.models import User, Group
+from django.db.models import Q
 from django.conf import settings
 from django.db import connection
 from .models import Source, Registration
 from rest_hooks.models import Hook
 from rest_framework import viewsets, mixins, generics, status
+from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import CursorPagination
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.views import APIView
@@ -275,6 +277,60 @@ class SendPublicRegistrationNotificationView(APIView):
         accepted = {"accepted": True}
         send_public_registration_notifications.delay()
         return Response(accepted, status=status)
+
+
+class MissedCallNotification(APIView):
+    """ Send out a notification to the subscriber about the missed call service
+        the first time their call fails.
+    """
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request, *args, **kwargs):
+        try:
+            # The hooks send the request data as {"hook":{}, "data":{}}
+            data = request.data['data']
+        except KeyError:
+            raise ValidationError('"data" must be supplied')
+
+        if data.get('identity', None) is not None and data['identity'] != "":
+            registrations = Registration.objects.filter(
+                Q(mother_id=data['identity']) |
+                Q(data__receiver_id=data['identity'])).order_by('-created_at')
+            if len(registrations) > 0:
+                registration = registrations[0]
+            else:
+                raise ValidationError('No registration found for identity')
+        else:
+            raise ValidationError(
+                '"data" must contain "identity" key')
+
+        if (not data['delivered'] and
+                not registration.data.get('missedcall_notification')):
+
+            subscriptions = utils.get_subscriptions(data['identity'])
+
+            try:
+                subscription = next(subscriptions)
+            except StopIteration:
+                subscription = None
+
+            if not subscription:
+                raise ValidationError('No subscription found for identity')
+
+            messageset = utils.get_messageset(subscription["messageset"])
+
+            if messageset['content_type'] == 'audio':
+                payload = {
+                    "to_identity": data['identity'],
+                    "content": settings.MISSEDCALL_NOTIFICATION_TEXT,
+                    "metadata": {}
+                }
+                utils.post_message(payload)
+
+                registration.data['missedcall_notification'] = True
+                registration.save(update_fields=['data'])
+
+        return Response(status=status.HTTP_200_OK)
 
 
 class UserDetailList(APIView):

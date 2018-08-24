@@ -278,6 +278,18 @@ class AuthenticatedAPITestCase(APITestCase):
         }
         return Registration.objects.create(**data)
 
+    def mock_subscription_lookup(self, identity_id, result=[]):
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/subscriptions/'
+            '?active=True&identity={}'.format(identity_id),
+            json={
+                "next": None, "previous": None,
+                "results": result
+            },
+            status=200, content_type='application/json', match_querystring=True
+        )
+
     def mock_subscription_search(self, query_string='', result=[]):
         responses.add(
             responses.GET,
@@ -288,6 +300,15 @@ class AuthenticatedAPITestCase(APITestCase):
                 "results": result
             },
             status=200, content_type='application/json', match_querystring=True
+        )
+
+    def mock_messageset_lookup(self, messageset_id, details):
+        responses.add(
+            responses.GET,
+            'http://localhost:8005/api/v1/messageset/{}/'.format(
+                messageset_id),
+            json=details, status=200, content_type='application/json',
+            match_querystring=True
         )
 
     def mock_patch_subscription(self, subscription_id, data={}):
@@ -3956,27 +3977,6 @@ class TestThirdPartyRegistrations(AuthenticatedAPITestCase):
             match_querystring=True
         )
 
-    def mock_subscription_lookup(self, identity_id, result=[]):
-        responses.add(
-            responses.GET,
-            'http://localhost:8005/api/v1/subscriptions/'
-            '?active=True&identity={}'.format(identity_id),
-            json={
-                "next": None, "previous": None,
-                "results": result
-            },
-            status=200, content_type='application/json', match_querystring=True
-        )
-
-    def mock_messageset_lookup(self, messageset_id, details):
-        responses.add(
-            responses.GET,
-            'http://localhost:8005/api/v1/messageset/{}/'.format(
-                messageset_id),
-            json=details, status=200, content_type='application/json',
-            match_querystring=True
-        )
-
     def mock_identity_patch(self, identity_id):
         responses.add(
             responses.PATCH,
@@ -4542,6 +4542,7 @@ class TestAddRegistrationsAPI(TestThirdPartyRegistrations):
         }])
         self.mock_messageset_lookup(1, {
             'short_name': 'prebirth.mother.text.10_42',
+            'content_type': 'text'
         })
 
         data = override_get_data_mother_only(None)[0]
@@ -4581,6 +4582,7 @@ class TestAddRegistrationsAPI(TestThirdPartyRegistrations):
         }])
         self.mock_messageset_lookup(2, {
             'short_name': 'prebirth.mother.text.10_42',
+            'content_type': 'text'
         })
 
         data = override_get_data_mother_only(None)[0]
@@ -5103,6 +5105,249 @@ class TestSendPublicRegistrationNotifications(AuthenticatedAPITestCase):
 
         content = json.loads(responses.calls[-3].request.body)['content']
         self.assertEqual(content.count('+234'), 15)
+
+
+class TestMissedCallNotification(AuthenticatedAPITestCase):
+
+    def mock_outbound(self):
+        responses.add(
+            responses.POST,
+            'http://localhost:8006/api/v1/outbound/',
+            json={"id": 1},
+            status=200, content_type='application/json',
+        )
+
+    def make_registration(self, identity, custom_data={}):
+
+        data = REG_DATA['hw_pre_mother'].copy()
+        data.update(custom_data)
+
+        registration = {
+            "mother_id": identity,
+            "stage": "postbirth",
+            "data": data,
+            "source": self.make_source_normaluser()
+        }
+
+        return Registration.objects.create(**registration)
+
+    def mock_subscription_by_type(self, mother_id, msg_type='text'):
+        self.mock_subscription_lookup(mother_id, [{
+            "active": True,
+            "completed": False,
+            "process_status": 0,
+            "messageset": 1,
+        }])
+
+        self.mock_messageset_lookup(1, {
+            'short_name': 'prebirth.mother.{}.10_42'.format(msg_type),
+            'content_type': msg_type
+        })
+
+    def test_missedcall_notifications_no_body(self):
+        """
+        If the body is not supplied then an error should be returned.
+        """
+
+        response = self.normalclient.post('/api/v1/missedcall_notification/')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, ['"data" must be supplied'])
+
+    def test_missedcall_notifications_no_identity(self):
+        """
+        If no identity is supplied then an error should be returned.
+        """
+        data = {
+            "data": {
+                "delivered": True,
+            }
+        }
+
+        response = self.normalclient.post(
+            '/api/v1/missedcall_notification/', json.dumps(data),
+            content_type='application/json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, ['"data" must contain "identity" key'])
+
+    def test_missedcall_notifications_no_registration(self):
+        """
+        If the registration linked to the identity is not found then an error
+        should be returned.
+        """
+        data = {
+            "data": {
+                "identity": "mother00-9d89-4aa6-99ff-13c225365b5d",
+                "delivered": True,
+            }
+        }
+
+        response = self.normalclient.post(
+            '/api/v1/missedcall_notification/', json.dumps(data),
+            content_type='application/json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, ['No registration found for identity'])
+
+    @responses.activate
+    def test_missedcall_notifications_no_subscription(self):
+        """
+        If no subscription is found then an error should be returned.
+        """
+        mother_id = "mother00-1111-4aa6-99ff-13c225365b5d"
+
+        data = {
+            "data": {
+                "identity": mother_id,
+                "delivered": False,
+            }
+        }
+        self.make_registration(mother_id)
+        self.mock_subscription_lookup(mother_id)
+
+        response = self.normalclient.post(
+            '/api/v1/missedcall_notification/', json.dumps(data),
+            content_type='application/json')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, ['No subscription found for identity'])
+
+    def test_missedcall_notifications_delivered(self):
+        """
+        If the event is for a delivered message then nothing should happen.
+        """
+        mother_id = "mother00-9d89-4aa6-99ff-13c225365b5d"
+
+        data = {
+            "data": {
+                "identity": mother_id,
+                "delivered": True,
+            }
+        }
+
+        self.make_registration(mother_id)
+
+        response = self.normalclient.post(
+            '/api/v1/missedcall_notification/', json.dumps(data),
+            content_type='application/json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_missedcall_notifications_already_sent(self):
+        """
+        If the person was already notified, nothing should happen.
+        """
+        mother_id = "mother00-9d89-4aa6-99ff-13c225365b5d"
+
+        data = {
+            "data": {
+                "identity": mother_id,
+                "delivered": False,
+            }
+        }
+
+        registration = self.make_registration(mother_id)
+        registration.data['missedcall_notification'] = True
+        registration.save(update_fields=['data'])
+
+        response = self.normalclient.post(
+            '/api/v1/missedcall_notification/', json.dumps(data),
+            content_type='application/json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    @responses.activate
+    def test_missedcall_notifications(self):
+        """
+        If the request is good and the registration is found and the person has
+        not been sent the notification before, the notification should be sent.
+        """
+        mother_id = "mother00-9d89-4aa6-99ff-13c225365b5d"
+
+        data = {
+            "data": {
+                "identity": mother_id,
+                "delivered": False,
+            }
+        }
+
+        registration = self.make_registration(mother_id)
+        self.mock_subscription_by_type(mother_id, 'audio')
+        self.mock_outbound()
+
+        response = self.normalclient.post(
+            '/api/v1/missedcall_notification/', json.dumps(data),
+            content_type='application/json')
+
+        registration.refresh_from_db()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(registration.data['missedcall_notification'])
+
+        # check the outbound
+        call = responses.calls[-1]
+        self.assertEqual(
+            json.loads(call.request.body)['content'],
+            settings.MISSEDCALL_NOTIFICATION_TEXT)
+        self.assertEqual(json.loads(call.request.body)['to_identity'],
+                         mother_id)
+
+    @responses.activate
+    def test_missedcall_notifications_household(self):
+        """
+        If the request is good and a household registration is found and the
+        person has not been sent the notification before, the notification
+        should be sent.
+        """
+        mother_id = "mother00-1111-4aa6-99ff-13c225365b5d"
+        father_id = "father00-2222-4aa6-99ff-13c225365b5d"
+
+        data = {
+            "data": {
+                "identity": father_id,
+                "delivered": False,
+            }
+        }
+
+        registration = self.make_registration(
+            mother_id, custom_data={'receiver_id': father_id})
+        self.mock_subscription_by_type(father_id, 'audio')
+        self.mock_outbound()
+
+        response = self.normalclient.post(
+            '/api/v1/missedcall_notification/', json.dumps(data),
+            content_type='application/json')
+
+        registration.refresh_from_db()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(registration.data['missedcall_notification'])
+
+        # check the outbound
+        call = responses.calls[-1]
+        self.assertEqual(
+            json.loads(call.request.body)['content'],
+            settings.MISSEDCALL_NOTIFICATION_TEXT)
+        self.assertEqual(json.loads(call.request.body)['to_identity'],
+                         father_id)
+
+    @responses.activate
+    def test_missedcall_notifications_text(self):
+        """
+        The notification should not be sent if the person receives texts.
+        """
+        mother_id = "mother00-1111-4aa6-99ff-13c225365b5d"
+
+        data = {
+            "data": {
+                "identity": mother_id,
+                "delivered": False,
+            }
+        }
+
+        registration = self.make_registration(mother_id)
+        self.mock_subscription_by_type(mother_id)
+
+        response = self.normalclient.post(
+            '/api/v1/missedcall_notification/', json.dumps(data),
+            content_type='application/json')
+
+        registration.refresh_from_db()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
 
 class TestUserDetailListView(AuthenticatedAPITestCase):
