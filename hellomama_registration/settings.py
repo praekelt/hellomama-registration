@@ -333,9 +333,9 @@ HCW_PERSONNEL_CODE_TEXT_ENG_NG = os.environ.get(
     'registered as a HCW. Dial 55500 to start registering mothers. '
     'Your personnel code is {personnel_code}.')
 MISSEDCALL_NOTIFICATION_TEXT = os.environ.get(
-    'MISSEDCALL_NOTIFICATION_TEXT', 'Missed a call from HelloMama? Want to '
-    'repeat a message? Flash 55500 and we`ll call you back. Save 55500 in your'
-    ' phone.')
+    'MISSEDCALL_NOTIFICATION_TEXT', "Missed a call from HelloMama? Want to "
+    "repeat a message? Flash 55500 and we'll call you back. Save 55500 in your"
+    " phone.")
 
 EMAIL_HOST = os.environ.get('EMAIL_HOST', 'localhost')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
