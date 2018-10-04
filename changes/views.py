@@ -370,7 +370,7 @@ class AddChangeView(generics.CreateAPIView):
             msisdn = data.get('msisdn')
             if data['action'] == 'unsubscribe_household_only':
                 identity_id = data['data']['household_id']
-                msisdn = data.get('household_msisdn')
+                msisdn = data['data'].get('household_msisdn')
 
             optout_info = {
                 'optout_type': 'stop',
