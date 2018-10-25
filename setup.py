@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="hellomama-registration",
-    version="0.1.8",
+    version="0.1.9",
     url='http://github.com/praekelt/hellomama-registration',
     license='BSD',
     author='Praekelt Foundation',
